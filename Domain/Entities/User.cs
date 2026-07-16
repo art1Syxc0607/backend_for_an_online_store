@@ -6,6 +6,7 @@ namespace Domain.Entities;
 public class User
 {
     private List<Review> _reviews = new();
+    private List<Order> _orders = new();
     //private List<FavoriteProduct> _favoriteProducts = new();
     //private List<FavoriteSeller> _favoriteSellers = new();
 
@@ -19,6 +20,7 @@ public class User
     // Навигационные свойства
     public Cart? Cart { get; private set; }
     public virtual IReadOnlyCollection<Review> Reviews => _reviews.AsReadOnly();
+    public virtual IReadOnlyCollection<Order> Orders => _orders.AsReadOnly();
     //public virtual IReadOnlyCollection<FavoriteProduct> FavoriteProducts => _favoriteProducts.AsReadOnly();
     //public virtual IReadOnlyCollection<FavoriteSeller> FavoriteSellers => _favoriteSellers.AsReadOnly();
 

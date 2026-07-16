@@ -3,11 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Application.DTOs.Order;
+using Domain.Entities;
 
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface IOrderRepository
 {
-    public interface IOrderRepository
-    {
-
-    }
+    Task<List<Order>> GetAllAsync(int userId,
+        CancellationToken ct);
+    Task CreateOrder(User user, 
+        List<OrderItemDto> items, string shippingAddress,
+        CancellationToken ct);
+    //Task CreateOrders(int userId, List<OrderItemDto> items);
 }
