@@ -21,7 +21,7 @@ public class GetOrderHistoryQueryHandler : IRequestHandler
     public async Task<List<OrderResponseDto>> Handle(
         GetOrderHistoryQuery query, CancellationToken ct)
     {
-        var orders = await _orderRepository.GetAllAsync(query.userId);
+        var orders = await _orderRepository.GetAllAsync(query.userId, ct);
 
         var result = orders.Select(o => new OrderResponseDto
         {

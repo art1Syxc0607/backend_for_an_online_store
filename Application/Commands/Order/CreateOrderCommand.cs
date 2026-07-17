@@ -6,7 +6,7 @@ namespace Application.Commands.Order;
 
 
 
-public class CreateOrderCommand : IRequest
+public class CreateOrderCommand : IRequest<int>
 {
     public List<OrderItemDto> Items { get; init; } = new();
     public int UserId { get; init; }

@@ -6,11 +6,12 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Application.DTOs.Order;
-public record OrderItemDto(int ProductId, int Quantity);
-public record CreateOrderDto
+
+public record CancelOrderDto
 {
     [Required]
-    public List<OrderItemDto> Items { get; init; } = new();
+    public int UserId { get; set; }
     [Required]
-    public string shippingAddress { get; init; }
+    public int OrderId { get; set; }
+
 }

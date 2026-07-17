@@ -21,10 +21,11 @@ public class Order
 
     private Order() { }
 
-    public Order(User user, string shippingAddress)
+    public Order(User user, string shippingAddress, List<OrderItem> items)
     {
         User = user ?? throw new DomainException("User cannot be null.");
         UserId = user.Id;
+        _items = items;
         ShippingAddress = shippingAddress ?? throw new DomainException("Address cannot be null.");
         Status = OrderStatus.Pending;
         CreatedAt = DateTime.UtcNow;

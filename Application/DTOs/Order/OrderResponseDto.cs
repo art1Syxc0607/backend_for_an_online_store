@@ -10,7 +10,7 @@ namespace Application.DTOs.Order;
 
 public record OrderResponseDto
 {
-    public List<OrderItem> Items { get; init; } = new();
+    public IReadOnlyCollection<OrderItem> Items { get; init; } = new();
 
     public int Id { get; init; }
     public int UserId { get; init; }
