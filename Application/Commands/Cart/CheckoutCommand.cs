@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using MediatR;
+using System.ComponentModel.DataAnnotations;
 
-namespace Application.Commands.Cart
+namespace Application.Commands.Cart;
+
+public class CheckoutCommand : IRequest<int> // Id of an Order
 {
-    public class CheckoutCommand
-    {
-
-    }
+    [Required]
+    public int UserId { get; init; }
+    [Required]
+    public string ShippingAddress { get; init; }
 }

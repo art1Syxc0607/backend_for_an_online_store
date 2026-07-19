@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Application.DTOs.Cart;
+using MediatR;
 
-namespace Application.Queries.Cart
+namespace Application.Queries.Cart;
+
+public class GetCartQuery : IRequest<CartResponseDto>
 {
-    public class GetCartQuery
-    {
-        
-    }
+    public int UserId { get; set; }
 }

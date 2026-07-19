@@ -9,10 +9,9 @@ using MediatR;
 
 namespace Application.Commands.Order;
 
-public record CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand>
+public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand>
 {
     private readonly IOrderRepository _orderRepository;
-    private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public CancelOrderCommandHandler(
@@ -20,23 +19,23 @@ public record CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand>
         IUnitOfWork unitOfWork, IUserRepository userRepository)
     {
         _orderRepository = orderRepository;
-        _userRepository = userRepository;
         _unitOfWork = unitOfWork;
     }
 
     public async Task Handle(CancelOrderCommand command,
         CancellationToken ct)
     {
-        var user = await _userRepository.GetByIdAsync(command.UserId,
-            ct);
-        if (user == null)
-            throw new DomainException("No such user");
-
         var order = await _orderRepository.GetOrder(command.OrderId, ct);
-        if (order == null) throw new DomainException("No such order");
-        if(order.UserId != user.Id) throw new DomainException("This order doesn't belong to this user");
+        if (order == null)
+            throw new DomainException("Order not found");
+
+        if (order.UserId != command.UserId)
+            throw new DomainException("This order doesn't belong to this user");
 
         order.Cancel();
+
+        await _orderRepository.UpdateOrder(order, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
 
     }
 }

@@ -10,8 +10,9 @@ namespace Application.Interfaces;
 
 public interface IProductRepository
 {
-    Task<Product> GetByIdAsync(int id, CancellationToken ct);
-    Task<List<Product>> GetAllProductsAsync(CancellationToken ct);
-
+    Task<Product?> GetByIdAsync(int id, CancellationToken ct);
+    Task<List<Product>?> GetByIdsAsync(List<int> Ids, CancellationToken ct);
+    Task<List<Product>?> GetAllProductsAsync(CancellationToken ct);
+    Task<bool> ProductsExist(List<int> Ids, CancellationToken ct);
 }
 

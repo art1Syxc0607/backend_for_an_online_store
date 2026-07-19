@@ -14,6 +14,7 @@ public interface IUserRepository
     Task UpdateAsync(User user, CancellationToken ct = default);
     Task DeleteAsync(User user, CancellationToken ct = default);
     Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
+    //Task<bool> IfBuyThisProduct(int productId, CancellationToken ct = default);
     Task<bool> ExistsByUserNameAsync(string userName, CancellationToken ct = default);
     Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default);
 

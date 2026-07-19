@@ -12,8 +12,7 @@ public class GetOrderHistoryQueryHandler : IRequestHandler
     private readonly IOrderRepository _orderRepository;
 
     public GetOrderHistoryQueryHandler(
-        IOrderRepository orderRepository,
-        IUserRepository userRepository)
+        IOrderRepository orderRepository)
     {
         _orderRepository = orderRepository;
     }

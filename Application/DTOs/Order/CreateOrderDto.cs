@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Application.DTOs.Order;
-public record OrderItemDto(int ProductId, int Quantity);
+
 public record CreateOrderDto
 {
     [Required]

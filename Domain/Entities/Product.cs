@@ -14,6 +14,8 @@ public class Product
     public string? Description { get; private set; }
     public decimal Price { get; private set; }
     public int StockQuantity { get; private set; }
+    public int ReservedQuantity { get; private set; }
+    public int AvailableQuantity => StockQuantity - ReservedQuantity;
     public string? Sku { get; private set; }
     public string? ImageUrl { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -84,6 +86,39 @@ public class Product
     {
         Category = category ?? throw new DomainException("Category cannot be null.");
         CategoryId = category.Id;
+    }
+
+    public void Reserve(int quantity) // Создание заказа
+        // [StockQuantity не меняется, но ReservedQuantity увеличивается]
+    {
+        if (quantity <= 0)
+            throw new DomainException("Quantity must be positive.");
+        if (AvailableQuantity < quantity)
+            throw new DomainException($"Not enough available stock. Available: {AvailableQuantity}");
+
+        ReservedQuantity += quantity;
+    }
+
+    public void ReleaseReservation(int quantity)
+    // Отмена заказа → ReleaseReservation(quantity) [StockQuantity не меняется, ReservedQuantity уменьшается]
+    {
+        if (quantity <= 0)
+            throw new DomainException("Quantity must be positive.");
+        if (ReservedQuantity < quantity)
+            throw new DomainException($"Cannot release more than reserved. Reserved: {ReservedQuantity}");
+
+        ReservedQuantity -= quantity;
+    }
+
+    public void ConfirmReservation(int quantity) // Оплата заказа → ConfirmReservation(quantity) [StockQuantity уменьшается, ReservedQuantity уменьшается]
+    {
+        if (quantity <= 0)
+            throw new DomainException("Quantity must be positive.");
+        if (ReservedQuantity < quantity)
+            throw new DomainException($"Cannot confirm more than reserved. Reserved: {ReservedQuantity}");
+
+        StockQuantity -= quantity;
+        ReservedQuantity -= quantity;
     }
 
     // Приватные методы

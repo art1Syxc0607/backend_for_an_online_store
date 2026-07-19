@@ -46,16 +46,20 @@ public class OrderRepository : IOrderRepository
     {
         await _dpcontext.Orders.AddAsync(order);
     }
-    //public async Task CreateOrder(User user,
-    //    List<OrderItemDto> items, string shippingAddress,
-    //    CancellationToken ct)
-    //{
-    //    var orders = items
-    //        .Select(i => new Order(user, shippingAddress)).
-    //        ToList();
 
-    //    await _dpcontext.Orders.AddRangeAsync(orders);
-    //}
-    //Task CreateOrders(int userId, List<OrderItemDto> items);
+    public async Task UpdateOrder(Order order, CancellationToken ct = default)
+    {
+        _dpcontext.Orders.Update(order);
+        await Task.CompletedTask;
+    }
 
+    public async Task<bool> IfBuyThisProduct(int userId, int productId, CancellationToken ct = default)
+    {
+        var orders = await GetAllAsync(userId, ct);
+
+        var result = orders.Any(order => order.Status == Domain.Enums.OrderStatus.Delivered && 
+        order.Items.Any(oi => oi.ProductId == productId));
+
+        return result;
+    }
 }

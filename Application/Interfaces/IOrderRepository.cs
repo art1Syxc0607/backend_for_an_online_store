@@ -19,5 +19,9 @@ public interface IOrderRepository
 
     Task CreateOrder(Order order,
     CancellationToken ct);
+
+    Task UpdateOrder(Order order, CancellationToken ct);
+
+    Task<bool> IfBuyThisProduct(int userId, int productId, CancellationToken ct = default);
     //Task CreateOrders(int userId, List<OrderItemDto> items);
 }

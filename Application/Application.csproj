@@ -7,12 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="DTOs\Review\**" />
-    <EmbeddedResource Remove="DTOs\Review\**" />
-    <None Remove="DTOs\Review\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="MediatR" Version="14.1.0" />
   </ItemGroup>
 

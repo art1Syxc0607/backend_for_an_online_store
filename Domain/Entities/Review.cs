@@ -12,7 +12,8 @@ public class Review
     public bool IsVerifiedPurchase { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
-
+    
+    // навигацонные свойства
     public virtual User User { get; private set; }
     public virtual Product Product { get; private set; }
 

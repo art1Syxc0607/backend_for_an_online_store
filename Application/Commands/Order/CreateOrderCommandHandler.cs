@@ -2,6 +2,7 @@
 using Application.Interfaces;
 using Domain.Exceptions;
 using Domain.Entities;
+using Domain.DTOs.Order;
 
 namespace Application.Commands.Order;
 
@@ -31,18 +32,28 @@ public class CreateOrderCommandHandler : IRequestHandler
         if (user == null) 
             throw new DomainException("No such user");
 
-        foreach(var item in command.Items)
-        {
-            var product = await _productRepository.GetByIdAsync(item.ProductId, ct);
+        var productIds = command.Items.Select(i => i.ProductId).ToList();
+        var products = await _productRepository.GetByIdsAsync(productIds, ct);
+
+        if(products == null) throw new DomainException("Some products not found");
+        if (products.Count != productIds.Count)
+            throw new DomainException("Some products not found");
 
 
-        }
+        // 3. Создаем DTO для заказа (с продуктами)
+        var orderItems = command.Items
+            .Select(i => new Domain.DTOs.Order.OrderItemDto
+                (
+                    products.First(p => p.Id == i.ProductId),   // ← передаем продукт
+                    i.Quantity,
+                    i.PriceAtPurchase
+                )
+            )
+            .ToList();
 
 
-
-        var orderitems = command.Items.Select(ot_dto => new OrderItem())
-        var order = new Domain.Entities.Order(user, command.shippingAddress);
-
+        // 4. Создаем заказ (вся бизнес-логика внутри Order)
+        var order = new Domain.Entities.Order(user, command.ShippingAddress, orderItems);
 
         await _orderRepository.CreateOrder(order, ct);
 

@@ -1,11 +1,13 @@
-﻿using Application.Commands.User;
+﻿using Application.Commands.Cart;
+using Application.Commands.User;
+using Application.DTOs.Cart;
 using Application.DTOs.User;
+using Application.Queries.Cart;
+using Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Application.DTOs.Cart;
 using System.Security.Claims;
-using Application.Commands.Cart;
 
 
 namespace WebApi.Controllers;
@@ -20,7 +22,31 @@ public class CartController : ControllerBase
     public CartController(IMediator mediator)
         => _mediator = mediator;
 
-    [HttpPost("add")]
+    [HttpGet]
+    public async Task<CartResponseDto> GetCart()
+    {
+        var command = new GetCartQuery { UserId = GetCurrentUserId() };
+
+        var result = await _mediator.Send(command);
+
+        return result;
+    }
+
+    [HttpPost("Checkout")]
+    public async Task<ActionResult<int>> Checkout([FromBody] MakeCheckoutDto dto)
+    {
+        var command = new CheckoutCommand
+        {
+            UserId = GetCurrentUserId(),
+            ShippingAddress = dto.shippingAddress
+        };
+
+        var id = await _mediator.Send(command);
+
+        return id;
+    }
+
+    [HttpPost()]
     public async Task<IActionResult> AddToCart([FromBody] AddCartItemDto request)
     {
         var command = new AddToCartCommand
@@ -63,6 +89,9 @@ public class CartController : ControllerBase
 
         return NoContent();
     }
+
+
+
 
     private int GetCurrentUserId()
     {

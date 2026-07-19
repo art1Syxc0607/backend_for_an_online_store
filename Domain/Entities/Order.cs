@@ -1,5 +1,6 @@
 ﻿using Domain.Enums;
 using Domain.Exceptions;
+using Domain.DTOs.Order;
 
 namespace Domain.Entities;
 
@@ -21,11 +22,13 @@ public class Order
 
     private Order() { }
 
-    public Order(User user, string shippingAddress, List<OrderItem> items)
+    public Order(User user, string shippingAddress, List<OrderItemDto> items)
     {
         User = user ?? throw new DomainException("User cannot be null.");
         UserId = user.Id;
-        _items = items;
+
+        items.ForEach(oi_dto => AddItem(oi_dto.Product, oi_dto.Quantity, oi_dto.PriceAtPurchase));
+
         ShippingAddress = shippingAddress ?? throw new DomainException("Address cannot be null.");
         Status = OrderStatus.Pending;
         CreatedAt = DateTime.UtcNow;
@@ -39,6 +42,13 @@ public class Order
         if (quantity <= 0) throw new DomainException("Quantity must be positive.");
         if (Status != OrderStatus.Pending)
             throw new DomainException("Cannot add items to a non-pending order.");
+
+        // ✅ Проверка доступного количества (с учетом резерва)
+        if (product.AvailableQuantity < quantity)
+            throw new DomainException($"Not enough stock. Available: {product.AvailableQuantity}");
+
+        // ✅ Резервируем товар (уменьшаем доступный остаток)
+        product.Reserve(quantity);
 
         var existingItem = _items.FirstOrDefault(i => i.ProductId == product.Id);
         if (existingItem != null)

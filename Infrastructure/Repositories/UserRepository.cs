@@ -62,6 +62,10 @@ public class UserRepository : IUserRepository
         return users;
     }
 
+    //public async Task<bool> IfBuyThisProduct(int productId, CancellationToken ct = default)
+    //{
+    //    var result = _context.Users
+    //}
     public async Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default)
     {
         return await _context.Users.FirstOrDefaultAsync(u => u.Email ==  email) != null; // true если есть

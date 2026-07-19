@@ -59,7 +59,7 @@ public class OrderController : ControllerBase
         {
             UserId = GetCurrentUserId(),
             Items = dto.Items,
-            shippingAddress = dto.shippingAddress,
+            ShippingAddress = dto.shippingAddress,
         };
 
         var result = await _mediator.Send(command);
