@@ -22,6 +22,12 @@ public class CartRepository : ICartRepository
             .FirstOrDefaultAsync(c => c.UserId == userId, ct);
     }
 
+    public async void UpdateAsync(Cart cart, CancellationToken ct = default)
+    {
+        _context.Carts.Update(cart);
+
+    }
+
     // ... другие методы
 }
 

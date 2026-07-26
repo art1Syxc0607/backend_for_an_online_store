@@ -28,6 +28,28 @@ public class ProductRepository : IProductRepository
         return await _dpContext.Products.ToListAsync(ct);
     }
 
+    public async Task<int> AddProductAsync(Product product, CancellationToken ct)
+    {
+        await _dpContext.Products.AddAsync(product, ct);
+
+        return product.Id;
+    }
+
+    public Task UpdateProductAsync(Product product, CancellationToken ct)
+    {
+        _dpContext.Products.Update(product);
+
+        return Task.CompletedTask;
+
+    }
+
+    public Task DeleteProductAsync(Product product, CancellationToken ct)
+    {
+        _dpContext.Products.Remove(product);
+
+        return Task.CompletedTask;
+    }
+
     public async Task<bool> ProductsExist(List<int> Ids, CancellationToken ct)
     {
         if (Ids == null || Ids.Count == 0)
@@ -38,5 +60,10 @@ public class ProductRepository : IProductRepository
             .CountAsync(p => Ids.Contains(p.Id), ct);
 
         return count == Ids.Count;
+    }
+
+    public async Task<bool> ProductExist(int id)
+    {
+        return await _dpContext.Products.AnyAsync(p =>  id == p.Id);
     }
 }

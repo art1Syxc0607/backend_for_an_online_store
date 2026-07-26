@@ -22,6 +22,8 @@ public interface IOrderRepository
 
     Task UpdateOrder(Order order, CancellationToken ct);
 
-    Task<bool> IfBuyThisProduct(int userId, int productId, CancellationToken ct = default);
+    Task<bool> HasProductInOrdersAsync(int id, CancellationToken ct);
+
+    Task<bool> HasUserPurchasedProductAsync(int userId, int productId, CancellationToken ct = default);
     //Task CreateOrders(int userId, List<OrderItemDto> items);
 }

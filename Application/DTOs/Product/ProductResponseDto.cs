@@ -8,14 +8,17 @@ namespace Application.DTOs.Product;
 
 public class ProductResponseDto
 {
-    public int Id { get; private set; }
-    public string Name { get; private set; }
-    public string? Description { get; private set; }
-    public decimal Price { get; private set; }
-    public int StockQuantity { get; private set; }
-    public string? Sku { get; private set; }
-    public string? ImageUrl { get; private set; }
-    public DateTime CreatedAt { get; private set; }
-    public DateTime UpdatedAt { get; private set; }
+    public int Id { get; init; }
+    public string Name { get; init; }
+    public string? Description { get; init; }
+    public decimal Price { get; init; }
+    public int StockQuantity { get; init; }
+    public int ReservedQuantity { get; init; }
+    public int AvailableQuantity => StockQuantity - ReservedQuantity;
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
+
+    // Внешние ключи
+    public int? CategoryId { get; init; }
 }
 

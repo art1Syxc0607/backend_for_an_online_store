@@ -11,7 +11,7 @@ namespace Application.DTOs.Order;
 
 public record OrderResponseDto
 {
-    public IReadOnlyCollection<OrderItemResponseDto> Items { get; init; } = new List<OrderItemResponseDto>();
+    public List<OrderItemDto> Items { get; init; } = new List<OrderItemDto>();
 
     public int Id { get; init; }
     public int UserId { get; init; }

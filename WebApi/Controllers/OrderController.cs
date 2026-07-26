@@ -67,6 +67,42 @@ public class OrderController : ControllerBase
         return result;
     }
 
+
+    [HttpPost("initiate")] // оплатить заказ
+    public async Task<ActionResult<PaymentResult>> InitiatePayment([FromBody] InitiatePaymentDto dto)
+    {
+        var command = new InitiatePaymentCommand
+        {
+            UserId = GetCurrentUserId(),
+            OrderId = dto.OrderId,
+            Method = dto.Method,
+            //ReturnUrl = dto.ReturnUrl
+        };
+
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+            return BadRequest(new { error = result.ErrorMessage });
+
+        return Ok(result);
+    }
+
+    //[HttpPost("confirm")]
+    //public async Task<IActionResult> ConfirmPayment([FromBody] ConfirmPaymentDto dto)
+    //{
+    //    var command = new ConfirmPaymentCommand
+    //    {
+    //        PaymentIntentId = dto.PaymentIntentId
+    //    };
+
+    //    var result = await _mediator.Send(command);
+
+    //    if (!result.Success)
+    //        return BadRequest(new { error = result.ErrorMessage });
+
+    //    return Ok(result);
+    //}
+
     [HttpPut]
     public async Task<IActionResult> CancelOrder([FromBody] CancelOrderDto dto)
     {

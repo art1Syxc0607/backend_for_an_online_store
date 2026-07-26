@@ -19,9 +19,19 @@ public class ReviewRepository : IReviewRepository
         _dpcontext = dpcontext;
     }
 
-    public async Task<List<Review>> GetUserReviews(int userId, CancellationToken ct)
+    public async Task<List<Review>?> GetUserReviews(int userId, CancellationToken ct)
     {
         return await _dpcontext.Reviews.Where(r => r.UserId == userId).ToListAsync(ct);
+    }
+
+    public async Task<Review?> GetReviewById(int id, CancellationToken ct)
+    {
+        return await _dpcontext.Reviews.FirstOrDefaultAsync(r => r.Id == id, ct);
+    }
+
+    public async Task<List<Review>?> GetProductReviews(int productId, CancellationToken ct)
+    {
+        return await _dpcontext.Reviews.Where(r => r.ProductId == productId).ToListAsync(ct);
     }
 
     public async Task AddReviewAsync(Review review, CancellationToken ct)

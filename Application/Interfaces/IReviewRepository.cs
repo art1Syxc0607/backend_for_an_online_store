@@ -10,6 +10,8 @@ namespace Application.Interfaces;
 public interface IReviewRepository
 {
     Task AddReviewAsync(Review review, CancellationToken ct);
-    Task<List<Review>> GetUserReviews(int userId, CancellationToken ct);
+    Task<List<Review>?> GetUserReviews(int userId, CancellationToken ct);
+    Task<List<Review>?> GetProductReviews(int productId, CancellationToken ct);
+    Task<Review?> GetReviewById(int id, CancellationToken ct);
 
 }

@@ -1,6 +1,7 @@
 ﻿using Application.DTOs.Review;
 using Application.Interfaces;
 using MediatR;
+using Domain.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,7 @@ public class GetUserReviewsCommandHandler : IRequestHandler<GetUserReviewsComman
     public async Task<List<ReviewResponseDto>> Handle(GetUserReviewsCommand command, CancellationToken ct)
     {
         var userReviews = await _reviewRepositiry.GetUserReviews(command.UserId, ct);
+        if (userReviews == null || userReviews.Count == 0) new DomainException("The User didn't left comments");
 
         var userReviewsdto = userReviews.Select(r => new ReviewResponseDto
         {

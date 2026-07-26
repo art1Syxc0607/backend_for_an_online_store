@@ -33,11 +33,12 @@ public class Product
     //public virtual IReadOnlyCollection<InventoryTransaction> InventoryTransactions => _inventoryTransactions.AsReadOnly();
 
 
-    public Product(string name, decimal price, int stockQuantity, int? sellerId = null, int? categoryId = null)
+    public Product(string name, decimal price, int stockQuantity, string description, int? categoryId = null)
     {
         SetName(name);
         SetPrice(price);
         SetStock(stockQuantity);
+        this.Description = description;
         //SellerId = sellerId;
         CategoryId = categoryId;
         CreatedAt = DateTime.UtcNow;
@@ -45,12 +46,14 @@ public class Product
     }
 
     // Бизнес-методы
-    public void UpdateDetails(string? name = null, string? description = null, decimal? price = null, string? 
-        sku = null, string? imageUrl = null)
+    public void UpdateDetails(string? name = null, decimal? price = null, string? description = null,
+        int? StockQuantity = null, string? sku = null, string? imageUrl = null)
     {
         if (name != null) SetName(name);
         if (description != null) Description = description;
         if (price != null) SetPrice(price.Value);
+        if(StockQuantity  != null) SetStock(StockQuantity.Value);
+
         if (sku != null) Sku = sku;
         if (imageUrl != null) ImageUrl = imageUrl;
         UpdatedAt = DateTime.UtcNow;
@@ -136,11 +139,13 @@ public class Product
         Price = price;
     }
 
-    private void SetStock(int quantity)
+    public void SetStock(int newStock)
     {
-        if (quantity < 0)
-            throw new DomainException("Stock cannot be negative.");
-        StockQuantity = quantity;
+        if (newStock < 0)
+            throw new DomainException("Stock cannot be negative");
+        if (newStock < ReservedQuantity)
+            throw new DomainException($"Cannot set stock below reserved quantity ({ReservedQuantity})");
+        StockQuantity = newStock;
     }
 }
 

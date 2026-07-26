@@ -34,7 +34,10 @@ public class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, OrderResponse
         {
             Id = order.Id,
             UserId = order.UserId,
-            Items = order.Items,
+            Items = order.Items.Select(i => new OrderItemDto
+            (
+                i.ProductId, i.Quantity, i.PriceAtPurchase           
+            )).ToList(),
             TotalAmount = order.TotalAmount,
             ShippingAddress = order.ShippingAddress,
             Status = order.Status,

@@ -1,13 +1,14 @@
-﻿using System;
+﻿using Application.DTOs.Order;
+using Application.Interfaces;
+using Domain.Entities;
+using Domain.Enums;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Application.DTOs.Order;
-using Application.Interfaces;
-using Domain.Entities;
-using Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repositories;
 
@@ -53,12 +54,29 @@ public class OrderRepository : IOrderRepository
         await Task.CompletedTask;
     }
 
-    public async Task<bool> IfBuyThisProduct(int userId, int productId, CancellationToken ct = default)
+    public async Task<bool> HasProductInOrdersAsync(int productId, CancellationToken ct)
     {
-        var orders = await GetAllAsync(userId, ct);
+        //Сейчас ты проверяешь, есть ли любой заказ с этим товаром.Но если заказ отменен — товар физически не 
+        //был продан, и его можно удалить.
 
-        var result = orders.Any(order => order.Status == Domain.Enums.OrderStatus.Delivered && 
-        order.Items.Any(oi => oi.ProductId == productId));
+        return await _dpcontext.Orders
+            .AnyAsync(o =>
+                o.Status != OrderStatus.Cancelled &&
+                o.Items.Any(i => i.ProductId == productId),
+                ct);
+    }
+
+    public async Task<bool> HasUserPurchasedProductAsync(int userId, int productId, CancellationToken ct = default)
+    {
+        //var orders = await GetAllAsync(userId, ct);
+
+        //var result = orders.Any(order => order.Status == Domain.Enums.OrderStatus.Delivered && 
+        //order.Items.Any(oi => oi.ProductId == productId));
+
+        var result = await _dpcontext.Orders
+        .AnyAsync(o => o.UserId == userId
+                       && o.Status == OrderStatus.Delivered
+                       && o.Items.Any(i => i.ProductId == productId), ct);
 
         return result;
     }
