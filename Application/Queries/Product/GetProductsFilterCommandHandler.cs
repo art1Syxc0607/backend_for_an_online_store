@@ -1,7 +1,8 @@
 ﻿using Application.DTOs.Product;
+using Application.Enums;
 using Application.Interfaces;
-using MediatR;
 using Domain.Exceptions;
+using MediatR;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,15 +27,29 @@ public class GetProductsFilterCommandHandler : IRequestHandler<GetProductsFilter
 
     public async Task<List<ProductResponseDto>> Handle(GetProductsFilterCommand command, CancellationToken ct)
     {
-        if (command.CategoryId.HasValue)
+        var products = await _productRepository.GetProductsFilter(
+            command.CategoryId,
+            command.SearchText,
+            command.PriceLimitMax,
+            command.PriceLimitMin,
+            command.OnlyAvailable,
+            command.PageNumber,
+            command.PageSize,
+            command.SortBy,
+            command.SortDesc
+        );
+
+        return products.Select(p => new ProductResponseDto
         {
-            if (!await _categoryRepository.ExistByIdAsync(command.CategoryId.Value, ct))
-                throw new DomainException("No such Category");
-        }
-
-        var filteredProducts = await _productRepository.GetProductsFilter(command.CategoryId.Value,
-            command.SearchText, command.PriceLimit, command.OnlyAvailable, command.SortBy, command.SortDesc);
-
-
+            Id = p.Id,
+            Name = p.Name,
+            Description = p.Description,
+            Price = p.Price,
+            StockQuantity = p.StockQuantity,
+            ReservedQuantity = p.ReservedQuantity,
+            CategoryId = p.CategoryId,
+            CreatedAt = p.CreatedAt,
+            UpdatedAt = p.UpdatedAt,
+        }).ToList();
     }
 }

@@ -23,7 +23,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(p => p.StockQuantity).IsRequired();
         builder.Property(p => p.ReservedQuantity).IsRequired();
-        builder.Property(p => p.AvailableQuantity).IsRequired();
+
+        // ✅ Ignore вычисляемое поле
+        builder.Ignore(p => p.AvailableQuantity);
 
         builder.Property(p => p.Sku).HasMaxLength(100);
         builder.Property(p => p.ImageUrl).HasMaxLength(2048);

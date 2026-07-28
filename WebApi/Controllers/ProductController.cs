@@ -78,19 +78,21 @@ public class ProductController : ControllerBase
         return Ok();
     }
 
-    // ========== Фильтрация и Поиск, Сортировка ==========
+    // ========== Фильтрация и Поиск, Сортировка, Плагинация ==========
     [HttpGet]
-    public async Task<ActionResult<List<ProductResponseDto>>> GetProductsFilter([FromBody] ProductFilterDto dto,
-        [FromQuery] SortBy? sortBy = SortBy.Name, [FromQuery] bool sortDesc = true)
+    public async Task<ActionResult<List<ProductResponseDto>>> GetProductsFilter([FromQuery] ProductFilterDto dto)
     {
         var command = new GetProductsFilterCommand
         {
             SearchText = dto.SearchText,
             CategoryId = dto.CategoryId,
-            PriceLimit = dto.PriceLimit,
+            PriceLimitMax = dto.PriceLimitMax,
+            PriceLimitMin = dto.PriceLimitMin,
             OnlyAvailable = dto.OnlyAvailable,
-            SortBy = sortBy,
-            SortDesc = sortDesc
+            PageNumber = dto.PageNumber,
+            PageSize = dto.PageSize,
+            SortBy = dto.SortBy,
+            SortDesc = dto.SortDesc
         };
 
         return await _mediator.Send(command);

@@ -1,7 +1,10 @@
-﻿using Application.Interfaces;
+﻿using Application.Enums;
+using Application.Interfaces;
 using Domain.Entities;
 using Infrastructure.Data;
+using Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace Infrastructure.Repositories;
 
@@ -66,4 +69,27 @@ public class ProductRepository : IProductRepository
     {
         return await _dpContext.Products.AnyAsync(p =>  id == p.Id);
     }
+
+    public async Task<List<Product>> GetProductsFilter(int? CategoryId, string? SearchText, decimal? PriceLimitMax,
+        decimal? PriceLimitMin, bool? OnlyAvailable, int? pageNumber, int? pageSize, SortBy? sortBy = SortBy.Name, bool SortDesc = true)
+    {
+        var search = _dpContext.Products.Include(p => p.Reviews)
+            .WhereIf(CategoryId != null, p => p.CategoryId == CategoryId)
+            .WhereIf(SearchText != null, p => p.Name.Contains(SearchText) || p.Description.Contains(SearchText))
+            .WhereIf(PriceLimitMin != null, p => p.Price >= PriceLimitMin)
+            .WhereIf(PriceLimitMax != null, p => p.Price <= PriceLimitMax)
+            .WhereIf(OnlyAvailable != null, p => p.AvailableQuantity != 0);
+
+        var sortedQuery = search.ApplySorting(sortBy, SortDesc);
+
+        // Pagination
+        var paginatedproducts = pageNumber != null && pageSize != null ? sortedQuery
+            .Pagination(pageNumber.Value, pageSize.Value) : sortedQuery;
+
+
+
+        return await paginatedproducts.ToListAsync();
+    }
+
 }
+

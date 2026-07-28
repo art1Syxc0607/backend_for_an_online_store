@@ -12,6 +12,11 @@ public record ProductFilterDto
 {
     public string? SearchText { get; init; }
     public int? CategoryId { get; init; }
-    public int? PriceLimit { get; init; }
-    public bool? OnlyAvailable { get; init; } = true;
+    public decimal? PriceLimitMin { get; init; }
+    public decimal? PriceLimitMax { get; init; }
+    public bool? OnlyAvailable { get; init; }
+    public int PageNumber { get; init; } = 1;
+    public int PageSize { get; init; } = 20;
+    public SortBy SortBy { get; init; } = SortBy.Name;
+    public bool SortDesc { get; init; } = true;
 }

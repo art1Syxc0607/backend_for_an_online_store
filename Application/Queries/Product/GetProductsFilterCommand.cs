@@ -13,10 +13,13 @@ public class GetProductsFilterCommand : IRequest<List<ProductResponseDto>>
 {
     public string? SearchText { get; init; }
     public int? CategoryId { get; init; }
-    public int? PriceLimit { get; init; }
+    public decimal? PriceLimitMax { get; init; }
+    public decimal? PriceLimitMin { get; init; }
     public bool? OnlyAvailable { get; init; } = true;
-    public SortBy? SortBy { get; init; } = 0;
-    public bool? SortDesc { get; init; } = true;
+    public int PageNumber { get; init; } = 1;
+    public int PageSize { get; init; } = 20;
+    public SortBy SortBy { get; init; } = 0;
+    public bool SortDesc { get; init; } = true;
     //public bool? OnlyOutOfUserCart { get; init; } = false;
 
 

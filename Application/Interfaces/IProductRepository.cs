@@ -1,4 +1,5 @@
 ﻿using Application.DTOs.Product;
+using Application.Enums;
 using Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -23,7 +24,8 @@ public interface IProductRepository
     Task<bool> ProductsExist(List<int> Ids, CancellationToken ct);
 
 
-    Task<List<Product>> GetProductsFilter(int CategoryId, string? SearchText, int? PriceLimit,
-        bool? OnlyAvailable, string? sortBy = "name", bool? SortDesc = true);
+    Task<List<Product>> GetProductsFilter(int? CategoryId, string? SearchText, decimal? PriceLimitMax,
+        decimal? PriceLimitMin, bool? OnlyAvailable, int? pageNumber, int? pageSize, SortBy? sortBy = SortBy.Name, bool SortDesc = true);
+
 }
 
