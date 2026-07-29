@@ -87,6 +87,40 @@ public class OrderController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize(Roles = "Admin")]
+    [HttpPost("ship/{orderId}")]
+    public async Task<IActionResult> ShipOrder(int orderId)
+    {
+        var command = new InitiateShipmentCommand { OrderId  = orderId };
+
+        await _mediator.Send(command);
+
+        return Ok();
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("deliver/{orderId}")]
+    public async Task<IActionResult> DeliverOrder(int orderId)
+    {
+        var command = new DeliverOrderCommand { OrderId = orderId };
+
+        await _mediator.Send(command);
+
+        return Ok();
+    }
+
+
+    [Authorize(Roles = "User")]
+    [HttpPost("receive/{orderId}")]
+    public async Task<IActionResult> ReceiveOrder(int orderId)
+    {
+        var command = new ReceiveOrderCommand { OrderId = orderId , UserId = GetCurrentUserId()};
+
+        await _mediator.Send(command);
+
+        return Ok();
+    }
+
     //[HttpPost("confirm")]
     //public async Task<IActionResult> ConfirmPayment([FromBody] ConfirmPaymentDto dto)
     //{

@@ -37,7 +37,7 @@ public class AddReviewCommandHandler : IRequestHandler<AddReviewCommand, int>
         if (product == null) throw new DomainException("No such product");
 
         if (!await _orderRepository.HasUserPurchasedProductAsync(command.UserId, command.ProductId, ct))
-            throw new DomainException("User didn' this product");
+            throw new DomainException("User didn' buy or recieved this product");
 
         var review = new Domain.Entities.Review(user, product, command.Text, command.Rating, true);
 

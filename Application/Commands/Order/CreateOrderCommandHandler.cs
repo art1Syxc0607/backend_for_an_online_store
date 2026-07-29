@@ -1,8 +1,9 @@
-﻿using MediatR;
+﻿using Application.Commands.Email;
 using Application.Interfaces;
-using Domain.Exceptions;
-using Domain.Entities;
 using Domain.DTOs.Order;
+using Domain.Entities;
+using Domain.Exceptions;
+using MediatR;
 
 namespace Application.Commands.Order;
 
@@ -12,16 +13,21 @@ public class CreateOrderCommandHandler : IRequestHandler
     private readonly IOrderRepository _orderRepository;
     private readonly IUserRepository _userRepository;
     private readonly IProductRepository _productRepository;
+    private readonly IEmailService _emailService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMediator _mediator;
 
     public CreateOrderCommandHandler(
         IOrderRepository orderRepository,
-        IUnitOfWork unitOfWork, IUserRepository userRepository, IProductRepository productRepository)
+        IUnitOfWork unitOfWork, IUserRepository userRepository, IProductRepository productRepository,
+        IEmailService emailService, IMediator mediator)
     {
         _orderRepository = orderRepository;
         _userRepository = userRepository;
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
+        _emailService = emailService;
+        _mediator = mediator;
     }
 
     public async Task<int> Handle(CreateOrderCommand command,
@@ -55,9 +61,13 @@ public class CreateOrderCommandHandler : IRequestHandler
         // 4. Создаем заказ (вся бизнес-логика внутри Order)
         var order = new Domain.Entities.Order(user, command.ShippingAddress, orderItems);
 
-        await _orderRepository.CreateOrder(order, ct);
 
+
+        await _orderRepository.CreateOrder(order, ct);
         await _unitOfWork.SaveChangesAsync();
+        
+        var createdOrderEmailCommand = new SendOrderConfirmationCommand { OrderId = order.Id };
+        await _mediator.Send(command, ct);
 
         return order.Id;
     }

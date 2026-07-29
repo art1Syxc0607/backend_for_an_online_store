@@ -2,6 +2,7 @@
 using Application.DTOs.Order;
 using Application.DTOs.Product;
 using Application.Enums;
+using Application.Interfaces;
 using Application.Queries.Product;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Xml.Linq;
+using WebApi.Interfaces;
 
 namespace WebApi.Controllers;
 
@@ -18,9 +20,19 @@ namespace WebApi.Controllers;
 public class ProductController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IProductImageService _imageService;
+    private readonly IProductRepository _productRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public ProductController(IMediator mediator)
-        => _mediator = mediator;
+    public ProductController(IMediator mediator, IProductImageService productImageService,
+        IProductRepository productRepository, IUnitOfWork unitOfWork)
+    {
+        _mediator = mediator;
+        _imageService = productImageService;
+        _productRepository = productRepository;
+        _unitOfWork = unitOfWork;
+    }
+
 
     [HttpGet]
     public async Task<ActionResult<List<ProductResponseDto>?>> GetAllProductsAsync()
@@ -77,6 +89,26 @@ public class ProductController : ControllerBase
 
         return Ok();
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("upload-image")]
+    public async Task<IActionResult> UploadImage(int productId, [FromForm] IFormFile file)
+    {
+        var imageUrl = await _imageService.SaveImageAsync(productId, file);
+
+        var ct = new CancellationTokenSource().Token;
+        // Сохраняем URL в БД (в Product.ImageUrl)
+        var product = await _productRepository.GetByIdAsync(productId, ct);
+
+        if (product == null) throw new Exception("No such product");
+
+        product.SetImageUrl(imageUrl);
+        await _unitOfWork.SaveChangesAsync();
+
+        return Ok(new { imageUrl });
+    }
+
+    
 
     // ========== Фильтрация и Поиск, Сортировка, Плагинация ==========
     [HttpGet]

@@ -75,7 +75,7 @@ public class OrderRepository : IOrderRepository
 
         var result = await _dpcontext.Orders
         .AnyAsync(o => o.UserId == userId
-                       && o.Status == OrderStatus.Delivered
+                       && o.Status == OrderStatus.Received
                        && o.Items.Any(i => i.ProductId == productId), ct);
 
         return result;

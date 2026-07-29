@@ -14,15 +14,15 @@ namespace Application.Queries.Product;
 public class GetProductsFilterCommandHandler : IRequestHandler<GetProductsFilterCommand, List<ProductResponseDto>>
 {
     private readonly IProductRepository _productRepository;
-    private readonly ICartRepository _cartRepository;
-    private readonly ICategoryRepository _categoryRepository;
+    //private readonly ICartRepository _cartRepository;
+    //private readonly ICategoryRepository _categoryRepository;
 
-    public GetProductsFilterCommandHandler(IProductRepository productRepository,
-        ICategoryRepository categoryRepository, ICartRepository cartRepository)
+    public GetProductsFilterCommandHandler(IProductRepository productRepository
+/*        ICategoryRepository categoryRepository, ICartRepository cartRepository*/)
     {
-        _cartRepository = cartRepository;
         _productRepository = productRepository;
-        _categoryRepository = categoryRepository;
+        //_cartRepository = cartRepository;
+        //_categoryRepository = categoryRepository;
     }
 
     public async Task<List<ProductResponseDto>> Handle(GetProductsFilterCommand command, CancellationToken ct)

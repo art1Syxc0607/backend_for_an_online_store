@@ -124,6 +124,11 @@ public class Product
         ReservedQuantity -= quantity;
     }
 
+    public void SetImageUrl(string url)
+    {
+        ImageUrl = url;
+    }
+
     // Приватные методы
     private void SetName(string name)
     {

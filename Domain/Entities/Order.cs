@@ -94,6 +94,13 @@ public class Order
         Status = OrderStatus.Delivered;
     }
 
+    public void ReceivedByUser()
+    {
+        if (Status != OrderStatus.Delivered)
+            throw new DomainException("Only delivered orders can be received.");
+        Status = OrderStatus.Received;
+    }
+
     private void RecalculateTotal()
     {
         TotalAmount = _items.Sum(i => i.PriceAtPurchase * i.Quantity);
