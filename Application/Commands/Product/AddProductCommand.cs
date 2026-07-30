@@ -9,9 +9,12 @@ namespace Application.Commands.Product;
 
 public class AddProductCommand : IRequest<int>
 {
-    public string Name { get; set; }
-    public decimal Price { get; set; }
-    public string Description { get; set; }
-    public int StockQuantity { get; set; }
-    public int? CategoryId { get; set; }
+    public string Name { get; init; }
+    public decimal Price { get; init; }
+    public int StockQuantity { get; init; }
+    public int? CategoryId { get; init; }
+    public string Description { get; init; }
+    public Stream? ImageStream { get; init; }     // ← фото как поток
+    public string? ImageFileName { get; init; }
+    public string? ImageContentType { get; init; }
 }

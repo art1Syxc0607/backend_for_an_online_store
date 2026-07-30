@@ -14,18 +14,23 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
 {
     private readonly IProductRepository _productRepository;
     private readonly ICategoryRepository _categoryRepository;
+    private readonly IFileStorageService _fileStorageService;
+    private readonly IMediator _mediator;
     private readonly IUnitOfWork _unitOfWork;
 
     public AddProductCommandHandler(IProductRepository productRepository, IUnitOfWork unitOfWork,
-        ICategoryRepository categoryRepository)
+        ICategoryRepository categoryRepository, IMediator mediator, IFileStorageService fileStorageService)
     {
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _categoryRepository = categoryRepository;
+        _mediator = mediator;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<int> Handle(AddProductCommand command, CancellationToken ct)
     {
+        // 1. Проверка категории
         if (command.CategoryId.HasValue)
         {
             var category = await _categoryRepository.GetByIdAsync(command.CategoryId.Value, ct);
@@ -33,11 +38,31 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
                 throw new DomainException($"Category {command.CategoryId} not found");
         }
 
-        var product = new Domain.Entities.Product(command.Name, command.Price, command.StockQuantity, 
-            command.Description, command.CategoryId);
+        // 2. Создаем продукт
+        var product = new Domain.Entities.Product(
+            command.Name,
+            command.Price,
+            command.StockQuantity,
+            command.Description,
+            command.CategoryId
+        );
 
         await _productRepository.AddProductAsync(product, ct);
-        await _unitOfWork.SaveChangesAsync();
+
+        // 3. Если есть фото — сохраняем и обновляем продукт
+        if (command.ImageStream != null && !string.IsNullOrEmpty(command.ImageFileName))
+        {
+            var imageUrl = await _fileStorageService.UploadFileAsync(
+                command.ImageStream,
+                command.ImageFileName,
+                command.ImageContentType ?? "image/jpeg",
+                ct
+            );
+            product.SetImageUrl(imageUrl);
+        }
+
+        // 4. Единое сохранение!
+        await _unitOfWork.SaveChangesAsync(ct);
 
         return product.Id;
     }

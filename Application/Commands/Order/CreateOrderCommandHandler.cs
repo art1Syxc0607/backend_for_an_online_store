@@ -38,6 +38,9 @@ public class CreateOrderCommandHandler : IRequestHandler
         if (user == null) 
             throw new DomainException("No such user");
 
+        // Проверка подтверждения email
+        user.EnsureEmailConfirmed();
+
         var productIds = command.Items.Select(i => i.ProductId).ToList();
         var products = await _productRepository.GetByIdsAsync(productIds, ct);
 

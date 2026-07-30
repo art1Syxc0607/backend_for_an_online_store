@@ -13,9 +13,9 @@ public interface IEmailService
     //Task SendEmailAsync(string to, string subject, string body, List<Attachment>? attachments = null);
 }
 
-public record Attachment
-{
-    public string FileName { get; init; }
-    public byte[] Content { get; init; }
-    public string ContentType { get; init; }
-}
+//public record Attachment
+//{
+//    public string FileName { get; init; }
+//    public byte[] Content { get; init; }
+//    public string ContentType { get; init; }
+//}

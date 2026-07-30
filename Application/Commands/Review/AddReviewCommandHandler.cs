@@ -32,6 +32,8 @@ public class AddReviewCommandHandler : IRequestHandler<AddReviewCommand, int>
     {
         var user = await _userRepository.GetByIdAsync(command.UserId, ct);
         if (user == null) throw new DomainException("No such user");
+        // Проверка подтверждения email
+        user.EnsureEmailConfirmed();
 
         var product = await _productRepository.GetByIdAsync(command.ProductId, ct);
         if (product == null) throw new DomainException("No such product");

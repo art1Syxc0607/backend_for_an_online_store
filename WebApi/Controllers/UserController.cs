@@ -1,3 +1,4 @@
+using Application.Commands.Email;
 using Application.Commands.User;
 using Application.DTOs.User;
 using MediatR;
@@ -19,18 +20,25 @@ public class UserController : ControllerBase
         => _mediator = mediator;
 
     [HttpPost("register")]
-    public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterDto registerDto)
+    public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterCommand command)
     {
-        var command = new RegisterCommand
+        var result = await _mediator.Send(command);
+        return Ok(result);
+    }
+
+    [HttpGet("confirm-email")]
+    public async Task<IActionResult> ConfirmEmail([FromQuery] int userId, [FromQuery] string token)
+    {
+        var command = new ConfirmEmailCommand
         {
-            Email = registerDto.Email,
-            UserName = registerDto.UserName,
-            Password = registerDto.Password,
+            UserId = userId,
+            Token = token
         };
 
-        var result = await _mediator.Send(command);
+        await _mediator.Send(command);
 
-        return Ok(result);
+        // Перенаправляем на фронтенд страницу успеха
+        return Redirect("https://yourstore.com/email-confirmed");
     }
 
     [HttpPost("login")]

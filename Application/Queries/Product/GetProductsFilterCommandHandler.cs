@@ -47,6 +47,7 @@ public class GetProductsFilterCommandHandler : IRequestHandler<GetProductsFilter
             Price = p.Price,
             StockQuantity = p.StockQuantity,
             ReservedQuantity = p.ReservedQuantity,
+            ImageUrl = p.ImageUrl,
             CategoryId = p.CategoryId,
             CreatedAt = p.CreatedAt,
             UpdatedAt = p.UpdatedAt,

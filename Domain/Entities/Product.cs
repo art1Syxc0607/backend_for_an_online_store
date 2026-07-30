@@ -124,9 +124,16 @@ public class Product
         ReservedQuantity -= quantity;
     }
 
-    public void SetImageUrl(string url)
+    public void SetImageUrl(string imageUrl)
     {
-        ImageUrl = url;
+        if (string.IsNullOrWhiteSpace(imageUrl))
+            throw new DomainException("Image URL cannot be empty");
+        ImageUrl = imageUrl;
+    }
+
+    public void ClearImageUrl()
+    {
+        ImageUrl = null;
     }
 
     // Приватные методы

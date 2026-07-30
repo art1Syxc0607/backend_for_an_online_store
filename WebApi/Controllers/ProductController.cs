@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Xml.Linq;
 using WebApi.Interfaces;
+using WebApi.DTOs.Product;
 
 namespace WebApi.Controllers;
 
@@ -20,15 +21,15 @@ namespace WebApi.Controllers;
 public class ProductController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly IProductImageService _imageService;
+    private readonly IFileStorageService _fileStorageService;
     private readonly IProductRepository _productRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public ProductController(IMediator mediator, IProductImageService productImageService,
+    public ProductController(IMediator mediator, IFileStorageService fileStorageService,
         IProductRepository productRepository, IUnitOfWork unitOfWork)
     {
         _mediator = mediator;
-        _imageService = productImageService;
+        _fileStorageService = fileStorageService;
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
     }
@@ -44,7 +45,7 @@ public class ProductController : ControllerBase
 
     [Authorize(Roles = "admin")]
     [HttpPost]
-    public async Task<ActionResult<int>> AddProduct([FromBody] AddProductDto dto)
+    public async Task<ActionResult<int>> AddProduct([FromForm] AddProductDto dto)
     {
         var command = new AddProductCommand
         {
@@ -52,9 +53,14 @@ public class ProductController : ControllerBase
             Price = dto.Price,
             StockQuantity = dto.StockQuantity,
             CategoryId = dto.CategoryId,
+            Description = dto.Description,
+            ImageStream = dto.ImageFile?.OpenReadStream(),
+            ImageFileName = dto.ImageFile?.FileName,
+            ImageContentType = dto.ImageFile?.ContentType
         };
 
-        return await _mediator.Send(command);
+        var productId = await _mediator.Send(command);
+        return productId;
     }
 
 
@@ -90,25 +96,73 @@ public class ProductController : ControllerBase
         return Ok();
     }
 
-    [Authorize(Roles = "Admin")]
-    [HttpPost("upload-image")]
-    public async Task<IActionResult> UploadImage(int productId, [FromForm] IFormFile file)
+    [HttpPost("{productId}/image")]
+    public async Task<ActionResult<string>> UploadImage(int productId, [FromForm] IFormFile file)
     {
-        var imageUrl = await _imageService.SaveImageAsync(productId, file);
+        // 1. Проверка файла
+        if (file == null || file.Length == 0)
+            return BadRequest("No file uploaded");
 
-        var ct = new CancellationTokenSource().Token;
-        // Сохраняем URL в БД (в Product.ImageUrl)
-        var product = await _productRepository.GetByIdAsync(productId, ct);
+        // 2. Проверка размера (5MB)
+        if (file.Length > 5 * 1024 * 1024)
+            return BadRequest("File size exceeds 5MB");
 
-        if (product == null) throw new Exception("No such product");
+        // 3. Проверка типа
+        var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp", "image/gif" };
+        if (!allowedTypes.Contains(file.ContentType))
+            return BadRequest($"Invalid file type. Allowed: {string.Join(", ", allowedTypes)}");
 
-        product.SetImageUrl(imageUrl);
-        await _unitOfWork.SaveChangesAsync();
+        // 4. Создаем команду
+        var command = new UploadProductImageCommand
+        {
+            ProductId = productId,
+            FileStream = file.OpenReadStream(),
+            FileName = file.FileName,
+            ContentType = file.ContentType
+        };
+
+        // 5. Отправляем через MediatR
+        var imageUrl = await _mediator.Send(command);
 
         return Ok(new { imageUrl });
     }
 
-    
+    [HttpDelete("{productId}/image")]
+    public async Task<IActionResult> DeleteImage(int productId)
+    {
+        var ct = CancellationToken.None;
+        var product = await _productRepository.GetByIdAsync(productId, ct);
+        if (product == null) return NotFound();
+
+        // Удаляем из хранилища
+        await _fileStorageService.DeleteFileAsync(product.ImageUrl); // логика проверки внутри
+
+        // Удаляем URL из сущности
+        product.ClearImageUrl();
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    //[Authorize(Roles = "Admin")]
+    //[HttpPost("upload-image")]
+    //public async Task<IActionResult> UploadImage(int productId, [FromForm] IFormFile file)
+    //{
+    //    var imageUrl = await _imageService.SaveImageAsync(productId, file);
+
+    //    var ct = new CancellationTokenSource().Token;
+    //    // Сохраняем URL в БД (в Product.ImageUrl)
+    //    var product = await _productRepository.GetByIdAsync(productId, ct);
+
+    //    if (product == null) throw new Exception("No such product");
+
+    //    product.SetImageUrl(imageUrl);
+    //    await _unitOfWork.SaveChangesAsync();
+
+    //    return Ok(new { imageUrl });
+    //}
+
 
     // ========== Фильтрация и Поиск, Сортировка, Плагинация ==========
     [HttpGet]

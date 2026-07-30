@@ -37,6 +37,8 @@ public class CheckoutCommandHandler : IRequestHandler<CheckoutCommand, int> // I
         var user = await _userRepository.GetByIdAsync(command.UserId, ct);
         if (user == null)
             throw new DomainException("User not found");
+        // Проверка подтверждения email
+        user.EnsureEmailConfirmed();
 
         // Проверяем, что корзина не пуста
         if (!cart.Items.Any())

@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Product;
+namespace Application.Commands.Email;
 
-public class UploadImageCommand 
+public class ResendConfirmationCommand : IRequest
 {
-
+    public string Email { get; init; }
 }

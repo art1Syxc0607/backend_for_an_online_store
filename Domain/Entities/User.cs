@@ -17,6 +17,12 @@ public class User
     public UserRole Role { get; private set; } 
     public DateTime CreatedAt { get; private set; }
 
+    // Registration confirming
+    public bool IsEmailConfirmed { get; private set; }
+    public DateTime? EmailConfirmedAt { get; private set; }
+    public string? EmailConfirmationToken { get; private set; }
+    public DateTime? EmailConfirmationTokenExpiry { get; private set; }
+
     // Навигационные свойства
     public Cart? Cart { get; private set; }
     public virtual IReadOnlyCollection<Review> Reviews => _reviews.AsReadOnly();
@@ -33,6 +39,37 @@ public class User
         CreatedAt = DateTime.UtcNow;
     }
 
+    // Метод для генерации токена подтверждения
+    public void GenerateEmailConfirmationToken(string token, DateTime expiry)
+    {
+        EmailConfirmationToken = token;
+        EmailConfirmationTokenExpiry = expiry;
+        IsEmailConfirmed = false;
+    }
+
+    // Метод для подтверждения email
+    public void ConfirmEmail(string token)
+    {
+        if (IsEmailConfirmed)
+            throw new DomainException("Email already confirmed");
+
+        if (EmailConfirmationToken != token)
+            throw new DomainException("Invalid confirmation token");
+
+        if (EmailConfirmationTokenExpiry < DateTime.UtcNow)
+            throw new DomainException("Confirmation token expired");
+
+        IsEmailConfirmed = true;
+        EmailConfirmedAt = DateTime.UtcNow;
+        EmailConfirmationToken = null;
+        EmailConfirmationTokenExpiry = null;
+    }
+
+    public void EnsureEmailConfirmed()
+    {
+        if (!IsEmailConfirmed)
+            throw new DomainException("Email not confirmed. Please confirm your email first.");
+    }
 
     // Бизнес-методы
     public void UpdateProfile(string? email = null, string? name = null)

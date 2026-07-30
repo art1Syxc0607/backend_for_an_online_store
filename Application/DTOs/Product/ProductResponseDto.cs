@@ -15,6 +15,7 @@ public class ProductResponseDto
     public int StockQuantity { get; init; }
     public int ReservedQuantity { get; init; }
     public int AvailableQuantity => StockQuantity - ReservedQuantity;
+    public string? ImageUrl { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
 
