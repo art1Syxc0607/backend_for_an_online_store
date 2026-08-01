@@ -1,4 +1,5 @@
-﻿using Application.Interfaces;
+﻿using Application.DTOs.Product;
+using Application.Interfaces;
 using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
@@ -49,20 +50,40 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
 
         await _productRepository.AddProductAsync(product, ct);
 
-        // 3. Если есть фото — сохраняем и обновляем продукт
-        if (command.ImageStream != null && !string.IsNullOrEmpty(command.ImageFileName))
+        // 3. Если есть файлы — сохраняем и обновляем продукт
+        var imageUrls = new List<string>();
+        var videoUrls = new List<string>();
+
+        if (command.Files != null)
         {
-            var imageUrl = await _fileStorageService.UploadFileAsync(
-                command.ImageStream,
-                command.ImageFileName,
-                command.ImageContentType ?? "image/jpeg",
-                ct
-            );
-            product.SetImageUrl(imageUrl);
+            foreach (var file in command.Files)
+            {
+                // Сохраняем файл
+                var url = await _fileStorageService.UploadFileAsync(
+                    file.Stream,
+                    file.FileName,
+                    file.ContentType,
+                    $"products/{product.Id}",
+                    ct
+                );
+
+                // Определяем тип и сохраняем в соответствующую коллекцию
+                if (file.ContentType.StartsWith("image/"))
+                    imageUrls.Add(url);
+                else if (file.ContentType.StartsWith("video/"))
+                    videoUrls.Add(url);
+
+            }
+
+            // Обновляем продукт
+            product.SetImageUrls(imageUrls);
+            product.SetVideoUrls(videoUrls);
         }
 
         // 4. Единое сохранение!
         await _unitOfWork.SaveChangesAsync(ct);
+
+
 
         return product.Id;
     }

@@ -20,24 +20,37 @@ public class LocalFileStorageService : IFileStorageService
         _logger = logger;
     }
 
-    public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, CancellationToken ct = default)
+    public async Task<string> UploadFileAsync(
+        Stream fileStream,
+        string fileName,
+        string contentType,
+        string? subFolder = null,  // ← добавить!
+        CancellationToken ct = default)
     {
         // 1. Генерируем уникальное имя
         var extension = Path.GetExtension(fileName);
         var uniqueName = $"{Guid.NewGuid():N}{extension}";
 
-        // 2. Папка для хранения
-        var uploadsFolder = Path.Combine(_environment.WebRootPath, "images", "products");
-        if (!Directory.Exists(uploadsFolder))
-            Directory.CreateDirectory(uploadsFolder);
+        // 2. Формируем путь с учетом подпапки
+        var baseFolder = Path.Combine(_environment.WebRootPath, "images");
+        var targetFolder = string.IsNullOrEmpty(subFolder)
+            ? Path.Combine(baseFolder, "products")
+            : Path.Combine(baseFolder, subFolder.Replace('/', Path.DirectorySeparatorChar));
+
+        if (!Directory.Exists(targetFolder))
+            Directory.CreateDirectory(targetFolder);
 
         // 3. Сохраняем файл
-        var filePath = Path.Combine(uploadsFolder, uniqueName);
+        var filePath = Path.Combine(targetFolder, uniqueName);
         using var fileStreamOutput = new FileStream(filePath, FileMode.Create);
         await fileStream.CopyToAsync(fileStreamOutput, ct);
 
         // 4. Возвращаем URL
-        return $"/images/products/{uniqueName}";
+        var urlPath = string.IsNullOrEmpty(subFolder) 
+            ? $"/images/products/{uniqueName}"
+            : $"/images/{subFolder}/{uniqueName}";
+
+        return urlPath;
     }
 
     public Task DeleteFileAsync(string fileUrl, CancellationToken ct = default)
@@ -49,5 +62,13 @@ public class LocalFileStorageService : IFileStorageService
             File.Delete(filePath);
 
         return Task.CompletedTask;
+    }
+
+    public async Task DeleteMultipleFilesAsync(List<string> fileUrls, CancellationToken ct = default)
+    {
+        foreach (var url in fileUrls)
+        {
+            await DeleteFileAsync(url, ct);
+        }
     }
 }

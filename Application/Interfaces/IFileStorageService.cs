@@ -11,10 +11,14 @@ public interface IFileStorageService
     /// <summary>
     /// Сохраняет файл и возвращает URL для доступа
     /// </summary>
-    Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, CancellationToken ct = default);
+    Task<string> UploadFileAsync(Stream fileStream, string fileName, 
+        string contentType, string subFolder, CancellationToken ct = default);
 
     /// <summary>
     /// Удаляет файл по URL
     /// </summary>
     Task DeleteFileAsync(string fileUrl, CancellationToken ct = default);
+
+    // Новый метод для массового удаления (опционально)
+    Task DeleteMultipleFilesAsync(List<string> fileUrls, CancellationToken ct = default);
 }

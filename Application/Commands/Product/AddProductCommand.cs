@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Application.DTOs.Product;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +15,9 @@ public class AddProductCommand : IRequest<int>
     public int StockQuantity { get; init; }
     public int? CategoryId { get; init; }
     public string Description { get; init; }
-    public Stream? ImageStream { get; init; }     // ← фото как поток
-    public string? ImageFileName { get; init; }
-    public string? ImageContentType { get; init; }
+    //public Stream? ImageStream { get; init; }     // ← фото как поток
+    //public string? ImageFileName { get; init; }
+    //public string? ImageContentType { get; init; }
+
+    public List<FileUploadDto>? Files { get; init; }
 }

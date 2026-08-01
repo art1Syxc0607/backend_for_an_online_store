@@ -7,6 +7,8 @@ public class Product
     private List<Review> _reviews = new();
     private List<CartItem> _cartItems = new();
     private List<OrderItem> _orderItems = new();
+    private List<string> _imageUrls = new();
+    private List<string> _videoUrls = new();
     //private List<InventoryTransaction> _inventoryTransactions = new();
 
     public int Id { get; private set; }
@@ -30,6 +32,8 @@ public class Product
     public virtual IReadOnlyCollection<Review> Reviews => _reviews.AsReadOnly();
     public virtual IReadOnlyCollection<CartItem> CartItems => _cartItems.AsReadOnly();
     public virtual IReadOnlyCollection<OrderItem> OrderItems => _orderItems.AsReadOnly();
+    public IReadOnlyCollection<string> ImageUrls => _imageUrls.AsReadOnly();
+    public IReadOnlyCollection<string> VideoUrls => _videoUrls.AsReadOnly();
     //public virtual IReadOnlyCollection<InventoryTransaction> InventoryTransactions => _inventoryTransactions.AsReadOnly();
 
 
@@ -158,6 +162,46 @@ public class Product
         if (newStock < ReservedQuantity)
             throw new DomainException($"Cannot set stock below reserved quantity ({ReservedQuantity})");
         StockQuantity = newStock;
+    }
+
+    public void SetImageUrls(List<string> urls)
+    {
+        if (urls == null) throw new DomainException("Image URLs cannot be null");
+
+        // Максимум 8 изображений
+        if (_imageUrls.Count + urls.Count > 8)
+            throw new DomainException($"Maximum 8 images allowed (current: {_imageUrls.Count})");
+
+        _imageUrls.AddRange(urls);
+    }
+
+    public void SetVideoUrls(List<string> urls)
+    {
+        if (urls == null) throw new DomainException("Video URLs cannot be null");
+
+        // Максимум 2 видео
+        if (_videoUrls.Count + urls.Count > 2)
+            throw new DomainException($"Maximum 2 videos allowed (current: {_videoUrls.Count})");
+
+        _videoUrls.AddRange(urls);
+    }
+
+    public void RemoveImage(string imageUrl)
+    {
+        if (!_imageUrls.Remove(imageUrl))
+            throw new DomainException("Image not found");
+    }
+
+    public void RemoveVideo(string videoUrl)
+    {
+        if (!_videoUrls.Remove(videoUrl))
+            throw new DomainException("Video not found");
+    }
+
+    public void ClearAllFiles()
+    {
+        _imageUrls.Clear();
+        _videoUrls.Clear();
     }
 }
 

@@ -41,44 +41,30 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
         if (order == null)
             throw new DomainException("Order not found");
 
-        // 2. Проверяем, что заказ принадлежит пользователю
         if (order.UserId != command.UserId)
             throw new UnauthorizedAccessException("This order doesn't belong to you");
 
-        // 3. Проверяем, что заказ не оплачен и не отменен
         if (order.Status == OrderStatus.Paid)
             throw new DomainException("Order is already paid");
         if (order.Status == OrderStatus.Cancelled)
             throw new DomainException("Cannot pay for a cancelled order");
 
-        // 4. Инициируем оплату через внешний сервис
-        var result = await _paymentService.InitiatePaymentAsync(
-            command.OrderId,
+        // 2. Инициируем оплату через внешний сервис
+        var result = await _paymentService.InitiatePaymentAsync(command.OrderId, command.Method, ct);
+
+        if (!result.Success)
+            return result;
+
+        // 3. Создаем Payment со статусом Pending (НЕ помечаем заказ как оплаченный!)
+        var payment = new Payment(
+            order.Id,
+            order.TotalAmount,
             command.Method,
-            ct
+            result.PaymentIntentId
         );
 
-        // 5. Если оплата успешно инициирована — сохраняем Payment в БД
-        if (result.Success)
-        {
-            // Сохраняем информацию о платеже
-            order.MarkAsPaid(); // ← метод в сущности Order
-
-            // Сохраняем Payment (если есть такая сущность)
-            //var payment = new Payment
-            //{
-            //    OrderId = order.Id,
-            //    Amount = order.TotalAmount,
-            //    Status = PaymentStatus.Pending,
-            //    TransactionId = result.PaymentIntentId,
-            //    PaymentMethod = command.Method,
-            //    CreatedAt = DateTime.UtcNow
-            //};
-
-            var payment = new Payment(order.Id, order.TotalAmount, command.Method);
-            await _paymentRepository.AddAsync(payment, ct);
-            await _unitOfWork.SaveChangesAsync(ct);
-        }
+        await _paymentRepository.AddAsync(payment, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
 
         return result;
     }

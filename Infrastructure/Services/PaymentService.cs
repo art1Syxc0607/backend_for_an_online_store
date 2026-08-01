@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Infrastructure.Repositories;
+namespace Infrastructure.Services;
 
 // Infrastructure/Services/PaymentService.cs
 public class PaymentService : IPaymentService
