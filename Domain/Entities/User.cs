@@ -98,6 +98,13 @@ public class User
         Role = UserRole.Admin;
     }
 
+    public void DemoteFromAdmin()
+    {
+        if (Role == UserRole.Customer)
+            throw new DomainException("User is not an admin.");
+        Role = UserRole.Customer;
+    }
+
     // Приватные методы для валидации
     private void SetEmail(string email)
     {

@@ -17,8 +17,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection Extension(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
+        //services.AddDbContext<AppDbContext>(options =>
+        //    options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
 
 
         services.AddScoped<ICartRepository, CartRepository>();

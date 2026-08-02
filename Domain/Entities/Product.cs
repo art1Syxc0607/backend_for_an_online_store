@@ -19,7 +19,7 @@ public class Product
     public int ReservedQuantity { get; private set; }
     public int AvailableQuantity => StockQuantity - ReservedQuantity;
     public string? Sku { get; private set; }
-    public string? ImageUrl { get; private set; }
+    //public string? ImageUrl { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -39,6 +39,7 @@ public class Product
 
     public Product(string name, decimal price, int stockQuantity, string description, int? categoryId = null)
     {
+        ReservedQuantity = 0;
         SetName(name);
         SetPrice(price);
         SetStock(stockQuantity);
@@ -59,7 +60,7 @@ public class Product
         if(StockQuantity  != null) SetStock(StockQuantity.Value);
 
         if (sku != null) Sku = sku;
-        if (imageUrl != null) ImageUrl = imageUrl;
+        //if (imageUrl != null) ImageUrl = imageUrl;
         UpdatedAt = DateTime.UtcNow;
     }
 

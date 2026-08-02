@@ -121,22 +121,21 @@ public class OrderController : ControllerBase
         return Ok();
     }
 
-    //[HttpPost("confirm")]
-    //public async Task<IActionResult> ConfirmPayment([FromBody] ConfirmPaymentDto dto)
-    //{
-    //    var command = new ConfirmPaymentCommand
-    //    {
-    //        PaymentIntentId = dto.PaymentIntentId
-    //    };
+    [HttpPost("confirm")]
+    public async Task<ActionResult<PaymentConfirmation>> ConfirmPayment([FromBody] ConfirmPaymentDto dto)
+    {
+        var command = new ConfirmPaymentCommand
+        {
+            PaymentIntentId = dto.PaymentIntentId
+        };
 
-    //    var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command);
 
-    //    if (!result.Success)
-    //        return BadRequest(new { error = result.ErrorMessage });
+        if (!result.Success)
+            return BadRequest(new { error = result.ErrorMessage });
 
-    //    return Ok(result);
-    //}
-
+        return Ok(result);
+    }
 
 
     [HttpPut]
