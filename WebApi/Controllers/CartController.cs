@@ -51,9 +51,9 @@ public class CartController : ControllerBase
     {
         var command = new AddToCartCommand
         {
-            productId = request.productId,
-            countOfProduct = request.countOfProduct,
-            userId = GetCurrentUserId(),
+            ProductId = request.productId,
+            Quantity = request.countOfProduct,
+            UserId = GetCurrentUserId(),
         };
         await _mediator.Send(command);
 

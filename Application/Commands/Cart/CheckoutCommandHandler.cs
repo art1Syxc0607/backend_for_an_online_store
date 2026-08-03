@@ -44,7 +44,7 @@ public class CheckoutCommandHandler : IRequestHandler<CheckoutCommand, int> // I
         if (!cart.Items.Any())
             throw new DomainException("Cannot checkout an empty cart");
 
-        var orderItemsDto = cart.Items.Select(ci => new Domain.DTOs.Order.OrderItemDto(
+        var orderItemsDto = cart.Items.Select(ci => new Domain.DTOs.Order.OrderItemDomainDto(
                 ci.Product,
                 ci.Quantity,
                 ci.Product.Price

@@ -22,7 +22,7 @@ public class Order
 
     private Order() { }
 
-    public Order(User user, string shippingAddress, List<OrderItemDto> items)
+    public Order(User user, string shippingAddress, List<OrderItemDomainDto> items)
     {
         User = user ?? throw new DomainException("User cannot be null.");
         UserId = user.Id;

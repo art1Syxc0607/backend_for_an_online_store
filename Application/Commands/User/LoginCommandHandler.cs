@@ -15,18 +15,15 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtService _jwtService;
-    private readonly IUnitOfWork _unitOfWork;
 
     public LoginCommandHandler(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
-    IJwtService jwtService,
-    IUnitOfWork unitOfWork)
+    IJwtService jwtService)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _jwtService = jwtService;
-        _unitOfWork = unitOfWork;
     }
 
     public async Task<AuthResponseDto> Handle(LoginCommand request, CancellationToken ct)
@@ -39,11 +36,11 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
 
         var user = await _userRepository.GetByEmailAsync(request.Email, ct);
 
-        if (user != null)
-            throw new DomainException("There isn't a user with this Email");
+        if (user == null)
+            throw new DomainException("Invalid email or password.");
 
-        if (user.PasswordHash != _passwordHasher.HashPassword(request.Password))
-            throw new DomainException("Password is wrong");
+        if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
+            throw new DomainException("Invalid email or password.");
 
         var response = new AuthResponseDto
         {

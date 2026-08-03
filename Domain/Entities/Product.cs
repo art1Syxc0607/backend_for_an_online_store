@@ -16,7 +16,7 @@ public class Product
     public string Description { get; private set; }
     public decimal Price { get; private set; }
     public int StockQuantity { get; private set; }
-    public int ReservedQuantity { get; private set; }
+    public int ReservedQuantity { get; private set; } = 0;
     public int AvailableQuantity => StockQuantity - ReservedQuantity;
     public string? Sku { get; private set; }
     //public string? ImageUrl { get; private set; }
@@ -37,17 +37,20 @@ public class Product
     //public virtual IReadOnlyCollection<InventoryTransaction> InventoryTransactions => _inventoryTransactions.AsReadOnly();
 
 
-    public Product(string name, decimal price, int stockQuantity, string description, int? categoryId = null)
+    public Product(string name, decimal price, int stockQuantity, string description, 
+        int? categoryId = null, int? id = null)
     {
-        ReservedQuantity = 0;
         SetName(name);
         SetPrice(price);
         SetStock(stockQuantity);
+        if (description == "") throw new DomainException("Description cannot be empty.");
         this.Description = description;
         //SellerId = sellerId;
         CategoryId = categoryId;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
+        if(id != null) 
+            Id = id.Value;
     }
 
     // Бизнес-методы
@@ -55,7 +58,11 @@ public class Product
         int? StockQuantity = null, string? sku = null, string? imageUrl = null)
     {
         if (name != null) SetName(name);
-        if (description != null) Description = description;
+        if (description != null) 
+        {
+            if (description == "") throw new DomainException("Description cannot be empty.");
+            Description = description;
+        } 
         if (price != null) SetPrice(price.Value);
         if(StockQuantity  != null) SetStock(StockQuantity.Value);
 
@@ -129,16 +136,10 @@ public class Product
         ReservedQuantity -= quantity;
     }
 
-    public void SetImageUrl(string imageUrl)
+    public void AddReview(Review review)
     {
-        if (string.IsNullOrWhiteSpace(imageUrl))
-            throw new DomainException("Image URL cannot be empty");
-        ImageUrl = imageUrl;
-    }
-
-    public void ClearImageUrl()
-    {
-        ImageUrl = null;
+        if (review == null) throw new DomainException("Review cannot be null");
+        _reviews.Add(review);
     }
 
     // Приватные методы
@@ -165,38 +166,187 @@ public class Product
         StockQuantity = newStock;
     }
 
+    // работа с файлами
+    // ========== ОБНОВЛЕНИЕ ОДНОГО URL ==========
+    public void UpdateImageUrl(string oldUrl, string newUrl)
+    {
+        // 1. Проверка входных данных
+        if (string.IsNullOrWhiteSpace(oldUrl))
+            throw new DomainException("Old image URL cannot be empty");
+        if (string.IsNullOrWhiteSpace(newUrl))
+            throw new DomainException("New image URL cannot be empty");
+
+        // 2. Проверка, что старый URL существует
+        if (!_imageUrls.Contains(oldUrl))
+            throw new DomainException($"Image not found: {oldUrl}");
+
+        // 3. Проверка, что новый URL не дублирует существующий (кроме самого себя)
+        if (_imageUrls.Contains(newUrl) && newUrl != oldUrl)
+            throw new DomainException($"Image URL already exists: {newUrl}");
+
+        // 4. Заменяем
+        var index = _imageUrls.IndexOf(oldUrl);
+        _imageUrls[index] = newUrl;
+    }
+
+    public void UpdateVideoUrl(string oldUrl, string newUrl)
+    {
+        if (string.IsNullOrWhiteSpace(oldUrl))
+            throw new DomainException("Old video URL cannot be empty");
+        if (string.IsNullOrWhiteSpace(newUrl))
+            throw new DomainException("New video URL cannot be empty");
+
+        if (!_videoUrls.Contains(oldUrl))
+            throw new DomainException($"Video not found: {oldUrl}");
+
+        if (_videoUrls.Contains(newUrl) && newUrl != oldUrl)
+            throw new DomainException($"Video URL already exists: {newUrl}");
+
+        var index = _videoUrls.IndexOf(oldUrl);
+        _videoUrls[index] = newUrl;
+    }
+
+    // ========== УДАЛЕНИЕ ОДНОГО URL ==========
+    public void RemoveImage(string url)
+    {
+        // 1. Проверка входных данных
+        if (string.IsNullOrWhiteSpace(url))
+            throw new DomainException("Image URL cannot be empty");
+
+        // 2. Проверка, что URL существует
+        if (!_imageUrls.Remove(url))
+            throw new DomainException($"Image not found: {url}");
+    }
+
+    public void RemoveVideo(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            throw new DomainException("Video URL cannot be empty");
+
+        if (!_videoUrls.Remove(url))
+            throw new DomainException($"Video not found: {url}");
+    }
+
+    // ========== МАССОВАЯ ЗАГРУЗКА ==========
     public void SetImageUrls(List<string> urls)
     {
-        if (urls == null) throw new DomainException("Image URLs cannot be null");
+        if (urls == null || !urls.Any())
+            throw new DomainException("Image URLs cannot be null or empty");
 
-        // Максимум 8 изображений
-        if (_imageUrls.Count + urls.Count > 8)
-            throw new DomainException($"Maximum 8 images allowed (current: {_imageUrls.Count})");
+        // ✅ Фильтруем дубликаты
+        var newUrls = urls.Distinct().ToList();
+        var existingUrls = _imageUrls.ToHashSet(); // так лучше алгоритмически?
 
-        _imageUrls.AddRange(urls);
+        // ✅ Проверяем, есть ли дубликаты с существующими
+        var duplicates = newUrls.Where(u => existingUrls.Contains(u)).ToList();
+        if (duplicates.Any())
+            throw new DomainException($"Duplicate image URLs found: {string.Join(", ", duplicates)}");
+
+        // ✅ Проверяем лимит (с учетом новых уникальных)
+        if (_imageUrls.Count + newUrls.Count > 8)
+            throw new DomainException($"Maximum 8 images allowed (current: {_imageUrls.Count}, adding: {newUrls.Count})");
+
+        _imageUrls.AddRange(newUrls);
     }
 
     public void SetVideoUrls(List<string> urls)
     {
-        if (urls == null) throw new DomainException("Video URLs cannot be null");
+        if (urls == null || !urls.Any())
+            throw new DomainException("Video URLs cannot be null or empty");
 
-        // Максимум 2 видео
-        if (_videoUrls.Count + urls.Count > 2)
-            throw new DomainException($"Maximum 2 videos allowed (current: {_videoUrls.Count})");
+        var newUrls = urls.Distinct().ToList();
+        var existingUrls = _videoUrls.ToHashSet();
 
-        _videoUrls.AddRange(urls);
+        var duplicates = newUrls.Where(u => existingUrls.Contains(u)).ToList();
+        if (duplicates.Any())
+            throw new DomainException($"Duplicate video URLs found: {string.Join(", ", duplicates)}");
+
+        if (_videoUrls.Count + newUrls.Count > 2)
+            throw new DomainException($"Maximum 2 videos allowed (current: {_videoUrls.Count}, adding: {newUrls.Count})");
+
+        _videoUrls.AddRange(newUrls);
     }
 
-    public void RemoveImage(string imageUrl)
+    // ========== МАССОВОЕ УДАЛЕНИЕ ==========
+    public void RemoveImages(List<string> urls)
     {
-        if (!_imageUrls.Remove(imageUrl))
-            throw new DomainException("Image not found");
+        if (urls == null || !urls.Any())
+            throw new DomainException("No files specified for removal");
+
+        // ✅ Проверяем, что все URL существуют
+        var missing = urls.Where(u => !_imageUrls.Contains(u)).ToList();
+        if (missing.Any())
+            throw new DomainException($"Image(s) not found: {string.Join(", ", missing)}");
+
+        // ✅ Удаляем все (убираем дубли в запросе)
+        var toRemove = urls.Distinct().ToList();
+        foreach (var url in toRemove)
+        {
+            _imageUrls.Remove(url);
+        }
     }
 
-    public void RemoveVideo(string videoUrl)
+    public void RemoveVideos(List<string> urls)
     {
-        if (!_videoUrls.Remove(videoUrl))
-            throw new DomainException("Video not found");
+        if (urls == null || !urls.Any())
+            throw new DomainException("No files specified for removal");
+
+        var missing = urls.Where(u => !_videoUrls.Contains(u)).ToList();
+        if (missing.Any())
+            throw new DomainException($"Video(s) not found: {string.Join(", ", missing)}");
+
+        var toRemove = urls.Distinct().ToList();
+        foreach (var url in toRemove)
+        {
+            _videoUrls.Remove(url);
+        }
+    }
+
+    // ========== МАССОВАЯ ЗАМЕНА ==========
+    public void ReplaceImageUrls(List<string> urls)
+    {
+        if (urls == null || !urls.Any())
+            throw new DomainException("Image URLs cannot be null or empty");
+
+        var uniqueUrls = urls.Distinct().ToList();
+        if (uniqueUrls.Count > 8)
+            throw new DomainException($"Maximum 8 images allowed (received: {uniqueUrls.Count})");
+
+        _imageUrls.Clear();
+        _imageUrls.AddRange(uniqueUrls);
+    }
+
+    public void ReplaceVideoUrls(List<string> urls)
+    {
+        if (urls == null || !urls.Any())
+            throw new DomainException("Video URLs cannot be null or empty");
+
+        var uniqueUrls = urls.Distinct().ToList();
+        if (uniqueUrls.Count > 2)
+            throw new DomainException($"Maximum 2 videos allowed (received: {uniqueUrls.Count})");
+
+        _videoUrls.Clear();
+        _videoUrls.AddRange(uniqueUrls);
+    }
+
+    // ========== ПОЛУЧЕНИЕ ВСЕХ URL ==========
+    public List<string> GetAllFileUrls()
+    {
+        var all = new List<string>();
+        all.AddRange(_imageUrls);
+        all.AddRange(_videoUrls);
+        return all;
+    }
+
+    // очистка
+    public void ClearImageUrls()
+    {
+        _imageUrls.Clear();
+    }
+
+    public void ClearVideoUrls()
+    {
+        _videoUrls.Clear();
     }
 
     public void ClearAllFiles()

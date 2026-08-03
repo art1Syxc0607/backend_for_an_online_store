@@ -19,8 +19,8 @@ public class CreateOrderCommandHandler : IRequestHandler
 
     public CreateOrderCommandHandler(
         IOrderRepository orderRepository,
-        IUnitOfWork unitOfWork, IUserRepository userRepository, IProductRepository productRepository,
-        IEmailService emailService, IMediator mediator)
+        IUserRepository userRepository, IProductRepository productRepository,
+        IEmailService emailService, IMediator mediator, IUnitOfWork unitOfWork)
     {
         _orderRepository = orderRepository;
         _userRepository = userRepository;
@@ -51,7 +51,7 @@ public class CreateOrderCommandHandler : IRequestHandler
 
         // 3. Создаем DTO для заказа (с продуктами)
         var orderItems = command.Items
-            .Select(i => new Domain.DTOs.Order.OrderItemDto
+            .Select(i => new Domain.DTOs.Order.OrderItemDomainDto
                 (
                     products.First(p => p.Id == i.ProductId),   // ← передаем продукт
                     i.Quantity,

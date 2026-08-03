@@ -7,4 +7,5 @@ using System.Threading.Tasks;
 
 namespace Domain.DTOs.Order;
 
-public record OrderItemDto(Product Product, int Quantity, decimal PriceAtPurchase);
+public record OrderItemDomainDto(Product Product, int Quantity, 
+    decimal? PriceAtPurchase = null);

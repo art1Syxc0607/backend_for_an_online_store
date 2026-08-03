@@ -39,6 +39,8 @@ public class Review
         UpdatedAt = DateTime.UtcNow;
     }
 
+
+
     private void SetText(string text)
     {
         if (string.IsNullOrWhiteSpace(text))

@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Application.DTOs.Email;
 using Application.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SendGrid;
 using SendGrid.Helpers.Mail;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 
 namespace Infrastructure.Services;
@@ -52,6 +53,38 @@ public class EmailService : IEmailService
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Failed to send email to {to}");
+            throw;
+        }
+    }
+
+    public async Task SendEmailAsync(EmailDto dto)
+    {
+        try
+        {
+            var apiKey = _configuration["SendGrid:ApiKey"];
+            var fromEmail = _configuration["SendGrid:FromEmail"];
+            var fromName = _configuration["SendGrid:FromName"];
+
+            var client = new SendGridClient(apiKey);
+            var from = new EmailAddress(fromEmail, fromName);
+            var toAddress = new EmailAddress(dto.To);
+
+            var msg = MailHelper.CreateSingleEmail(from, toAddress, dto.Subject,
+                plainTextContent: dto.IsHtml ? null : dto.Body,
+                htmlContent: dto.IsHtml ? dto.Body : null);
+
+            var response = await client.SendEmailAsync(msg);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Body.ReadAsStringAsync();
+                _logger.LogError($"SendGrid error: {response.StatusCode} - {errorBody}");
+                throw new Exception($"Failed to send email: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Failed to send email to {dto.To}");
             throw;
         }
     }

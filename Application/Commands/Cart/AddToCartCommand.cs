@@ -12,11 +12,11 @@ namespace Application.Commands.Cart
     public class AddToCartCommand : IRequest
     {
         [Required]
-        public int productId { get; set; }
+        public int ProductId { get; set; }
         [Required]
-        public int countOfProduct { get; set; }
+        public int Quantity { get; set; }
         [Required]
-        public int userId { get; set; }
+        public int UserId { get; set; }
 
     }
 }

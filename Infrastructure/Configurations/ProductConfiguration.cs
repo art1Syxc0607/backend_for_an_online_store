@@ -28,7 +28,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Ignore(p => p.AvailableQuantity);
 
         builder.Property(p => p.Sku).HasMaxLength(100);
-        builder.Property(p => p.ImageUrl).HasMaxLength(2048);
+        //builder.Property(p => p.ImageUrl).HasMaxLength(2048);
 
 
         // связи

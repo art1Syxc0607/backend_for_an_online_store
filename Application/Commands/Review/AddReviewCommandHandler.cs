@@ -43,8 +43,13 @@ public class AddReviewCommandHandler : IRequestHandler<AddReviewCommand, int>
 
         var review = new Domain.Entities.Review(user, product, command.Text, command.Rating, true);
 
-        await _reviewRepository.AddReviewAsync(review, ct);
+        await _reviewRepository.AddReviewAsync(review, ct); 
         await _unitOfWork.SaveChangesAsync();
+
+        // не нужно явно добовлять product.AddReview?
+        //Короткий ответ: ДА, НЕ НУЖНО!
+        //Если связь настроена правильно(через навигационные свойства), EF Core сам свяжет Review 
+        //с Product и User.Явно добавлять product.Reviews.Add(review) не обязательно.
 
         return review.Id;
 

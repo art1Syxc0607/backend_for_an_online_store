@@ -18,9 +18,8 @@ public class AddToCartCommandHandler : IRequest<AddToCartCommand>
     private readonly IUnitOfWork _unitOfWork;
 
     public AddToCartCommandHandler(
-        IPasswordHasher passwordHasher,
-        IProductRepository productRepository,
         ICartRepository cartRepository,
+        IProductRepository productRepository,
         IUnitOfWork unitOfWork)
     {
         _productRepository = productRepository;
@@ -31,17 +30,17 @@ public class AddToCartCommandHandler : IRequest<AddToCartCommand>
     public async Task Handle(AddToCartCommand request, CancellationToken ct)
     {
         // 1. Получаем корзину
-        var cart = await _cartRepository.GetByUserIdAsync(request.userId, ct);
+        var cart = await _cartRepository.GetByUserIdAsync(request.UserId, ct);
         if (cart == null)
             throw new NotFoundException("Cart not found");
 
         // 2. Получаем товар
-        var product = await _productRepository.GetByIdAsync(request.productId, ct);
+        var product = await _productRepository.GetByIdAsync(request.ProductId, ct);
         if (product == null)
-            throw new NotFoundException("Product not found");
+            throw new DomainException("Product not found");
 
         // 3. Добавляем в корзину (бизнес-логика внутри сущности)
-        cart.AddItem(product, request.countOfProduct);
+        cart.AddItem(product, request.Quantity);
 
         // 4. Сохраняем
         await _unitOfWork.SaveChangesAsync(ct);

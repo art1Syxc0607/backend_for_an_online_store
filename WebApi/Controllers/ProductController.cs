@@ -157,6 +157,25 @@ public class ProductController : ControllerBase
     //    return Ok(new { imageUrl });
     //}
 
+    //[Authorize(Roles = "Admin")]
+    //[HttpPost("upload-image")]
+    //public async Task<IActionResult> UploadImage(int productId, [FromForm] IFormFile file)
+    //{
+    //    var imageUrl = await _imageService.SaveImageAsync(productId, file);
+
+    //    var ct = new CancellationTokenSource().Token;
+    //    // Сохраняем URL в БД (в Product.ImageUrl)
+    //    var product = await _productRepository.GetByIdAsync(productId, ct);
+
+    //    if (product == null) throw new Exception("No such product");
+
+    //    product.SetImageUrl(imageUrl);
+    //    await _unitOfWork.SaveChangesAsync();
+
+    //    return Ok(new { imageUrl });
+    //}
+
+
     [Authorize(Roles = "Admin")]
     [HttpPost("{productId}/files")]
     public async Task<ActionResult<List<FileUploadResponseDto>>> UploadFiles(
@@ -236,23 +255,6 @@ public class ProductController : ControllerBase
         return Ok(result);
     }
 
-    //[Authorize(Roles = "Admin")]
-    //[HttpPost("upload-image")]
-    //public async Task<IActionResult> UploadImage(int productId, [FromForm] IFormFile file)
-    //{
-    //    var imageUrl = await _imageService.SaveImageAsync(productId, file);
-
-    //    var ct = new CancellationTokenSource().Token;
-    //    // Сохраняем URL в БД (в Product.ImageUrl)
-    //    var product = await _productRepository.GetByIdAsync(productId, ct);
-
-    //    if (product == null) throw new Exception("No such product");
-
-    //    product.SetImageUrl(imageUrl);
-    //    await _unitOfWork.SaveChangesAsync();
-
-    //    return Ok(new { imageUrl });
-    //}
 
 
     // ========== Фильтрация и Поиск, Сортировка, Плагинация ==========
