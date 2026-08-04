@@ -19,8 +19,9 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
     private readonly IMediator _mediator;
     private readonly IUnitOfWork _unitOfWork;
 
-    public AddProductCommandHandler(IProductRepository productRepository, IUnitOfWork unitOfWork,
-        ICategoryRepository categoryRepository, IMediator mediator, IFileStorageService fileStorageService)
+    public AddProductCommandHandler(IProductRepository productRepository, 
+        ICategoryRepository categoryRepository, 
+        IFileStorageService fileStorageService, IMediator mediator, IUnitOfWork unitOfWork)
     {
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
@@ -82,8 +83,6 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
 
         // 4. Единое сохранение!
         await _unitOfWork.SaveChangesAsync(ct);
-
-
 
         return product.Id;
     }

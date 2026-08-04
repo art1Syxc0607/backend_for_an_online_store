@@ -15,6 +15,7 @@ public record OrderResponseDto
 
     public int Id { get; init; }
     public int UserId { get; init; }
+    //public string ProductName { get; init; }
     public decimal TotalAmount { get; init; }
     public string ShippingAddress { get; init; }
     public OrderStatus Status { get; init; }

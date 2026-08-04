@@ -36,7 +36,7 @@ public class CreateOrderCommandHandler : IRequestHandler
         var user = await _userRepository.GetByIdAsync(command.UserId,
             ct);
         if (user == null) 
-            throw new DomainException("No such user");
+            throw new DomainException("User not found.");
 
         // Проверка подтверждения email
         user.EnsureEmailConfirmed();

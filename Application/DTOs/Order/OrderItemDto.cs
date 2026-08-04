@@ -6,4 +6,5 @@ using System.Threading.Tasks;
 
 namespace Application.DTOs.Order;
 
-public record OrderItemDto(int ProductId, int Quantity, decimal PriceAtPurchase);
+public record OrderItemDto(int ProductId, int Quantity, decimal PriceAtPurchase, 
+    string ProductNameAtPurchase);

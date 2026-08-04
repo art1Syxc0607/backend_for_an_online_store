@@ -30,13 +30,18 @@ public class User
     //public virtual IReadOnlyCollection<FavoriteProduct> FavoriteProducts => _favoriteProducts.AsReadOnly();
     //public virtual IReadOnlyCollection<FavoriteSeller> FavoriteSellers => _favoriteSellers.AsReadOnly();
 
-    public User(string email, string passwordHash, string name)
+    public User(string email, string passwordHash, string userName)
     {
         SetEmail(email);
         SetPasswordHash(passwordHash);
-        SetName(name);
+        SetName(userName);
         Role = UserRole.Customer;
         CreatedAt = DateTime.UtcNow;
+    }
+
+    public void TestsSetUser(int? id = null)
+    {
+        if(id != null) Id = id.Value;
     }
 
     // Метод для генерации токена подтверждения

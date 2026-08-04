@@ -39,7 +39,10 @@ public class Review
         UpdatedAt = DateTime.UtcNow;
     }
 
-
+    public void TestsSetReviewId(int id)
+    {
+        Id = id;
+    }
 
     private void SetText(string text)
     {

@@ -21,7 +21,7 @@ public class OrderRepository : IOrderRepository
         _dpcontext = dpcontext;
     }
 
-    public async Task<Order?> GetOrder(int id, CancellationToken ct)
+    public async Task<Order?> GetOrder(int id, CancellationToken ct = default)
     {
         var result = await _dpcontext.Orders.
             Include(o => o.Items).
@@ -31,7 +31,7 @@ public class OrderRepository : IOrderRepository
     }
 
     public async Task<List<Order>> GetAllAsync(int userId, 
-        CancellationToken ct)
+        CancellationToken ct = default)
     {
         var result = await _dpcontext.Orders.
             Include(o => o.Items).
@@ -43,7 +43,7 @@ public class OrderRepository : IOrderRepository
 
     }
     public async Task CreateOrder(Order order,
-        CancellationToken ct)
+        CancellationToken ct = default)
     {
         await _dpcontext.Orders.AddAsync(order);
     }
@@ -54,7 +54,7 @@ public class OrderRepository : IOrderRepository
         await Task.CompletedTask;
     }
 
-    public async Task<bool> HasProductInOrdersAsync(int productId, CancellationToken ct)
+    public async Task<bool> HasProductInOrdersAsync(int productId, CancellationToken ct = default)
     {
         //Сейчас ты проверяешь, есть ли любой заказ с этим товаром.Но если заказ отменен — товар физически не 
         //был продан, и его можно удалить.
@@ -66,12 +66,13 @@ public class OrderRepository : IOrderRepository
                 ct);
     }
 
-    public async Task<bool> HasUserPurchasedProductAsync(int userId, int productId, CancellationToken ct = default)
+    public async Task<bool> HasUserPurchasedProductAsync(int userId, int productId, 
+        CancellationToken ct = default)
     {
         //var orders = await GetAllAsync(userId, ct);
 
         //var result = orders.Any(order => order.Status == Domain.Enums.OrderStatus.Delivered && 
-        //order.Items.Any(oi => oi.ProductId == productId));
+        //order.Items.Any(oi => oi.ProductId == productId)); // me
 
         var result = await _dpcontext.Orders
         .AnyAsync(o => o.UserId == userId

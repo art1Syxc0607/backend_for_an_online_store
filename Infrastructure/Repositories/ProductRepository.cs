@@ -15,30 +15,30 @@ public class ProductRepository : IProductRepository
     public ProductRepository(AppDbContext dpContext) => 
         _dpContext = dpContext;
 
-    public async Task<Product?> GetByIdAsync(int id, CancellationToken ct)
+    public async Task<Product?> GetByIdAsync(int id, CancellationToken ct = default )
     {
         return await _dpContext.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
     }
 
-    public async Task<List<Product>?> GetByIdsAsync(List<int> Ids, CancellationToken ct)
+    public async Task<List<Product>?> GetByIdsAsync(List<int> Ids, CancellationToken ct = default)
     {
         var result = await _dpContext.Products.Where(p => Ids.Contains(p.Id)).ToListAsync();
         return result;
     }
 
-    public async Task<List<Product>?> GetAllProductsAsync(CancellationToken ct)
+    public async Task<List<Product>?> GetAllProductsAsync(CancellationToken ct = default)
     {
         return await _dpContext.Products.ToListAsync(ct);
     }
 
-    public async Task<int> AddProductAsync(Product product, CancellationToken ct)
+    public async Task<int> AddProductAsync(Product product, CancellationToken ct = default)
     {
         await _dpContext.Products.AddAsync(product, ct);
 
         return product.Id;
     }
 
-    public Task UpdateProductAsync(Product product, CancellationToken ct)
+    public Task UpdateProductAsync(Product product, CancellationToken ct = default)
     {
         _dpContext.Products.Update(product);
 
@@ -46,14 +46,14 @@ public class ProductRepository : IProductRepository
 
     }
 
-    public Task DeleteProductAsync(Product product, CancellationToken ct)
+    public Task DeleteProductAsync(Product product, CancellationToken ct = default)
     {
         _dpContext.Products.Remove(product);
 
         return Task.CompletedTask;
     }
 
-    public async Task<bool> ProductsExist(List<int> Ids, CancellationToken ct)
+    public async Task<bool> ProductsExist(List<int> Ids, CancellationToken ct = default)
     {
         if (Ids == null || Ids.Count == 0)
             return false;
@@ -65,13 +65,14 @@ public class ProductRepository : IProductRepository
         return count == Ids.Count;
     }
 
-    public async Task<bool> ProductExist(int id)
+    public async Task<bool> ProductExist(int id, CancellationToken ct = default)
     {
         return await _dpContext.Products.AnyAsync(p =>  id == p.Id);
     }
 
     public async Task<List<Product>> GetProductsFilter(int? CategoryId, string? SearchText, decimal? PriceLimitMax,
-        decimal? PriceLimitMin, bool? OnlyAvailable, int? pageNumber, int? pageSize, SortBy? sortBy = SortBy.Name, bool SortDesc = true)
+        decimal? PriceLimitMin, bool? OnlyAvailable, int? pageNumber, int? pageSize, 
+        SortBy? sortBy = SortBy.Name, bool SortDesc = true, CancellationToken ct = default)
     {
         var search = _dpContext.Products.Include(p => p.Reviews)
             .WhereIf(CategoryId != null, p => p.CategoryId == CategoryId)

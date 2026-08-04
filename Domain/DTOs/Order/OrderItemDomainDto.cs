@@ -8,4 +8,4 @@ using System.Threading.Tasks;
 namespace Domain.DTOs.Order;
 
 public record OrderItemDomainDto(Product Product, int Quantity, 
-    decimal? PriceAtPurchase = null);
+    decimal PriceAtPurchase);

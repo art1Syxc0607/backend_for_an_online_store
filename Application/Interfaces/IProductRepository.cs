@@ -11,21 +11,22 @@ namespace Application.Interfaces;
 
 public interface IProductRepository
 {
-    Task<Product?> GetByIdAsync(int id, CancellationToken ct);
-    Task<List<Product>?> GetByIdsAsync(List<int> Ids, CancellationToken ct);
-    Task<List<Product>?> GetAllProductsAsync(CancellationToken ct);
+    Task<Product?> GetByIdAsync(int id, CancellationToken ct = default);
+    Task<List<Product>?> GetByIdsAsync(List<int> Ids, CancellationToken ct = default);
+    Task<List<Product>?> GetAllProductsAsync(CancellationToken ct = default);
 
-    Task<int> AddProductAsync(Product product, CancellationToken ct);
-    Task UpdateProductAsync(Product product, CancellationToken ct);
+    Task<int> AddProductAsync(Product product, CancellationToken ct = default);
+    Task UpdateProductAsync(Product product, CancellationToken ct = default);
 
-    Task DeleteProductAsync(Product product, CancellationToken ct);
+    Task DeleteProductAsync(Product product, CancellationToken ct = default);
 
-    Task<bool> ProductExist(int id);
-    Task<bool> ProductsExist(List<int> Ids, CancellationToken ct);
+    Task<bool> ProductExist(int id, CancellationToken ct = default);
+    Task<bool> ProductsExist(List<int> Ids, CancellationToken ct = default);
 
 
     Task<List<Product>> GetProductsFilter(int? CategoryId, string? SearchText, decimal? PriceLimitMax,
-        decimal? PriceLimitMin, bool? OnlyAvailable, int? pageNumber, int? pageSize, SortBy? sortBy = SortBy.Name, bool SortDesc = true);
+        decimal? PriceLimitMin, bool? OnlyAvailable, int? pageNumber, int? pageSize, 
+        SortBy? sortBy = SortBy.Name, bool SortDesc = true, CancellationToken ct = default);
 
 }
 

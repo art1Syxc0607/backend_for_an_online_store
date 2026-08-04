@@ -38,7 +38,7 @@ public class Product
 
 
     public Product(string name, decimal price, int stockQuantity, string description, 
-        int? categoryId = null, int? id = null)
+        int? categoryId = null)
     {
         SetName(name);
         SetPrice(price);
@@ -49,11 +49,13 @@ public class Product
         CategoryId = categoryId;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
-        if(id != null) 
-            Id = id.Value;
     }
 
     // Бизнес-методы
+    public void TestsSetProduct(int? id = null)
+    {
+        if(id != null) Id = id.Value;
+    }
     public void UpdateDetails(string? name = null, decimal? price = null, string? description = null,
         int? StockQuantity = null, string? sku = null, string? imageUrl = null)
     {

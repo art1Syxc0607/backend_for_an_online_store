@@ -10,7 +10,7 @@ public class Order
 
     public int Id { get; private set; }
     public int UserId { get; private set; }
-    public decimal TotalAmount { get; private set; }
+    public decimal TotalAmount { get; private set; } // TotalAmountOfMoney
     public string ShippingAddress { get; private set; }
     public OrderStatus Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -21,6 +21,15 @@ public class Order
     public virtual IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
 
     private Order() { }
+
+    public void TestsSetOrder(int? id = null, decimal? totalAmount = null, DateTime? createdAt = null
+        , OrderStatus? status = null)
+    {
+        if(id != null) Id = id.Value;
+        if(createdAt != null) CreatedAt = createdAt.Value;
+        if(totalAmount != null) TotalAmount = totalAmount.Value;
+        if(status != null) Status = status.Value;
+    }
 
     public Order(User user, string shippingAddress, List<OrderItemDomainDto> items)
     {

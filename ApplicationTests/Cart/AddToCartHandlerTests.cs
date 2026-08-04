@@ -21,7 +21,9 @@ public class AddToCartHandlerTests
         var quantity = 2;
         var user = new Domain.Entities.User("test@mail.com", "hash", "John");
         var product = new Domain.Entities.Product("iPhone", 999.99m, 10, "Test product",
-            (int?)null, productId);
+            (int?)null);
+
+        product.TestsSetProduct(productId);
 
 
         var cart = new Domain.Entities.Cart(user);
