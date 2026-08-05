@@ -25,7 +25,7 @@ internal class AddCategoryCommandHandler : IRequestHandler<AddCategoryCommand, i
 
         var category = new Domain.Entities.Category(command.Name, command.Description);
 
-        await _categoryRepository.AddAsync(category, ct);
+        await _categoryRepository.CreateAsync(category, ct);
         await _unitOfWork.SaveChangesAsync();
 
         return category.Id;

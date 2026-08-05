@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Application.DTOs.File;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,4 +15,6 @@ public class AddReviewCommand : IRequest<int>
     public string Text { get; init; }
     public int Rating { get; init; } // 1-5 stars
     //public bool IsVerifiedPurchase { get; private set; }
+
+    public List<FileUploadDto>? Files { get; init; }
 }

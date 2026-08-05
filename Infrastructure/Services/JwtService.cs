@@ -19,11 +19,19 @@ public class JwtService : IJwtService
 
     public string GenerateToken(User user)
     {
-        var claims = new List<Claim>
+        //var claims = new List<Claim>
+        //{
+        //    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        //    new Claim(ClaimTypes.Email, user.Email),
+        //    new Claim(ClaimTypes.Name, user.UserName),
+        //    new Claim("userId", user.Id.ToString())
+        //};
+
+        var claims = new List<Claim> // for tests
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.UserName),
+            // Используем JwtRegisteredClaimNames вместо ClaimTypes
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.Name, user.UserName),
             new Claim("userId", user.Id.ToString())
         };
 

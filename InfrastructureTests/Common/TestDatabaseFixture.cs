@@ -16,6 +16,16 @@ public class TestDatabaseFixture : IDisposable
         Context = new AppDbContext(options);
     }
 
+    // Вместо ExecuteDeleteAsync используем RemoveRange
+    public void Cleanup()
+    {
+        Context.Categories.RemoveRange(Context.Categories);
+        //Context.Products.RemoveRange(Context.Products);
+        //Context.Users.RemoveRange(Context.Users);
+        //Context.Orders.RemoveRange(Context.Orders);
+        Context.SaveChanges();
+    }
+
     public void Dispose()
     {
         Context.Database.EnsureDeleted();

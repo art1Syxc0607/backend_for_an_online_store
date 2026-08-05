@@ -38,7 +38,6 @@ public class AddProductHandlerTests
             productRepoMock.Object,
             categoryRepoMock.Object,
             fileStorageMock.Object,
-            Mock.Of<IMediator>(),
             unitOfWorkMock.Object
         );
 
@@ -71,7 +70,6 @@ public class AddProductHandlerTests
             Mock.Of<IProductRepository>(),
             categoryRepoMock.Object,
             Mock.Of<IFileStorageService>(),
-            Mock.Of<IMediator>(),
             Mock.Of<IUnitOfWork>()
         );
 

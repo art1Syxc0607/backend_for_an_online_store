@@ -27,7 +27,7 @@ public class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategoryComman
 
         if (category == null) throw new DomainException("No such category");
 
-        await _categoryRepository.UpdateAsync(category, ct);
+        await _categoryRepository.UpdateAsync(category);
         await _unitOfWork.SaveChangesAsync();
     }
 }

@@ -16,17 +16,15 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
     private readonly IProductRepository _productRepository;
     private readonly ICategoryRepository _categoryRepository;
     private readonly IFileStorageService _fileStorageService;
-    private readonly IMediator _mediator;
     private readonly IUnitOfWork _unitOfWork;
 
     public AddProductCommandHandler(IProductRepository productRepository, 
         ICategoryRepository categoryRepository, 
-        IFileStorageService fileStorageService, IMediator mediator, IUnitOfWork unitOfWork)
+        IFileStorageService fileStorageService, IUnitOfWork unitOfWork)
     {
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _categoryRepository = categoryRepository;
-        _mediator = mediator;
         _fileStorageService = fileStorageService;
     }
 

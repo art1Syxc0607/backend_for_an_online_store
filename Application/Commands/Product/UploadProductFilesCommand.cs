@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Application.Commands.Product;
 
-public class UploadFilesCommand : IRequest<List<FileUploadResponseDto>>
+public class UploadProductFilesCommand : IRequest<List<FileUploadResponseDto>>
 {
     public int ProductId { get; init; }
     public List<FileUploadDto> Files { get; init; } = new();

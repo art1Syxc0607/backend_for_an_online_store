@@ -14,16 +14,16 @@ namespace Infrastructure.Services;
 // Infrastructure/Services/PaymentService.cs
 public class PaymentService : IPaymentService
 {
-    private readonly IConfiguration _configuration;
+    //private readonly IConfiguration _configuration;
     private readonly ILogger<PaymentService> _logger;
 
-    public PaymentService(IConfiguration configuration, ILogger<PaymentService> logger)
+    public PaymentService(/*IConfiguration configuration, */ILogger<PaymentService> logger)
     {
-        _configuration = configuration;
+        //_configuration = configuration;
         _logger = logger;
     }
 
-    public async Task<PaymentResult> InitiatePaymentAsync(int orderId, PaymentMethod method, CancellationToken ct)
+    public async Task<PaymentResult> InitiatePaymentAsync(int orderId, PaymentMethod method, CancellationToken ct = default)
     {
         try
         {
@@ -65,7 +65,7 @@ public class PaymentService : IPaymentService
         }
     }
 
-    public async Task<PaymentConfirmation> ConfirmPaymentAsync(string paymentIntentId, CancellationToken ct)
+    public async Task<PaymentConfirmation> ConfirmPaymentAsync(string paymentIntentId, CancellationToken ct = default)
     {
         try
         {
@@ -88,7 +88,7 @@ public class PaymentService : IPaymentService
         }
     }
 
-    public async Task<PaymentRefund> RefundPaymentAsync(int orderId, decimal amount, CancellationToken ct)
+    public async Task<PaymentRefund> RefundPaymentAsync(int orderId, decimal amount, CancellationToken ct = default)
     {
         try
         {

@@ -11,6 +11,8 @@ public class Product
     private List<string> _videoUrls = new();
     //private List<InventoryTransaction> _inventoryTransactions = new();
 
+    private const int MaxFiles = 8;
+
     public int Id { get; private set; }
     public string Name { get; private set; }
     public string Description { get; private set; }
@@ -235,20 +237,7 @@ public class Product
         if (urls == null || !urls.Any())
             throw new DomainException("Image URLs cannot be null or empty");
 
-        // ✅ Фильтруем дубликаты
-        var newUrls = urls.Distinct().ToList();
-        var existingUrls = _imageUrls.ToHashSet(); // так лучше алгоритмически?
-
-        // ✅ Проверяем, есть ли дубликаты с существующими
-        var duplicates = newUrls.Where(u => existingUrls.Contains(u)).ToList();
-        if (duplicates.Any())
-            throw new DomainException($"Duplicate image URLs found: {string.Join(", ", duplicates)}");
-
-        // ✅ Проверяем лимит (с учетом новых уникальных)
-        if (_imageUrls.Count + newUrls.Count > 8)
-            throw new DomainException($"Maximum 8 images allowed (current: {_imageUrls.Count}, adding: {newUrls.Count})");
-
-        _imageUrls.AddRange(newUrls);
+        AddUrls(urls, _imageUrls, "image");
     }
 
     public void SetVideoUrls(List<string> urls)
@@ -256,17 +245,24 @@ public class Product
         if (urls == null || !urls.Any())
             throw new DomainException("Video URLs cannot be null or empty");
 
+        AddUrls(urls, _videoUrls, "video");
+    }
+
+    // ✅ Общий метод для добавления URL
+    private void AddUrls(List<string> urls, List<string> targetCollection, string type)
+    {
         var newUrls = urls.Distinct().ToList();
-        var existingUrls = _videoUrls.ToHashSet();
+        var existingUrls = targetCollection.ToHashSet();
 
         var duplicates = newUrls.Where(u => existingUrls.Contains(u)).ToList();
         if (duplicates.Any())
-            throw new DomainException($"Duplicate video URLs found: {string.Join(", ", duplicates)}");
+            throw new DomainException($"Duplicate {type} URLs found: {string.Join(", ", duplicates)}");
 
-        if (_videoUrls.Count + newUrls.Count > 2)
-            throw new DomainException($"Maximum 2 videos allowed (current: {_videoUrls.Count}, adding: {newUrls.Count})");
+        var totalFiles = _imageUrls.Count + _videoUrls.Count + newUrls.Count;
+        if (totalFiles > MaxFiles)
+            throw new DomainException($"Maximum {MaxFiles} files allowed (current: {_imageUrls.Count + _videoUrls.Count}, adding: {newUrls.Count})");
 
-        _videoUrls.AddRange(newUrls);
+        targetCollection.AddRange(newUrls);
     }
 
     // ========== МАССОВОЕ УДАЛЕНИЕ ==========

@@ -24,7 +24,7 @@ public class ReviewRepository : IReviewRepository
         return await _dpcontext.Reviews.Where(r => r.UserId == userId).ToListAsync(ct);
     }
 
-    public async Task<Review?> GetReviewById(int id, CancellationToken ct)
+    public async Task<Review?> GetReviewByIdAsync(int id, CancellationToken ct)
     {
         return await _dpcontext.Reviews.FirstOrDefaultAsync(r => r.Id == id, ct);
     }

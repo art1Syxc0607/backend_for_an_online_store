@@ -205,7 +205,7 @@ public class ProductController : ControllerBase
         }
 
         // 3. Команда
-        var command = new UploadFilesCommand
+        var command = new UploadProductFilesCommand
         {
             ProductId = productId,
             Files = files.Select(f => new FileUploadDto

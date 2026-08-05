@@ -1,5 +1,7 @@
-﻿using Application.DTOs.Product;
+﻿using Application.Commands.Product;
+using Application.DTOs.File;
 using Application.Interfaces;
+using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
 using System;
@@ -8,26 +10,28 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Product;
+namespace Application.Commands.Review;
 
-public class UploadFilesHandler : IRequestHandler<UploadFilesCommand, List<FileUploadResponseDto>>
+public class UploadReviewFilesHandler : IRequestHandler<UploadReviewFilesCommand, List<FileUploadResponseDto>>
 {
-    private readonly IProductRepository _productRepository;
+    private readonly IReviewRepository _reviewRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly IUnitOfWork _unitOfWork;
 
-    public UploadFilesHandler(IProductRepository productRepository, IFileStorageService fileStorageService, IUnitOfWork unitOfWork)
+    public UploadReviewFilesHandler(IReviewRepository reviewRepository, 
+        IFileStorageService fileStorageService, IUnitOfWork unitOfWork)
     {
-        _productRepository = productRepository;
+        _reviewRepository = reviewRepository;
         _fileStorageService = fileStorageService;
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<List<FileUploadResponseDto>> Handle(UploadFilesCommand command, CancellationToken ct)
+
+    public async Task<List<FileUploadResponseDto>> Handle(UploadReviewFilesCommand command, CancellationToken ct)
     {
-        var product = await _productRepository.GetByIdAsync(command.ProductId, ct);
-        if (product == null)
-            throw new DomainException($"Product with ID {command.ProductId} not found");
+        var review = await _reviewRepository.GetReviewByIdAsync(command.ReviewId, ct);
+        if (review == null)
+            throw new DomainException($"Review with ID {command.ReviewId} not found");
 
         var result = new List<FileUploadResponseDto>();
         var imageUrls = new List<string>();
@@ -40,7 +44,7 @@ public class UploadFilesHandler : IRequestHandler<UploadFilesCommand, List<FileU
                 file.Stream,
                 file.FileName,
                 file.ContentType,
-                $"products/{command.ProductId}",
+                $"reviews/{command.ReviewId}",
                 ct
             );
 
@@ -59,12 +63,14 @@ public class UploadFilesHandler : IRequestHandler<UploadFilesCommand, List<FileU
             });
         }
 
-        // Обновляем продукт
-        product.SetImageUrls(imageUrls);
-        product.SetVideoUrls(videoUrls);
+        // Обновляем review
+        review.SetImageUrls(imageUrls);
+        review.SetVideoUrls(videoUrls);
 
         await _unitOfWork.SaveChangesAsync(ct);
 
         return result;
     }
+
+
 }

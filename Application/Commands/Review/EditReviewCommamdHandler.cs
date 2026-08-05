@@ -24,7 +24,7 @@ public class EditReviewCommamdHandler : IRequestHandler<EditReviewCommamd>
     public async Task Handle(EditReviewCommamd commamd, CancellationToken ct)
     {
 
-        var review = await _reviewRepository.GetReviewById(commamd.ReviewId, ct);
+        var review = await _reviewRepository.GetReviewByIdAsync(commamd.ReviewId, ct);
 
         if (review == null) throw new ArgumentNullException(nameof(review));
 

@@ -10,15 +10,20 @@ namespace Application.Interfaces;
 
 public interface ICategoryRepository
 {
-    Task<List<CategoryResponseDto>?> GetAllCategoriesAsync(CancellationToken ct);
+    Task<List<Category>> GetAllCategoriesAsync(CancellationToken ct = default);
 
-    Task<Category> GetByIdAsync(int categoryId, CancellationToken ct);
+    Task<Category?> GetByIdAsync(int categoryId, CancellationToken ct = default);
 
-    Task AddAsync(Category category, CancellationToken ct);
+    Task<List<Category>> GetByIdsAsync(List<int> ids, CancellationToken ct = default);
 
-    Task UpdateAsync(Category category, CancellationToken ct);
+    //Task<List<Category>> GetUserCategoriesAsync(int userId, CancellationToken ct = default);
 
-    Task DeleteAsync(Category category, CancellationToken ct);
+    Task CreateAsync(Category category, CancellationToken ct = default);
 
-    Task<bool> ExistByIdAsync(int categoryId, CancellationToken ct);
+    Task UpdateAsync(Category category);
+
+    Task DeleteAsync(Category category);
+    Task DeleteAllAsync();
+
+    Task<bool> ExistByIdAsync(int categoryId, CancellationToken ct = default);
 }

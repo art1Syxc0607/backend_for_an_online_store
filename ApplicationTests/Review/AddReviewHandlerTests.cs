@@ -49,7 +49,8 @@ public class AddReviewHandlerTests
             unitOfWorkMock.Object,
             userRepoMock.Object,
             productRepoMock.Object,
-            reviewRepoMock.Object
+            reviewRepoMock.Object,
+            Mock.Of<IFileStorageService>()
         );
 
         var command = new AddReviewCommand
@@ -98,7 +99,8 @@ public class AddReviewHandlerTests
             Mock.Of<IUnitOfWork>(),
             userRepoMock.Object,
             productRepoMock.Object,
-            Mock.Of<IReviewRepository>()
+            Mock.Of<IReviewRepository>(),
+            Mock.Of<IFileStorageService>()
         );
 
         var command = new AddReviewCommand

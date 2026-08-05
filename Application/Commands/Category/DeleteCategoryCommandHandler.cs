@@ -26,7 +26,7 @@ public class DeleteCategoryCommandHandler : IRequestHandler<DeleteCategoryComman
 
         if (category == null) throw new DomainException("No such category");
 
-        await _categoryRepository.DeleteAsync(category, ct);
+        await _categoryRepository.DeleteAsync(category);
         await _unitOfWork.SaveChangesAsync();
     }
 
