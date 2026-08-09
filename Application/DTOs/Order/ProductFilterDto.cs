@@ -17,6 +17,6 @@ public record ProductFilterDto
     public bool? OnlyAvailable { get; init; }
     public int PageNumber { get; init; } = 1;
     public int PageSize { get; init; } = 20;
-    public SortBy SortBy { get; init; } = SortBy.Name;
+    public SortProductBy SortBy { get; init; } = SortProductBy.Name;
     public bool SortDesc { get; init; } = true;
 }

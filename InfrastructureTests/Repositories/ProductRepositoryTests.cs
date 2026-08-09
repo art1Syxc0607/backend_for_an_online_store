@@ -23,7 +23,7 @@ public class ProductRepositoryTests : IClassFixture<TestDatabaseFixture>
     public async Task AddProductAsync_ShouldAddProduct()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, "Latest iPhone");
+        var product = new Product("iPhone", 999.99m, 900.99m, 10, "Latest iPhone");
 
         // Act
         await _repository.AddProductAsync(product);
@@ -39,7 +39,7 @@ public class ProductRepositoryTests : IClassFixture<TestDatabaseFixture>
     public async Task GetByIdAsync_WhenProductExists_ShouldReturnProduct()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, "Latest iPhone");
+        var product = new Product("iPhone", 999.99m, 900.99m, 10, "Latest iPhone");
         await _repository.AddProductAsync(product);
         await _fixture.Context.SaveChangesAsync();
 
@@ -57,8 +57,8 @@ public class ProductRepositoryTests : IClassFixture<TestDatabaseFixture>
         // Arrange
         var products = new List<Product>
         {
-            new Product("iPhone", 999.99m, 10, "Latest iPhone"),
-            new Product("AirPods", 199.99m, 20, "Wireless headphones")
+            new Product("iPhone", 999.99m, 900.99m, 10, "Latest iPhone"),
+            new Product("AirPods", 199.99m, 900.99m, 20, "Wireless headphones")
         };
 
         foreach (var p in products)
@@ -81,7 +81,7 @@ public class ProductRepositoryTests : IClassFixture<TestDatabaseFixture>
     public async Task UpdateProductAsync_ShouldUpdateProduct()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, "Latest iPhone");
+        var product = new Product("iPhone", 999.99m, 900.99m, 10, "Latest iPhone");
         await _repository.AddProductAsync(product);
         await _fixture.Context.SaveChangesAsync();
 
@@ -100,7 +100,7 @@ public class ProductRepositoryTests : IClassFixture<TestDatabaseFixture>
     public async Task DeleteProductAsync_ShouldDeleteProduct()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, "Latest iPhone");
+        var product = new Product("iPhone", 999.99m, 900.99m, 10, "Latest iPhone");
         await _repository.AddProductAsync(product);
         await _fixture.Context.SaveChangesAsync();
 

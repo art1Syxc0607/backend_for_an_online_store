@@ -37,45 +37,4 @@ public class CategoryController : ControllerBase
         return await _mediator.Send(command);
     }
 
-    [Authorize(Roles = "admin")]
-    [HttpPost]
-    public async Task<ActionResult<int>> AddCategory([FromBody] AddCategoryDto dto)
-    {
-        var command = new AddCategoryCommand
-        {
-            Name = dto.Name,
-            Description = dto.Description,
-        };
-
-        return await _mediator.Send(command);
-    }
-
-    [Authorize(Roles = "admin")]
-    [HttpPut]
-    public async Task<IActionResult> UpdateCategory([FromBody] UpdateCategoryDto dto)
-    {
-        var command = new UpdateCategoryCommand
-        {
-            CategoryDescription = dto.Description,
-            CategoryName = dto.Name
-        };
-
-        await _mediator.Send(command);
-
-        return Ok();
-    }
-
-    [Authorize(Roles = "admin")]
-    [HttpDelete("{catedoryId}")]
-    public async Task<IActionResult> DeleteCategory(int catedoryId)
-    {
-        var command = new DeleteCategoryCommand
-        {
-            CategoryId = catedoryId
-        };
-
-        await _mediator.Send(command);
-
-        return Ok();
-    }
 }

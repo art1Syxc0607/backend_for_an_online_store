@@ -36,16 +36,15 @@ public class Order
         User = user ?? throw new DomainException("User cannot be null.");
         UserId = user.Id;
 
-        items.ForEach(oi_dto => AddItem(oi_dto.Product, oi_dto.Quantity, oi_dto.PriceAtPurchase));
+        items.ForEach(oi_dto => AddItem(oi_dto.Product, oi_dto.Quantity));
 
         ShippingAddress = shippingAddress ?? throw new DomainException("Address cannot be null.");
         Status = OrderStatus.Pending;
         CreatedAt = DateTime.UtcNow;
-        TotalAmount = 0;
     }
 
     // Бизнес-методы
-    public void AddItem(Product product, int quantity, decimal priceAtPurchase)
+    public void AddItem(Product product, int quantity)
     {
         if (product == null) throw new DomainException("Product cannot be null.");
         if (quantity <= 0) throw new DomainException("Quantity must be positive.");
@@ -66,7 +65,7 @@ public class Order
         }
         else
         {
-            _items.Add(new OrderItem(this, product, quantity, priceAtPurchase));
+            _items.Add(new OrderItem(this, product, quantity, product.Price, product.PurchasePrice));
         }
 
         RecalculateTotal();

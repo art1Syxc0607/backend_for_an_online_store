@@ -15,6 +15,10 @@ public class ProductResponseDto
     public int StockQuantity { get; init; }
     public int ReservedQuantity { get; init; }
     public int AvailableQuantity => StockQuantity - ReservedQuantity;
+
+    public double AverageRating { get; init; }
+    public int CountOfReviews { get; init; }
+
     public List<string>? ImageUrls { get; init; }
     public List<string>? VideoUrls { get; init; }
     public DateTime CreatedAt { get; init; }

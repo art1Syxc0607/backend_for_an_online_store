@@ -21,7 +21,7 @@ public class AddReviewHandlerTests
         var user = new User("test@mail.com", "hash", "John");
         user.GenerateEmailConfirmationToken(emailToken, DateTime.UtcNow + TimeSpan.FromMinutes(15));
         user.ConfirmEmail(emailToken);
-        var product = new Domain.Entities.Product("iPhone", 999.99m, 10, "Test product");
+        var product = new Domain.Entities.Product("iPhone", 999.99m, 900.99m, 10, "Test product");
 
         var userRepoMock = new Mock<IUserRepository>();
         userRepoMock.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
@@ -88,7 +88,7 @@ public class AddReviewHandlerTests
 
         var productRepoMock = new Mock<IProductRepository>();
         productRepoMock.Setup(x => x.GetByIdAsync(productId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Domain.Entities.Product("iPhone", 999.99m, 10, "Test product"));
+            .ReturnsAsync(new Domain.Entities.Product("iPhone", 999.99m, 900.99m, 10, "Test product"));
 
         var orderRepoMock = new Mock<IOrderRepository>();
         orderRepoMock.Setup(x => x.HasUserPurchasedProductAsync(userId, productId, It.IsAny<CancellationToken>()))

@@ -94,7 +94,7 @@ public class OrderRepositoryTests : IClassFixture<TestDatabaseFixture>
     {
         // Arrange
         var user = new User("test@mail.com", "hash", "John");
-        var product = new Product("iPhone", 999.99m, 10, "Latest iPhone");
+        var product = new Product("iPhone", 999.99m, 900.99m, 10, "Latest iPhone");
 
 
         await _fixture.Context.Users.AddAsync(user);
@@ -102,7 +102,7 @@ public class OrderRepositoryTests : IClassFixture<TestDatabaseFixture>
         await _fixture.Context.SaveChangesAsync();
 
         var order = new Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
-        order.AddItem(product, 1, product.Price);
+        order.AddItem(product, 1);
         order.MarkAsPaid();
         order.Ship();
         order.Deliver();

@@ -1,4 +1,6 @@
-﻿using Domain.Entities;
+﻿using Application.DTOs.Admin.User;
+using Domain.Entities;
+using Domain.Enums;
 
 namespace Application.Interfaces;
 
@@ -19,4 +21,16 @@ public interface IUserRepository
     Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default);
 
 
+    // Admin
+    Task<List<User>> GetAllUsersFilteredAsync(
+        string? search,
+        UserRole? role,
+        bool? isActive,
+        int pageNumber,
+        int pageSize,
+        SortUserBy sortBy,
+        bool sortDesc,
+        CancellationToken ct);
+
+    Task<int> CountAdminsAsync(CancellationToken ct);
 }

@@ -42,6 +42,7 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
         var product = new Domain.Entities.Product(
             command.Name,
             command.Price,
+            command.PurchasePrice,
             command.StockQuantity,
             command.Description,
             command.CategoryId

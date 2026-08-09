@@ -17,9 +17,13 @@ public class Product
     public string Name { get; private set; }
     public string Description { get; private set; }
     public decimal Price { get; private set; }
+    public decimal PurchasePrice { get; private set; } // Цена закупки
+
+    public decimal ProfitMargin => Price - PurchasePrice; // Маржа в деньгах
     public int StockQuantity { get; private set; }
     public int ReservedQuantity { get; private set; } = 0;
     public int AvailableQuantity => StockQuantity - ReservedQuantity;
+    public int AmountOfRecieved { get; private set; } = 0;
     public string? Sku { get; private set; }
     //public string? ImageUrl { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -27,6 +31,8 @@ public class Product
 
     // Внешние ключи
     public int? CategoryId { get; private set; }
+
+
 
     // Навигационные свойства
     public virtual Category? Category { get; private set; }
@@ -39,11 +45,12 @@ public class Product
     //public virtual IReadOnlyCollection<InventoryTransaction> InventoryTransactions => _inventoryTransactions.AsReadOnly();
 
 
-    public Product(string name, decimal price, int stockQuantity, string description, 
-        int? categoryId = null)
+    public Product(string name, decimal price, decimal purchasePrice, int stockQuantity, string description, 
+        int? categoryId = null) // decimal purchasePrice надо бы
     {
         SetName(name);
         SetPrice(price);
+        SetPurchasePrice(purchasePrice);
         SetStock(stockQuantity);
         if (description == "") throw new DomainException("Description cannot be empty.");
         this.Description = description;
@@ -59,7 +66,7 @@ public class Product
         if(id != null) Id = id.Value;
     }
     public void UpdateDetails(string? name = null, decimal? price = null, string? description = null,
-        int? StockQuantity = null, string? sku = null, string? imageUrl = null)
+        int? StockQuantity = null, string? sku = null, decimal? purchasePrice = null)
     {
         if (name != null) SetName(name);
         if (description != null) 
@@ -71,7 +78,8 @@ public class Product
         if(StockQuantity  != null) SetStock(StockQuantity.Value);
 
         if (sku != null) Sku = sku;
-        //if (imageUrl != null) ImageUrl = imageUrl;
+        if(purchasePrice.HasValue) PurchasePrice = purchasePrice.Value; 
+
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -95,7 +103,7 @@ public class Product
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public double GetAverageRating()
+    public double GetAverageRating() // rating
     {
         if (!_reviews.Any()) return 0;
         return _reviews.Average(r => r.Rating);
@@ -116,6 +124,11 @@ public class Product
             throw new DomainException($"Not enough available stock. Available: {AvailableQuantity}");
 
         ReservedQuantity += quantity;
+    }
+
+    public void RecievedInOrder()
+    {
+        AmountOfRecieved++;
     }
 
     public void ReleaseReservation(int quantity)
@@ -168,6 +181,16 @@ public class Product
         if (newStock < ReservedQuantity)
             throw new DomainException($"Cannot set stock below reserved quantity ({ReservedQuantity})");
         StockQuantity = newStock;
+    }
+
+    private void SetPurchasePrice(decimal purchasePrice)
+    {
+        if (purchasePrice < 0)
+            throw new DomainException("Purchase price cannot be negative");
+        if (purchasePrice > Price)
+            throw new DomainException("Purchase price cannot be higher than selling price");
+
+        PurchasePrice = purchasePrice;
     }
 
     // работа с файлами

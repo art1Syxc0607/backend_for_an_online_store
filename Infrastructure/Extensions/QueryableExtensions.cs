@@ -23,19 +23,19 @@ public static class QueryableExtensions
 
     public static IQueryable<Product> ApplySorting(
    this IQueryable<Product> query,
-   SortBy? sortBy, bool sortDesc = true)
+   SortProductBy? sortBy, bool sortDesc = true)
     {
-        return (sortBy ?? SortBy.Name) switch
+        return (sortBy ?? SortProductBy.Name) switch
         {
-            SortBy.Price => sortDesc
+            SortProductBy.Price => sortDesc
                 ? query.OrderByDescending(p => p.Price)
                 : query.OrderBy(p => p.Price),
 
-            SortBy.Name => sortDesc
+            SortProductBy.Name => sortDesc
                 ? query.OrderByDescending(p => p.Name)
                 : query.OrderBy(p => p.Name),
 
-            SortBy.Rating => sortDesc
+            SortProductBy.Rating => sortDesc
                 ? query.OrderByDescending(p => p.Reviews.Any()
                     ? p.Reviews.Average(r => r.Rating)
                     : 0)
@@ -43,13 +43,36 @@ public static class QueryableExtensions
                     ? p.Reviews.Average(r => r.Rating)
                     : 0),
 
-            SortBy.ReviewAmount => sortDesc
+            SortProductBy.ReviewAmount => sortDesc
                 ? query.OrderByDescending(p => p.Reviews.Count)
                 : query.OrderBy(p => p.Reviews.Count),
 
-            _ => query.OrderBy(p => p.Name)
+            _ => query.OrderBy(p => p.Name) // // Если ни одно не совпало (default)
         };
     }
+
+    public static IQueryable<Order> ApplyOrderSorting(
+       this IQueryable<Order> query,
+       SortOrderBy? sortBy, bool sortDesc = true)
+    {
+        return (sortBy ?? SortOrderBy.DateOfCreation) switch
+        {
+            SortOrderBy.Status => sortDesc
+                ? query.OrderByDescending(p => p.Status)
+                : query.OrderBy(p => p.Status),
+
+            SortOrderBy.UserId => sortDesc
+                ? query.OrderByDescending(p => p.UserId)
+                : query.OrderBy(p => p.UserId),
+
+            SortOrderBy.DateOfCreation => sortDesc
+                ? query.OrderByDescending(p => p.CreatedAt)
+                : query.OrderBy(p => p.CreatedAt),
+
+            _ => query.OrderByDescending(p => p.CreatedAt) // // Если ни одно не совпало (default)
+        };
+    }
+
 
     public static IQueryable<T> Pagination<T>(this IQueryable<T> query, int pageNumber, int pageSize)
     {

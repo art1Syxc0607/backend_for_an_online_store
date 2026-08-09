@@ -15,10 +15,10 @@ public class OrderTests
         // Arrange
         var user = new User("test@mail.com", "hash", "John");
         var order = new Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
-        var product = new Product("Phone", 599.99m, 10, "Test product");
+        var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
 
         // Act
-        order.AddItem(product, 2, product.Price);
+        order.AddItem(product, 2);
 
         // Assert
         order.Items.Should().HaveCount(1);
@@ -32,10 +32,10 @@ public class OrderTests
         // Arrange
         var user = new User("test@mail.com", "hash", "John");
         var order = new Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
-        var product = new Product("Phone", 599.99m, 10, "Test product");
+        var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
 
         // Act
-        Action act = () => order.AddItem(product, 50, product.Price);
+        Action act = () => order.AddItem(product, 50);
 
         // Assert
         act.Should().Throw<DomainException>()
@@ -48,8 +48,8 @@ public class OrderTests
         // Arrange
         var user = new User("test@mail.com", "hash", "John");
         var order = new Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
-        var product = new Product("Phone", 599.99m, 10, "Test product");
-        order.AddItem(product, 2, product.Price);
+        var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
+        order.AddItem(product, 2);
 
         // Act
         order.MarkAsPaid();
@@ -65,8 +65,8 @@ public class OrderTests
         // Arrange
         var user = new User("test@mail.com", "hash", "John");
         var order = new Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
-        var product = new Product("Phone", 599.99m, 10, "Test product");
-        order.AddItem(product, 2, product.Price);
+        var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
+        order.AddItem(product, 2);
         order.MarkAsPaid();
 
         // Act

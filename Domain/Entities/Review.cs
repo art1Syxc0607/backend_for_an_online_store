@@ -1,4 +1,5 @@
 ﻿using Domain.Exceptions;
+using Domain.Enums;
 
 namespace Domain.Entities;
 
@@ -15,8 +16,13 @@ public class Review
     public string Text { get; private set; }
     public int Rating { get; private set; } // 1-5 stars
     public bool IsVerifiedPurchase { get; private set; }
+    public ReviewStatus Status { get; private set; } = ReviewStatus.Approved;
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+
+    // AdminResponse
+    public string? AdminResponse { get; private set; }
+    public DateTime? AdminResponseAt { get; private set; }
 
 
     // навигацонные свойства
@@ -105,6 +111,45 @@ public class Review
         var index = _videoUrls.IndexOf(oldUrl);
         _videoUrls[index] = newUrl;
     }
+
+    //AdminResponse
+
+    public void AddAdminResponse(string response)
+    {
+        if (string.IsNullOrWhiteSpace(response))
+            throw new DomainException("Response cannot be empty.");
+
+        if (Status != ReviewStatus.Approved)
+            throw new DomainException("Cannot respond to a review that is not approved.");
+
+        AdminResponse = response;
+        AdminResponseAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateAdminResponse(string response)
+    {
+        if (string.IsNullOrWhiteSpace(response))
+            throw new DomainException("Response cannot be empty.");
+
+        if (AdminResponse == null)
+            throw new DomainException("Cannot update a response that doesn't exist.");
+
+        AdminResponse = response;
+        AdminResponseAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RemoveAdminResponse()
+    {
+        if (AdminResponse == null)
+            throw new DomainException("No response to remove.");
+
+        AdminResponse = null;
+        AdminResponseAt = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
 
     // ========== УДАЛЕНИЕ ОДНОГО URL ==========
     public void RemoveImage(string url)

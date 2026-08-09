@@ -6,12 +6,9 @@ using System.Threading.Tasks;
 
 namespace Application.Enums;
 
-public enum SortBy
+public enum SortOrderBy
 {
-    Name = 0,
-    Price = 1,
-    AvailableQuantity = 2,
-    Rating = 3,
-    ReviewAmount = 4,
-    //PaymentAmount = 5,
+    Status = 0,
+    DateOfCreation = 1,
+    UserId = 2,
 }

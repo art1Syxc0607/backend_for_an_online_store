@@ -23,7 +23,7 @@ public class CreateOrderHandlerTests
         var user = new User("test@mail.com", "hash", "John");
         user.GenerateEmailConfirmationToken(emailToken, DateTime.UtcNow + TimeSpan.FromMinutes(15));
         user.ConfirmEmail(emailToken);
-        var product = new Domain.Entities.Product("iPhone", 999.99m, 10, "Test product", null);
+        var product = new Domain.Entities.Product("iPhone", 999.99m, 900.99m, 10, "Test product", null);
         product.TestsSetProduct(productId);
 
         var userRepoMock = new Mock<IUserRepository>();
@@ -114,7 +114,7 @@ public class CreateOrderHandlerTests
         user.GenerateEmailConfirmationToken(emailToken, DateTime.UtcNow + TimeSpan.FromMinutes(15));
         user.ConfirmEmail(emailToken);
 
-        var product = new Domain.Entities.Product("iPhone", 999.99m, 2, "Test product");
+        var product = new Domain.Entities.Product("iPhone", 999.99m, 900.99m, 2, "Test product");
 
         var userRepoMock = new Mock<IUserRepository>();
         userRepoMock.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))

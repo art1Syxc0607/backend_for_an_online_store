@@ -9,6 +9,7 @@ namespace DomainTests.Entities;
 public class ProductTests
 {
     private const string DefaultDescription = "Test product description";
+    private const decimal DefaultPurchasePrice = 900.99m;
 
     // ========== 1. Конструктор и создание продукта ==========
 
@@ -18,12 +19,13 @@ public class ProductTests
         // Arrange
         var name = "iPhone 15";
         var price = 999.99m;
+
         var stock = 50;
         var description = "Latest iPhone model";
         var categoryId = 1;
 
         // Act
-        var product = new Product(name, price, stock, description, categoryId);
+        var product = new Product(name, price, DefaultPurchasePrice, stock, description, categoryId);
 
         // Assert
         product.Id.Should().Be(0);
@@ -45,10 +47,11 @@ public class ProductTests
     {
         // Arrange
         var price = 999.99m;
+
         var stock = 10;
 
         // Act
-        Action act = () => new Product("", price, stock, DefaultDescription);
+        Action act = () => new Product("", price, DefaultPurchasePrice, stock, DefaultDescription);
 
         // Assert
         act.Should().Throw<DomainException>().WithMessage("*Product name cannot be empty*");
@@ -59,10 +62,11 @@ public class ProductTests
     {
         // Arrange
         var name = "iPhone 15";
+
         var stock = 10;
 
         // Act
-        Action act = () => new Product(name, 0, stock, DefaultDescription);
+        Action act = () => new Product(name, 0, DefaultPurchasePrice, stock, DefaultDescription);
 
         // Assert
         act.Should().Throw<DomainException>().WithMessage("*Price must be greater than zero*");
@@ -77,7 +81,7 @@ public class ProductTests
         var stock = 10;
 
         // Act
-        Action act = () => new Product(name, price, stock, DefaultDescription);
+        Action act = () => new Product(name, price, DefaultPurchasePrice, stock, DefaultDescription);
 
         // Assert
         act.Should().Throw<DomainException>().WithMessage("*Price must be greater than zero*");
@@ -92,7 +96,7 @@ public class ProductTests
         var stock = -5;
 
         // Act
-        Action act = () => new Product(name, price, stock, DefaultDescription);
+        Action act = () => new Product(name, price, DefaultPurchasePrice, stock, DefaultDescription);
 
         // Assert
         act.Should().Throw<DomainException>().WithMessage("*Stock cannot be negative*");
@@ -107,7 +111,7 @@ public class ProductTests
         var stock = 10;
 
         // Act
-        Action act = () => new Product(name, price, stock, "");
+        Action act = () => new Product(name, price, DefaultPurchasePrice, stock, "");
 
         // Assert
         act.Should().Throw<DomainException>().WithMessage("*Description cannot be empty*");
@@ -119,7 +123,7 @@ public class ProductTests
     public void UpdateDetails_WhenValidData_ShouldUpdateProduct()
     {
         // Arrange
-        var product = new Product("Old Name", 100m, 10, "Old description");
+        var product = new Product("Old Name", 100m, DefaultPurchasePrice, 10, "Old description");
         var newName = "New Name";
         var newDescription = "New description";
         var newPrice = 200m;
@@ -141,7 +145,7 @@ public class ProductTests
     public void UpdateDetails_WhenNameIsEmpty_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("Old Name", 100m, 10, DefaultDescription);
+        var product = new Product("Old Name", 100m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.UpdateDetails(name: "");
@@ -154,7 +158,7 @@ public class ProductTests
     public void UpdateDetails_WhenPriceIsZero_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("Old Name", 100m, 10, DefaultDescription);
+        var product = new Product("Old Name", 100m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.UpdateDetails(price: 0);
@@ -167,7 +171,7 @@ public class ProductTests
     public void UpdateDetails_WhenDescriptionIsEmpty_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("Old Name", 100m, 10, DefaultDescription);
+        var product = new Product("Old Name", 100m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.UpdateDetails(description: "");
@@ -182,7 +186,7 @@ public class ProductTests
     public void IncreaseStock_WhenValid_ShouldIncreaseStock()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var initialStock = product.StockQuantity;
 
         // Act
@@ -197,7 +201,7 @@ public class ProductTests
     public void IncreaseStock_WhenQuantityIsZero_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.IncreaseStock(0);
@@ -210,7 +214,7 @@ public class ProductTests
     public void IncreaseStock_WhenQuantityIsNegative_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.IncreaseStock(-5);
@@ -223,7 +227,7 @@ public class ProductTests
     public void DecreaseStock_WhenValid_ShouldDecreaseStock()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         product.DecreaseStock(3);
@@ -237,7 +241,7 @@ public class ProductTests
     public void DecreaseStock_WhenNotEnoughStock_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 5, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 5, DefaultDescription);
 
         // Act
         Action act = () => product.DecreaseStock(10);
@@ -250,7 +254,7 @@ public class ProductTests
     public void DecreaseStock_WhenQuantityIsZero_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 5, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 5, DefaultDescription);
 
         // Act
         Action act = () => product.DecreaseStock(0);
@@ -263,7 +267,7 @@ public class ProductTests
     public void DecreaseStock_WhenQuantityIsNegative_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 5, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 5, DefaultDescription);
 
         // Act
         Action act = () => product.DecreaseStock(-3);
@@ -278,7 +282,7 @@ public class ProductTests
     public void Reserve_WhenValid_ShouldIncreaseReservedQuantity()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var initialAvailable = product.AvailableQuantity;
 
         // Act
@@ -293,7 +297,7 @@ public class ProductTests
     public void Reserve_WhenNotEnoughAvailableStock_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 5, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 5, DefaultDescription);
 
         // Act
         Action act = () => product.Reserve(10);
@@ -306,7 +310,7 @@ public class ProductTests
     public void Reserve_WhenQuantityIsZero_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 5, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 5, DefaultDescription);
 
         // Act
         Action act = () => product.Reserve(0);
@@ -319,7 +323,7 @@ public class ProductTests
     public void ReleaseReservation_WhenValid_ShouldDecreaseReservedQuantity()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.Reserve(5);
 
         // Act
@@ -334,7 +338,7 @@ public class ProductTests
     public void ReleaseReservation_WhenReleasingMoreThanReserved_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.Reserve(3);
 
         // Act
@@ -348,7 +352,7 @@ public class ProductTests
     public void ConfirmReservation_WhenValid_ShouldDecreaseStockAndReserved()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.Reserve(3);
 
         // Act
@@ -364,7 +368,7 @@ public class ProductTests
     public void ConfirmReservation_WhenConfirmingMoreThanReserved_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.Reserve(2);
 
         // Act
@@ -464,7 +468,7 @@ public class ProductTests
     public void AssignCategory_WhenValid_ShouldAssignCategory()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var category = new Category("Electronics", "Electronic devices");
 
         // Act
@@ -479,7 +483,7 @@ public class ProductTests
     public void AssignCategory_WhenCategoryIsNull_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.AssignCategory(null!);
@@ -494,7 +498,7 @@ public class ProductTests
     public void SetImageUrls_WhenValid_ShouldSetAllImageUrls()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var urls = new List<string>
         {
             "https://example.com/image1.jpg",
@@ -514,7 +518,7 @@ public class ProductTests
     public void SetImageUrls_WhenNewUrlsAdded_ShouldAppendToExisting()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetImageUrls(new List<string> { "image1.jpg", "image2.jpg" });
 
         // Act
@@ -529,7 +533,7 @@ public class ProductTests
     public void SetImageUrls_WhenExceedsMaxLimit_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var urls = Enumerable.Range(1, 9).Select(i => $"image{i}.jpg").ToList(); // 9 > 8
 
         // Act
@@ -544,7 +548,7 @@ public class ProductTests
     public void SetImageUrls_WhenTotalExceedsLimit_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetImageUrls(new List<string> { "image1.jpg", "image2.jpg", "image3.jpg",
         "image33.jpg", "image36.jpg", "image368.jpg",});
 
@@ -560,7 +564,7 @@ public class ProductTests
     public void SetImageUrls_WhenListIsEmpty_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.SetImageUrls(new List<string>());
@@ -574,7 +578,7 @@ public class ProductTests
     public void SetImageUrls_WhenListIsNull_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.SetImageUrls(null!);
@@ -592,7 +596,7 @@ public class ProductTests
     public void SetVideoUrls_WhenValid_ShouldSetAllVideoUrls()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var urls = new List<string>
         {
             "https://example.com/video1.mp4",
@@ -611,7 +615,7 @@ public class ProductTests
     public void SetVideoUrls_WhenNewUrlsAdded_ShouldAppendToExisting()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetVideoUrls(new List<string> { "video1.mp4" });
 
         // Act
@@ -626,7 +630,7 @@ public class ProductTests
     public void SetVideoUrls_WhenExceedsMaxLimit_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var urls = new List<string> { "video1.mp4", "video2.mp4", "video3.mp4" }; // 3 > 2
 
         // Act
@@ -641,7 +645,7 @@ public class ProductTests
     public void SetVideoUrls_WhenListIsEmpty_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.SetVideoUrls(new List<string>());
@@ -659,7 +663,7 @@ public class ProductTests
     public void RemoveImages_WhenAllExist_ShouldRemoveAll()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetImageUrls(new List<string> { "image1.jpg", "image2.jpg", "image3.jpg" });
 
         // Act
@@ -674,7 +678,7 @@ public class ProductTests
     public void RemoveImages_WhenSomeNotFound_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetImageUrls(new List<string> { "image1.jpg", "image2.jpg" });
 
         // Act
@@ -690,7 +694,7 @@ public class ProductTests
     public void RemoveImages_WhenListIsEmpty_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.RemoveImages(new List<string>());
@@ -704,7 +708,7 @@ public class ProductTests
     public void RemoveVideos_WhenAllExist_ShouldRemoveAll()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetVideoUrls(new List<string> { "video1.mp4", "video2.mp4" });
 
         // Act
@@ -719,7 +723,7 @@ public class ProductTests
     public void RemoveVideos_WhenSomeNotFound_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetVideoUrls(new List<string> { "video1.mp4", "video2.mp4" });
 
         // Act
@@ -739,7 +743,7 @@ public class ProductTests
     public void ReplaceImageUrls_WhenValid_ShouldReplaceAll()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetImageUrls(new List<string> { "old1.jpg", "old2.jpg" });
         var newUrls = new List<string> { "new1.jpg", "new2.jpg", "new3.jpg" };
 
@@ -756,7 +760,7 @@ public class ProductTests
     public void ReplaceImageUrls_WhenExceedsLimit_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var urls = Enumerable.Range(1, 9).Select(i => $"image{i}.jpg").ToList();
 
         // Act
@@ -771,7 +775,7 @@ public class ProductTests
     public void ReplaceVideoUrls_WhenValid_ShouldReplaceAll()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetVideoUrls(new List<string> { "old1.mp4" });
         var newUrls = new List<string> { "new1.mp4", "new2.mp4" };
 
@@ -792,7 +796,7 @@ public class ProductTests
     public void ClearAllFiles_WhenFilesExist_ShouldClearAll()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetImageUrls(new List<string> { "image1.jpg", "image2.jpg" });
         product.SetVideoUrls(new List<string> { "video1.mp4", "video2.mp4" });
 
@@ -812,7 +816,7 @@ public class ProductTests
     public void GetAllFileUrls_WhenFilesExist_ShouldReturnAllUrls()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var imageUrls = new List<string> { "image1.jpg", "image2.jpg" };
         var videoUrls = new List<string> { "video1.mp4" };
         product.SetImageUrls(imageUrls);
@@ -831,7 +835,7 @@ public class ProductTests
     public void GetAllFileUrls_WhenNoFiles_ShouldReturnEmpty()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         var allUrls = product.GetAllFileUrls();
@@ -848,7 +852,7 @@ public class ProductTests
     public void UpdateImageUrl_WhenExists_ShouldUpdate()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetImageUrls(new List<string> { "old.jpg", "keep.jpg" });
 
         // Act
@@ -864,7 +868,7 @@ public class ProductTests
     public void UpdateImageUrl_WhenNotFound_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetImageUrls(new List<string> { "keep.jpg" });
 
         // Act
@@ -878,7 +882,7 @@ public class ProductTests
     public void UpdateVideoUrl_WhenExists_ShouldUpdate()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetVideoUrls(new List<string> { "old.mp4", "keep.mp4" });
 
         // Act
@@ -896,7 +900,7 @@ public class ProductTests
     public void GetAverageRating_WhenNoReviews_ShouldReturnZero()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         var rating = product.GetAverageRating();
@@ -909,7 +913,7 @@ public class ProductTests
     public void GetAverageRating_WhenReviewsExist_ShouldReturnAverage()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var user = new User("test@mail.com", "hash", "John");
 
         var review1 = new Review(user, product, "Great phone!", 5, true);
@@ -932,7 +936,7 @@ public class ProductTests
     public void RemoveImage_WhenImageExists_ShouldRemove()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var urls = new List<string> { "image1.jpg", "image2.jpg" };
         product.SetImageUrls(urls);
 
@@ -949,7 +953,7 @@ public class ProductTests
     public void RemoveImage_WhenImageDoesNotExist_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetImageUrls(new List<string> { "image1.jpg" });
 
         // Act
@@ -963,7 +967,7 @@ public class ProductTests
     public void RemoveVideo_WhenVideoExists_ShouldRemove()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var urls = new List<string> { "video1.mp4", "video2.mp4" };
         product.SetVideoUrls(urls);
 
@@ -980,7 +984,7 @@ public class ProductTests
     public void RemoveVideo_WhenVideoDoesNotExist_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetVideoUrls(new List<string> { "video1.mp4" });
 
         // Act
@@ -994,7 +998,7 @@ public class ProductTests
     public void ClearAllFiles_ShouldClearImageAndVideoUrls()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         product.SetImageUrls(new List<string> { "image1.jpg" });
         product.SetVideoUrls(new List<string> { "video1.mp4" });
 
@@ -1012,7 +1016,7 @@ public class ProductTests
     public void AddReview_WhenValid_ShouldAddReview()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
         var user = new User("test@mail.com", "hash", "John");
         var review = new Review(user, product, "Great product!", 5, true);
 
@@ -1028,7 +1032,7 @@ public class ProductTests
     public void AddReview_WhenReviewIsNull_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("iPhone", 999.99m, 10, DefaultDescription);
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.AddReview(null!);

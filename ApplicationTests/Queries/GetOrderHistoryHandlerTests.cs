@@ -128,7 +128,7 @@ public class GetOrderHistoryHandlerTests
         var userId = 1;
         var user = new User("test@mail.com", "hash", "John");
 
-        var product = new Domain.Entities.Product("iPhone", 999.99m, 10, "Test product", null);
+        var product = new Domain.Entities.Product("iPhone", 999.99m, 900.99m, 10, "Test product", null);
         product.TestsSetProduct(1);
 
         var order = CreateOrderWithItems(user, 1, product, 2, 999.99m);
@@ -196,16 +196,16 @@ public class GetOrderHistoryHandlerTests
         var userId = 1;
         var user = new User("test@mail.com", "hash", "John");
 
-        var product1 = new Domain.Entities.Product("iPhone", 999.99m, 10, "Smartphone", null);
+        var product1 = new Domain.Entities.Product("iPhone", 999.99m, 900.99m, 10, "Smartphone", null);
         product1.TestsSetProduct(1);
 
-        var product2 = new Domain.Entities.Product("AirPods", 199.99m, 20, "Wireless headphones", null);
+        var product2 = new Domain.Entities.Product("AirPods", 199.99m, 900.99m, 20, "Wireless headphones", null);
         product2.TestsSetProduct(2);
 
         var order = new Domain.Entities.Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
         order.TestsSetOrder(1);
-        order.AddItem(product1, 1, product1.Price);
-        order.AddItem(product2, 2, product2.Price);
+        order.AddItem(product1, 1);
+        order.AddItem(product2, 2);
 
         _userRepositoryMock
             .Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
@@ -252,7 +252,7 @@ public class GetOrderHistoryHandlerTests
     {
         var order = new Domain.Entities.Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
         order.TestsSetOrder(id);
-        order.AddItem(product, quantity, price);
+        order.AddItem(product, quantity);
 
         return order;
     }

@@ -26,7 +26,19 @@ public interface IProductRepository
 
     Task<List<Product>> GetProductsFilter(int? CategoryId, string? SearchText, decimal? PriceLimitMax,
         decimal? PriceLimitMin, bool? OnlyAvailable, int? pageNumber, int? pageSize, 
-        SortBy? sortBy = SortBy.Name, bool SortDesc = true, CancellationToken ct = default);
+        SortProductBy? sortBy = SortProductBy.Name, bool SortDesc = true, CancellationToken ct = default);
 
+    // admin
+    Task<List<Product>> GetLowStockProductsAsync(
+        int limit,
+        bool includeReserved = true,
+        int? categoryId = null,
+        string? search = null,
+        CancellationToken ct = default);
+
+    Task<List<PopularProductDto>> GetMostPopularProductsForThePeriod(
+        DateSpan period,
+        DateTime lastDayOfThePriod,
+        CancellationToken ct = default);
 }
 

@@ -17,6 +17,11 @@ public class User
     public UserRole Role { get; private set; } 
     public DateTime CreatedAt { get; private set; }
 
+
+    public bool IsActive { get; private set; } = true;
+    public string? BlockReason { get; private set; }
+    public DateTime? BlockedAt { get; private set; }
+
     // Registration confirming
     public bool IsEmailConfirmed { get; private set; }
     public DateTime? EmailConfirmedAt { get; private set; }
@@ -42,6 +47,29 @@ public class User
     public void TestsSetUser(int? id = null)
     {
         if(id != null) Id = id.Value;
+    }
+
+    public void Block(string? reason = null)
+    {
+        if (!IsActive)
+            throw new DomainException("User is already blocked");
+
+        if (Role == UserRole.Admin)
+            throw new DomainException("Cannot block an admin");
+
+        IsActive = false;
+        BlockReason = reason;
+        BlockedAt = DateTime.UtcNow;
+    }
+
+    public void Unblock()
+    {
+        if (IsActive)
+            throw new DomainException("User is not blocked");
+
+        IsActive = true;
+        BlockReason = null;
+        BlockedAt = null;
     }
 
     // Метод для генерации токена подтверждения

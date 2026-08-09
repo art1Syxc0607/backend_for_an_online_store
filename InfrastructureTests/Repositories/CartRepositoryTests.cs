@@ -44,7 +44,7 @@ public class CartRepositoryTests : IClassFixture<TestDatabaseFixture>
     {
         // Arrange
         var user = new User("test@mail.com", "hash", "John");
-        var product = new Product("iPhone", 999.99m, 10, "Latest iPhone");
+        var product = new Product("iPhone", 999.99m, 900.99m, 10, "Latest iPhone");
 
         await _fixture.Context.Users.AddAsync(user);
         await _fixture.Context.Products.AddAsync(product);

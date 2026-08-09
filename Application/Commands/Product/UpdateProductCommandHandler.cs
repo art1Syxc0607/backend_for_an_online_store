@@ -42,7 +42,7 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand>
             description: command.Description,
             StockQuantity: command.StockQuantity,
             sku: command.Sku,
-            imageUrl: command.ImageUrl
+            purchasePrice: command.PurchasePrice
         );
 
 

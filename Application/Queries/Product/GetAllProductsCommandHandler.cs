@@ -40,7 +40,7 @@ public class GetAllProductsCommandHandler: IRequestHandler<GetAllProductsCommand
             StockQuantity = p.StockQuantity,
             ReservedQuantity = p.ReservedQuantity,
             ImageUrls = p.ImageUrls.ToList(),
-            VideoUrls = p.ImageUrls.ToList(),
+            VideoUrls = p.VideoUrls.ToList(),
             CategoryId = p.CategoryId,
             CreatedAt = p.CreatedAt,
             UpdatedAt = p.UpdatedAt,
