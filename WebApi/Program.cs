@@ -17,6 +17,10 @@ builder.Services.Extension(builder.Configuration); // DbContext + Repositories
 builder.Services.AddApplication();
 
 
+// реализация In-Memory Cache
+builder.Services.AddMemoryCache();
+
+
 var app = builder.Build();
 app.UseStaticFiles();
 

@@ -14,16 +14,25 @@ namespace Application.Queries.Product;
 public class GetAllProductsCommandHandler: IRequestHandler<GetAllProductsCommand, List<ProductResponseDto>>
 {
     private readonly IProductRepository _productRepository;
+    private readonly ICacheService _cacheService;
 
-    public GetAllProductsCommandHandler(IProductRepository productRepository)
+    private const string CacheKey = "products:all";
+
+    public GetAllProductsCommandHandler(IProductRepository productRepository, ICacheService cacheService)
     {
         _productRepository = productRepository;
+        _cacheService = cacheService;
     }
         
 
 
     public async Task<List<ProductResponseDto>> Handle(GetAllProductsCommand command, CancellationToken ct)
     {
+        var cached = await _cacheService.GetAsync<List<ProductResponseDto>>(CacheKey);
+        if (cached != null)
+            return cached;
+
+
         var products = await _productRepository.GetAllProductsAsync(ct);
 
         if (products == null) throw new DomainException("No products");
@@ -31,7 +40,7 @@ public class GetAllProductsCommandHandler: IRequestHandler<GetAllProductsCommand
         if (!products.Any())
             return new List<ProductResponseDto>();
 
-        var productsdto = products.Select(p => new ProductResponseDto
+        var result = products.Select(p => new ProductResponseDto
         {
             Id = p.Id,
             Name = p.Name,
@@ -39,13 +48,20 @@ public class GetAllProductsCommandHandler: IRequestHandler<GetAllProductsCommand
             Price = p.Price,
             StockQuantity = p.StockQuantity,
             ReservedQuantity = p.ReservedQuantity,
+            AmountOfRecieved = p.AmountOfReceived,
+            AmountOfPaid = p.AmountOfPaid,
+            AmountOfCanceled = p.AmountOfCanceled,
+            CountOfOrdersContainThisProduct = p.OrderItems.Count(),
             ImageUrls = p.ImageUrls.ToList(),
             VideoUrls = p.VideoUrls.ToList(),
             CategoryId = p.CategoryId,
             CreatedAt = p.CreatedAt,
             UpdatedAt = p.UpdatedAt,
-        }).ToList();
+        }).OrderByDescending(dto => dto.CountOfOrdersContainThisProduct).ToList();
 
-        return productsdto;
+        // Кэшируем на 10 минут
+        await _cacheService.SetAsync(CacheKey, result, TimeSpan.FromMinutes(10));
+
+        return result;
     }
 }

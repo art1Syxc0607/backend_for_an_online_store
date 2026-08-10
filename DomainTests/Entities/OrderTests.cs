@@ -76,4 +76,61 @@ public class OrderTests
         act.Should().Throw<DomainException>()
             .WithMessage("*Cannot cancel a paid or shipped order*");
     }
+
+    // после добавление полной статистики по каждому товару
+    [Fact]
+    public void MarkAsPaid_ShouldIncreaseAmountOfPaid()
+    {
+        // Arrange
+        var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
+        var user = new User("test@mail.com", "hash", "John");
+        var order = new Order(user, "Address", new List<OrderItemDomainDto>());
+        order.AddItem(product, 2);
+
+        // Act
+        order.MarkAsPaid();
+
+        // Assert
+        product.AmountOfPaid.Should().Be(2);
+        product.AmountOfReceived.Should().Be(0);
+        product.AmountOfCanceled.Should().Be(0);
+    }
+
+    [Fact]
+    public void ReceivedByUser_ShouldIncreaseAmountOfReceived()
+    {
+        // Arrange
+        var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
+        var user = new User("test@mail.com", "hash", "John");
+        var order = new Order(user, "Address", new List<OrderItemDomainDto>());
+        order.AddItem(product, 2);
+        order.MarkAsPaid();
+        order.Ship();
+        order.Deliver();
+
+        // Act
+        order.ReceivedByUser();
+
+        // Assert
+        product.AmountOfReceived.Should().Be(2);
+    }
+
+    [Fact]
+    public void Cancel_ShouldIncreaseAmountOfCanceled()
+    {
+        // Arrange
+        var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
+        var user = new User("test@mail.com", "hash", "John");
+        var order = new Order(user, "Address", new List<OrderItemDomainDto>());
+        order.AddItem(product, 2);
+
+        // Act
+        order.Cancel();
+
+        // Assert
+        product.AmountOfCanceled.Should().Be(2);
+        product.AmountOfPaid.Should().Be(0);
+    }
+
+    // All tests complets succesfull so far
 }

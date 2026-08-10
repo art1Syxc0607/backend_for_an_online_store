@@ -32,6 +32,8 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, Infrastructure.UnitOfWork.UnitOfWork>();
         services.AddScoped<IUserRepository, UserRepository>();
 
+        // cash
+        services.AddSingleton<ICacheService, MemoryCacheService>();
 
         return services;
     }

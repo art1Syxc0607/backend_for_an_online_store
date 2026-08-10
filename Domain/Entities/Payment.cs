@@ -10,7 +10,7 @@ public class Payment
     public decimal Amount { get; private set; }
     public PaymentStatus Status { get; private set; }
     public PaymentMethod Method { get; private set; }
-    public string? TransactionId { get; private set; }          // наш внутренний ID
+    public string TransactionId { get; private set; }          // наш внутренний ID
     public string? ExternalTransactionId { get; private set; } // ID от платежного шлюза
     public DateTime CreatedAt { get; private set; }
     public DateTime? PaidAt { get; private set; }

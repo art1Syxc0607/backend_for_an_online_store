@@ -48,12 +48,12 @@ public class AdminReviewsController : ControllerBase
     }
 
     [HttpPut("{reviewId}/response")]
-    public async Task<IActionResult> UpdateReviewResponse(int reviewId, [FromBody] UpdateReviewResponseDto dto)
+    public async Task<IActionResult> UpdateReviewResponse(int reviewId, [FromBody] EditReviewDto dto)
     {
         var command = new UpdateReviewResponseCommand
         {
             ReviewId = reviewId,
-            NewResponse = dto.NewResponse
+            NewResponse = dto.NewText
         };
 
         await _mediator.Send(command);

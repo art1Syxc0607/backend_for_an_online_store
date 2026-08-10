@@ -16,15 +16,17 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
     private readonly IProductRepository _productRepository;
     private readonly ICategoryRepository _categoryRepository;
     private readonly IFileStorageService _fileStorageService;
+    private readonly ICacheService _cacheService;
     private readonly IUnitOfWork _unitOfWork;
 
     public AddProductCommandHandler(IProductRepository productRepository, 
         ICategoryRepository categoryRepository, 
-        IFileStorageService fileStorageService, IUnitOfWork unitOfWork)
+        IFileStorageService fileStorageService, ICacheService cacheService, IUnitOfWork unitOfWork)
     {
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _categoryRepository = categoryRepository;
+        _cacheService = cacheService;
         _fileStorageService = fileStorageService;
     }
 
@@ -82,6 +84,9 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
 
         // 4. Единое сохранение!
         await _unitOfWork.SaveChangesAsync(ct);
+
+        // ✅ Очищаем кэш товаров
+        await _cacheService.RemoveByPrefix("products:");
 
         return product.Id;
     }

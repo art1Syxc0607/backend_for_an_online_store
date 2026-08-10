@@ -16,21 +16,33 @@ public class GetMostPopularProductsForThePeriodHandler : IRequestHandler<GetMost
 {
     private readonly IProductRepository _productRepository;
     private readonly IOrderRepository _orderRepository;
+    private readonly ICacheService _cacheService;
 
     public GetMostPopularProductsForThePeriodHandler(IProductRepository productRepository,
-        IOrderRepository orderRepository)
+        IOrderRepository orderRepository, ICacheService cacheService)
     {
         _orderRepository = orderRepository;
         _productRepository = productRepository;
+        _cacheService = cacheService;
     }
 
 
     public async Task<List<PopularProductDto>> Handle(GetMostPopularProductsForThePeriodCommand command,
         CancellationToken ct = default)
     {
-        var popularProductsDto = await _productRepository.GetMostPopularProductsForThePeriod(command.Span,
+
+        var cacheKey = $"products:popular:{command.Span}_{command.LastDayOfThePriod:yyyyMMdd}";
+
+        var cached = await _cacheService.GetAsync<List<PopularProductDto>>(cacheKey);
+        if (cached != null)
+            return cached;
+
+
+        var result = await _productRepository.GetMostPopularProductsForThePeriod(command.Span,
             command.LastDayOfThePriod, ct);
-      
-        return popularProductsDto;
+
+        await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
+
+        return result;
     }
 }

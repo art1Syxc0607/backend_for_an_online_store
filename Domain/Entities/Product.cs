@@ -23,7 +23,10 @@ public class Product
     public int StockQuantity { get; private set; }
     public int ReservedQuantity { get; private set; } = 0;
     public int AvailableQuantity => StockQuantity - ReservedQuantity;
-    public int AmountOfRecieved { get; private set; } = 0;
+    public int AmountOfReceived { get; private set; } = 0;
+    public int AmountOfPaid { get; private set; } = 0;
+    public int AmountOfCanceled { get; private set; } = 0;
+    //public int CountOfOrdersContainThisProduct { get; private set; }
     public string? Sku { get; private set; }
     //public string? ImageUrl { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -126,10 +129,11 @@ public class Product
         ReservedQuantity += quantity;
     }
 
-    public void RecievedInOrder()
+    public void RecievedInOrder(int quantity)
     {
-        AmountOfRecieved++;
+        AmountOfReceived += quantity;
     }
+
 
     public void ReleaseReservation(int quantity)
     // Отмена заказа → ReleaseReservation(quantity) [StockQuantity не меняется, ReservedQuantity уменьшается]
@@ -138,6 +142,8 @@ public class Product
             throw new DomainException("Quantity must be positive.");
         if (ReservedQuantity < quantity)
             throw new DomainException($"Cannot release more than reserved. Reserved: {ReservedQuantity}");
+
+        AmountOfCanceled += quantity;
 
         ReservedQuantity -= quantity;
     }
@@ -148,6 +154,8 @@ public class Product
             throw new DomainException("Quantity must be positive.");
         if (ReservedQuantity < quantity)
             throw new DomainException($"Cannot confirm more than reserved. Reserved: {ReservedQuantity}");
+
+        AmountOfPaid += quantity;
 
         StockQuantity -= quantity;
         ReservedQuantity -= quantity;

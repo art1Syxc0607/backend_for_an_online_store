@@ -22,5 +22,9 @@ public class GetProductsFilterCommand : IRequest<List<ProductResponseDto>>
     public bool SortDesc { get; init; } = true;
     //public bool? OnlyOutOfUserCart { get; init; } = false;
 
-
+    public string GetCacheKey()
+    {
+        return $"{CategoryId}_{SearchText}_{PriceLimitMin}_{PriceLimitMax}_" +
+            $"{OnlyAvailable}_{PageNumber}_{PageSize}_{SortBy}_{SortDesc}";
+    }
 }

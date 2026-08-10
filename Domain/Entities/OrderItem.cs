@@ -24,6 +24,7 @@ public class OrderItem
         Order = order ?? throw new DomainException("Order cannot be null.");
         Product = product ?? throw new DomainException("Product cannot be null.");
         ProductId = product.Id;
+
         ProductNameAtPurchase = product.Name;
         Quantity = quantity;
         PriceAtPurchase = priceAtPurchase > 0 ? priceAtPurchase : throw new DomainException("Price must be positive.");

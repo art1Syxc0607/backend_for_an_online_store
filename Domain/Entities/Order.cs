@@ -79,6 +79,9 @@ public class Order
             throw new DomainException("Cannot pay for a cancelled order.");
         Status = OrderStatus.Paid;
         PaidAt = DateTime.UtcNow;
+
+        _items.ForEach(oi => oi.Product.ConfirmReservation(oi.Quantity)); // увеличиваем количестов 
+        // покупок у продукта
     }
 
     public void Cancel()
@@ -86,6 +89,9 @@ public class Order
         if (Status == OrderStatus.Paid || Status == OrderStatus.Shipped)
             throw new DomainException("Cannot cancel a paid or shipped order.");
         Status = OrderStatus.Cancelled;
+
+        _items.ForEach(oi => oi.Product.ReleaseReservation(oi.Quantity)); // увеличиваем количестов 
+        // отмен у продукта
     }
 
     public void Ship()
@@ -107,6 +113,9 @@ public class Order
         if (Status != OrderStatus.Delivered)
             throw new DomainException("Only delivered orders can be received.");
         Status = OrderStatus.Received;
+
+        _items.ForEach(oi => oi.Product.RecievedInOrder(oi.Quantity)); // увеличиваем количестов 
+        // отмен у продукта
     }
 
     private void RecalculateTotal()

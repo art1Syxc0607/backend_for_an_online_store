@@ -12,11 +12,14 @@ namespace Application.Commands.Category;
 internal class AddCategoryCommandHandler : IRequestHandler<AddCategoryCommand, int>
 {
     private readonly ICategoryRepository _categoryRepository;
+    private readonly ICacheService _cacheService;
     private readonly IUnitOfWork _unitOfWork;
 
-    public AddCategoryCommandHandler(ICategoryRepository categoryRepository, IUnitOfWork unitOfWork)
+    public AddCategoryCommandHandler(ICategoryRepository categoryRepository, ICacheService cacheService,
+        IUnitOfWork unitOfWork)
     {
         _categoryRepository = categoryRepository;
+        _cacheService = cacheService;
         _unitOfWork = unitOfWork;
     }
 
@@ -27,6 +30,9 @@ internal class AddCategoryCommandHandler : IRequestHandler<AddCategoryCommand, i
 
         await _categoryRepository.CreateAsync(category, ct);
         await _unitOfWork.SaveChangesAsync();
+
+        // ✅ Очищаем кэш категорий
+        await _cacheService.RemoveAsync("categories:all");
 
         return category.Id;
 

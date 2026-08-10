@@ -19,6 +19,11 @@ public class ProductResponseDto
     public double AverageRating { get; init; }
     public int CountOfReviews { get; init; }
 
+    public int AmountOfRecieved { get; init; } 
+    public int AmountOfPaid { get; init; } 
+    public int AmountOfCanceled { get; init; } 
+    public int CountOfOrdersContainThisProduct { get; init; }
+
     public List<string>? ImageUrls { get; init; }
     public List<string>? VideoUrls { get; init; }
     public DateTime CreatedAt { get; init; }

@@ -16,6 +16,12 @@ public class LowStockProductDto
     public int StockQuantity { get; init; }
     public int ReservedQuantity { get; init; }
     public int AvailableQuantity { get; init; }
+
+    public int AmountOfRecieved { get; init; }
+    public int AmountOfPaid { get; init; }
+    public int AmountOfCanceled { get; init; }
+    public int CountOfOrdersContainThisProduct { get; init; }
+
     public DateTime CreatedAt { get; init; }
     public string? CategoryName { get; init; }
     public List<string> ImageUrls { get; init; } = new();

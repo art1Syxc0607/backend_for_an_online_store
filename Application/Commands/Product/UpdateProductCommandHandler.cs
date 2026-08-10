@@ -9,13 +9,15 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand>
     private readonly IProductRepository _productRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICategoryRepository _categoryRepository;
+    private readonly ICacheService _cacheService;
 
     public UpdateProductCommandHandler(IProductRepository productRepository, IUnitOfWork unitOfWork,
-        ICategoryRepository cartRepository)
+        ICategoryRepository cartRepository, ICacheService cacheService)
     {
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _categoryRepository = cartRepository;
+        _cacheService = cacheService;
     }
 
 
@@ -48,5 +50,10 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand>
 
         await _productRepository.UpdateProductAsync(product, ct);
         await _unitOfWork.SaveChangesAsync();
+
+        // ✅ Очищаем кэш
+        await _cacheService.RemoveAsync($"product:{command.ProductId}");
+        await _cacheService.RemoveByPrefix("products:");
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Application.DTOs.Admin.Product;
+using Application.DTOs.Product;
 using Application.Interfaces;
 using Application.Queries.Admin.Product;
 using MediatR;
@@ -34,10 +35,17 @@ public class GetLowStockProductsHandler : IRequestHandler<GetLowStockProductsQue
             StockQuantity = p.StockQuantity,
             ReservedQuantity = p.ReservedQuantity,
             AvailableQuantity = p.AvailableQuantity,
+
+            AmountOfRecieved = p.AmountOfReceived,
+            AmountOfPaid = p.AmountOfPaid,
+            AmountOfCanceled = p.AmountOfCanceled,
+            CountOfOrdersContainThisProduct = p.OrderItems.Count(),
+
             CreatedAt = p.CreatedAt,
             CategoryName = p.Category?.Name,
             ImageUrls = p.ImageUrls.ToList(),
             OrdersCount = p.OrderItems?.Count ?? 0
         }).ToList();
+
     }
 }

@@ -14,19 +14,23 @@ namespace Application.Queries.Product;
 public class GetProductsFilterCommandHandler : IRequestHandler<GetProductsFilterCommand, List<ProductResponseDto>>
 {
     private readonly IProductRepository _productRepository;
-    //private readonly ICartRepository _cartRepository;
-    //private readonly ICategoryRepository _categoryRepository;
+    private readonly ICacheService _cacheService;
 
-    public GetProductsFilterCommandHandler(IProductRepository productRepository
-/*        ICategoryRepository categoryRepository, ICartRepository cartRepository*/)
+    public GetProductsFilterCommandHandler(IProductRepository productRepository, ICacheService cacheService)
     {
         _productRepository = productRepository;
-        //_cartRepository = cartRepository;
-        //_categoryRepository = categoryRepository;
+        _cacheService = cacheService;
     }
 
     public async Task<List<ProductResponseDto>> Handle(GetProductsFilterCommand command, CancellationToken ct)
     {
+        // Генерируем ключ на основе параметров запроса
+        var CacheKey = $"products:filter:{command.GetCacheKey()}";
+
+        var cached = await _cacheService.GetAsync<List<ProductResponseDto>>(CacheKey);
+        if (cached != null)
+            return cached;
+
         var products = await _productRepository.GetProductsFilter(
             command.CategoryId,
             command.SearchText,
@@ -39,7 +43,7 @@ public class GetProductsFilterCommandHandler : IRequestHandler<GetProductsFilter
             command.SortDesc
         );
 
-        return products.Select(p => new ProductResponseDto
+        var result = products.Select(p => new ProductResponseDto
         {
             Id = p.Id,
             Name = p.Name,
@@ -47,11 +51,20 @@ public class GetProductsFilterCommandHandler : IRequestHandler<GetProductsFilter
             Price = p.Price,
             StockQuantity = p.StockQuantity,
             ReservedQuantity = p.ReservedQuantity,
+            AmountOfRecieved = p.AmountOfReceived,
+            AmountOfPaid = p.AmountOfPaid,
+            AmountOfCanceled = p.AmountOfCanceled,
+            CountOfOrdersContainThisProduct = p.OrderItems.Count(),
             ImageUrls = p.ImageUrls.ToList(),
-            VideoUrls = p.ImageUrls.ToList(),
+            VideoUrls = p.VideoUrls.ToList(),
             CategoryId = p.CategoryId,
             CreatedAt = p.CreatedAt,
             UpdatedAt = p.UpdatedAt,
         }).ToList();
+
+        // Кэшируем на 10 минут
+        await _cacheService.SetAsync(CacheKey, result, TimeSpan.FromMinutes(10));
+
+        return result;
     }
 }
