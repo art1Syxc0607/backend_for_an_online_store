@@ -59,7 +59,13 @@ public class CreateOrderHandlerTests
             ShippingAddress = "ул. Ленина, 1",
             Items = new List<OrderItemDto>
             {
-                new OrderItemDto(product.Id, 2, 500, product.Name)  // ← позиционный конструктор
+                new OrderItemDto
+                {
+                    ProductId = product.Id,
+                    Quantity = 2,
+                    PriceAtPurchase = 500,
+                    ProductNameAtPurchase = product.Name
+                }  
             }
         };
 
@@ -139,7 +145,13 @@ public class CreateOrderHandlerTests
             ShippingAddress = "ул. Ленина, 1",
             Items = new List<OrderItemDto>
             {
-                new OrderItemDto( product.Id, 5, 500 , product.Name) // больше чем на складе
+                new OrderItemDto
+                {
+                    ProductId = product.Id,
+                    Quantity = 5,
+                    PriceAtPurchase = 500,
+                    ProductNameAtPurchase = product.Name
+                }  // больше чем на складе
             }
         };
 

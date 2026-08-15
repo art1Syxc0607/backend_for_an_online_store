@@ -1,5 +1,4 @@
-﻿using Application.DTOs.Product;
-using Application.Interfaces;
+﻿using Application.Interfaces;
 using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;

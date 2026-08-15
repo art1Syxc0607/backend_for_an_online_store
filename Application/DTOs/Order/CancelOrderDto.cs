@@ -7,11 +7,13 @@ using System.Threading.Tasks;
 
 namespace Application.DTOs.Order;
 
-public record CancelOrderDto
+public class CancelOrderDto
 {
-    [Required]
-    public int UserId { get; set; }
-    [Required]
-    public int OrderId { get; set; }
+    [Required(ErrorMessage = "User ID is required")]
+    [Range(1, int.MaxValue, ErrorMessage = "Invalid user ID")]
+    public int UserId { get; init; }
 
+    [Required(ErrorMessage = "Order ID is required")]
+    [Range(1, int.MaxValue, ErrorMessage = "Invalid order ID")]
+    public int OrderId { get; init; }
 }

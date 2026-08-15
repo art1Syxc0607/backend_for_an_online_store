@@ -16,6 +16,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{36D591C7-65C7-A0D1-1CBC-10CDE441BDC8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApplicationTests", "ApplicationTests\ApplicationTests.csproj", "{FD3214EA-9DB6-359E-DE00-0B7C53327D0E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E0DE8467-CDAE-4CE6-B9D8-62DE7B282F9C} = {E0DE8467-CDAE-4CE6-B9D8-62DE7B282F9C}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfrastructureTests", "InfrastructureTests\InfrastructureTests.csproj", "{4CA7B57E-F8C3-F284-CFB5-83BCF9C1831F}"
 EndProject

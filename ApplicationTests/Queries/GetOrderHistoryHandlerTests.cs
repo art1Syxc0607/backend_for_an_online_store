@@ -199,7 +199,7 @@ public class GetOrderHistoryHandlerTests
         var product1 = new Domain.Entities.Product("iPhone", 999.99m, 900.99m, 10, "Smartphone", null);
         product1.TestsSetProduct(1);
 
-        var product2 = new Domain.Entities.Product("AirPods", 199.99m, 900.99m, 20, "Wireless headphones", null);
+        var product2 = new Domain.Entities.Product("AirPods", 1099.99m, 900.99m, 20, "Wireless headphones", null);
         product2.TestsSetProduct(2);
 
         var order = new Domain.Entities.Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
@@ -224,7 +224,8 @@ public class GetOrderHistoryHandlerTests
         result[0].Items.Should().HaveCount(2);
         result[0].Items.Should().Contain(i => i.ProductNameAtPurchase == "iPhone");
         result[0].Items.Should().Contain(i => i.ProductNameAtPurchase == "AirPods");
-        result[0].TotalAmount.Should().Be(1399.97m); // 999.99 + 199.99*2
+        // ✅ Правильный расчёт: 999.99 + 1099.99 * 2 = 3199.97
+        result[0].TotalAmount.Should().Be(3199.97m);
     }
 
     #region Helper Methods

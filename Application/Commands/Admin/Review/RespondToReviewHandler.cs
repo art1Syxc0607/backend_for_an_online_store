@@ -57,32 +57,32 @@ public class RespondToReviewHandler : IRequestHandler<RespondToReviewCommand>
         await _unitOfWork.SaveChangesAsync(ct);
 
         // 5. Отправляем уведомление пользователю (опционально)
-        //await SendNotificationAsync(review.User, review.Product, command.Response, ct);
+        await SendNotificationAsync(review.User, review.Product, review, command.Response, ct);
     }
 
-    //private async Task SendNotificationAsync(Domain.Entities.User user, Domain.Entities.Product product,
-    //    string response, CancellationToken ct)
-    //{
-    //    var emailDto = new EmailDto
-    //    {
-    //        To = user.Email,
-    //        Subject = $"Ответ на ваш отзыв о товаре \"{product.Name}\"",
-    //        Body = $@"
-    //            <html>
-    //                <body>
-    //                    <h2>Здравствуйте, {user.UserName}!</h2>
-    //                    <p>Администратор ответил на ваш отзыв о товаре <strong>\{ product.Name }\</strong>:</p>
-    //                    < div style = 'background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 15px 0;' >
-    //                        < p >< strong > Ваш отзыв:</ strong > { review.Text}</ p >
-    //                        < p >< strong > Ответ администратора:</ strong > { response}</ p >
-    //                    </ div >
-    //                    < p > С уважением, команда магазина.</ p >
-    //                </ body >
-    //            </ html >
-    //        ",
-    //        IsHtml = true
-    //    };
+    private async Task SendNotificationAsync(Domain.Entities.User user, Domain.Entities.Product product,
+        Domain.Entities.Review review, string response, CancellationToken ct)
+    {
+        var emailDto = new EmailDto
+        {
+            To = user.Email,
+            Subject = $"Ответ на ваш отзыв о товаре \"{product.Name}\"",
+            Body = $@"
+                <html>
+                    <body>
+                        <h2>Здравствуйте, {user.UserName}!</h2>
+                        <p>Администратор ответил на ваш отзыв о товаре <strong>\{product.Name}\</strong>:</p>
+                        < div style = 'background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 15px 0;' >
+                            < p >< strong > Ваш отзыв:</ strong > {review.Text}</ p >
+                            < p >< strong > Ответ администратора:</ strong > {response}</ p >
+                        </ div >
+                        < p > С уважением, команда магазина.</ p >
+                    </ body >
+                </ html >
+            ",
+            IsHtml = true
+        };
 
-    //await _emailService.SendEmailAsync(emailDto);
-    //}
+        await _emailService.SendEmailAsync(emailDto);
+    }
 }

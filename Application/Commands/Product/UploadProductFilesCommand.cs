@@ -1,5 +1,5 @@
 ﻿using MediatR;
-using Application.DTOs.Product;
+using Application.DTOs.File;
 using System;
 using System.Collections.Generic;
 using System.Linq;

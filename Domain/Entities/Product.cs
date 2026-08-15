@@ -64,14 +64,24 @@ public class Product
     }
 
     // Бизнес-методы
-    public void TestsSetProduct(int? id = null)
+    public void TestsSetProduct(int? id = null, int? amountOfPaid = null, 
+        int? amountOfReceived = null)
     {
         if(id != null) Id = id.Value;
+        if(amountOfPaid != null) AmountOfPaid = amountOfPaid.Value;
+        if(amountOfReceived != null) AmountOfReceived = amountOfReceived.Value;
+
     }
     public void UpdateDetails(string? name = null, decimal? price = null, string? description = null,
         int? StockQuantity = null, string? sku = null, decimal? purchasePrice = null)
     {
+        //if (name != null)
+        //{
+        //    if (name == "") throw new DomainException("Product name cannot be empty.");
+
+        //}
         if (name != null) SetName(name);
+
         if (description != null) 
         {
             if (description == "") throw new DomainException("Description cannot be empty.");
@@ -265,7 +275,7 @@ public class Product
     // ========== МАССОВАЯ ЗАГРУЗКА ==========
     public void SetImageUrls(List<string> urls)
     {
-        if (urls == null || !urls.Any())
+        if (urls == null)
             throw new DomainException("Image URLs cannot be null or empty");
 
         AddUrls(urls, _imageUrls, "image");
@@ -273,7 +283,7 @@ public class Product
 
     public void SetVideoUrls(List<string> urls)
     {
-        if (urls == null || !urls.Any())
+        if (urls == null)
             throw new DomainException("Video URLs cannot be null or empty");
 
         AddUrls(urls, _videoUrls, "video");

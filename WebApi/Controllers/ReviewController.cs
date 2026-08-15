@@ -99,7 +99,7 @@ public class ReviewController : Controller
         var command = new EditReviewCommamd
         {
             UserId = GetCurrentUserId(),
-            ReviewId = dto.RevieweId,
+            ReviewId = dto.ReviewId,
             NewRating = dto.NewRating,
             NewText = dto.NewText,
         };

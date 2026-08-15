@@ -33,19 +33,22 @@ public record PaymentRefund
     public string? ErrorMessage { get; init; }
 }
 
-public record InitiatePaymentDto
+public class InitiatePaymentDto
 {
-    [Required]
+    [Required(ErrorMessage = "Order ID is required")]
+    [Range(1, int.MaxValue, ErrorMessage = "Invalid order ID")]
     public int OrderId { get; init; }
 
-    [Required]
+    [Required(ErrorMessage = "Payment method is required")]
     public PaymentMethod Method { get; init; }
 
-    public string? ReturnUrl { get; init; } // куда вернуть пользователя после оплаты
+    [MaxLength(1000, ErrorMessage = "Return URL cannot exceed 1000 characters")]
+    public string? ReturnUrl { get; init; }
 }
 
-public record ConfirmPaymentDto
+public class ConfirmPaymentDto
 {
-    [Required]
-    public string PaymentIntentId { get; init; }
+    [Required(ErrorMessage = "Payment intent ID is required")]
+    [MaxLength(200, ErrorMessage = "Payment intent ID cannot exceed 200 characters")]
+    public string PaymentIntentId { get; init; } = string.Empty;
 }

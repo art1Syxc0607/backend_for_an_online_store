@@ -1,4 +1,4 @@
-﻿using Application.DTOs.Product;
+﻿using Application.DTOs.File;
 using Application.Interfaces;
 using Domain.Exceptions;
 using MediatR;
@@ -10,7 +10,8 @@ using System.Threading.Tasks;
 
 namespace Application.Commands.Product;
 
-public class UploadProductFilesHandler : IRequestHandler<UploadProductFilesCommand, List<FileUploadResponseDto>>
+public class UploadProductFilesHandler : IRequestHandler<UploadProductFilesCommand, 
+            List<FileUploadResponseDto>>
 {
     private readonly IProductRepository _productRepository;
     private readonly IFileStorageService _fileStorageService;

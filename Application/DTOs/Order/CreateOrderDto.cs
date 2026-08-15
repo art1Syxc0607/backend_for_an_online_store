@@ -7,10 +7,14 @@ using System.Threading.Tasks;
 
 namespace Application.DTOs.Order;
 
-public record CreateOrderDto
+public class CreateOrderDto
 {
-    [Required]
+    [Required(ErrorMessage = "Items are required")]
+    [MinLength(1, ErrorMessage = "At least one item is required")]
     public List<OrderItemDto> Items { get; init; } = new();
-    [Required]
-    public string shippingAddress { get; init; }
+
+    [Required(ErrorMessage = "Shipping address is required")]
+    [MinLength(5, ErrorMessage = "Shipping address must be at least 5 characters")]
+    [MaxLength(500, ErrorMessage = "Shipping address cannot exceed 500 characters")]
+    public string ShippingAddress { get; init; } = string.Empty;
 }

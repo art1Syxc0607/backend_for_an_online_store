@@ -38,7 +38,7 @@ public class CartController : ControllerBase
         var command = new CheckoutCommand
         {
             UserId = GetCurrentUserId(),
-            ShippingAddress = dto.shippingAddress
+            ShippingAddress = dto.ShippingAddress
         };
 
         var id = await _mediator.Send(command);
@@ -51,8 +51,8 @@ public class CartController : ControllerBase
     {
         var command = new AddToCartCommand
         {
-            ProductId = request.productId,
-            Quantity = request.countOfProduct,
+            ProductId = request.ProductId,
+            Quantity = request.Quantity,
             UserId = GetCurrentUserId(),
         };
         await _mediator.Send(command);

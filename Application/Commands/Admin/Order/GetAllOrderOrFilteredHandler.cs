@@ -28,12 +28,13 @@ public class GetAllOrderOrFilteredHandler : IRequestHandler<GetAllOrderOrFiltere
         var result = orders.Select(o => new OrderResponseDto
         {
             Id = o.Id,
-            Items = o.Items.Select(ot => new OrderItemDto(
-                ot.ProductId,
-                ot.Quantity,
-                ot.PriceAtPurchase,
-                ot.ProductNameAtPurchase
-            )).ToList(),
+            Items = o.Items.Select(ot => new OrderItemDto
+            {
+                ProductId = ot.ProductId,
+                Quantity = ot.Quantity,
+                PriceAtPurchase = ot.PriceAtPurchase,
+                ProductNameAtPurchase = ot.ProductNameAtPurchase
+            }).ToList(),
             UserId = o.UserId,
             TotalAmount = o.TotalAmount,
             ShippingAddress = o.ShippingAddress,

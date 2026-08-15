@@ -29,7 +29,7 @@ public class PromoteToAdminHandler : IRequestHandler<PromoteToAdminCommand>
 
         // ✅ Нельзя повысить самого себя
         if (user.Id == request.AdminId)
-            throw new DomainException("Cannot promote yourself");
+            throw new DomainException("Already an admin.");
 
         user.PromoteToAdmin();
         await _unitOfWork.SaveChangesAsync(ct);

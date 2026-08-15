@@ -2,6 +2,7 @@
 using Application.Queries.Admin.Product;
 using Application.DTOs.Admin.Product;
 using Application.DTOs.Product;
+using Application.DTOs.File;
 using Application.Interfaces;
 using Domain.Entities;
 using MediatR;
@@ -59,7 +60,7 @@ public class AdminProductsController : ControllerBase
             StockQuantity = dto.StockQuantity,
             CategoryId = dto.CategoryId,
             Description = dto.Description,
-            Files = dto.Files?.Select(f => new FileUploadDto
+            Files = dto.Files?.Select(f => new Application.DTOs.File.FileUploadDto
             {
                 Stream = f.OpenReadStream(),
                 FileName = f.FileName,
@@ -112,7 +113,7 @@ public class AdminProductsController : ControllerBase
 
 
     [HttpPost("{productId}/files")]
-    public async Task<ActionResult<List<FileUploadResponseDto>>> UploadFiles(
+    public async Task<ActionResult<List<Application.DTOs.File.FileUploadResponseDto>>> UploadFiles(
     int productId,
     [FromForm] List<IFormFile> files)
     {
@@ -142,7 +143,7 @@ public class AdminProductsController : ControllerBase
         var command = new UploadProductFilesCommand
         {
             ProductId = productId,
-            Files = files.Select(f => new FileUploadDto
+            Files = files.Select(f => new Application.DTOs.File.FileUploadDto
             {
                 Stream = f.OpenReadStream(),
                 FileName = f.FileName,

@@ -58,7 +58,7 @@ public class ProductRepositoryTests : IClassFixture<TestDatabaseFixture>
         var products = new List<Product>
         {
             new Product("iPhone", 999.99m, 900.99m, 10, "Latest iPhone"),
-            new Product("AirPods", 199.99m, 900.99m, 20, "Wireless headphones")
+            new Product("AirPods", 1099.99m, 900.99m, 20, "Wireless headphones")
         };
 
         foreach (var p in products)

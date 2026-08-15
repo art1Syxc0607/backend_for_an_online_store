@@ -1,12 +1,24 @@
 ﻿
 
+using System.ComponentModel.DataAnnotations;
+
 namespace WebApi.DTOs.Review;
 
-public record class AddReviewDto
+public class AddReviewDto
 {
-    public int ProductId { get; private set; }
-    public string Text { get; private set; }
-    public int Rating { get; private set; } // 1-5 stars
-    public List<IFormFile>? Files { get; set; } // ← файл внутри DTO!
-    //public bool IsVerifiedPurchase { get; private set; }
+    [Required(ErrorMessage = "Product ID is required")]
+    [Range(1, int.MaxValue, ErrorMessage = "Invalid product ID")]
+    public int ProductId { get; init; }
+
+    [Required(ErrorMessage = "Review text is required")]
+    [MinLength(3, ErrorMessage = "Review must be at least 3 characters")]
+    [MaxLength(2000, ErrorMessage = "Review cannot exceed 2000 characters")]
+    public string Text { get; init; } = string.Empty;
+
+    [Required(ErrorMessage = "Rating is required")]
+    [Range(1, 5, ErrorMessage = "Rating must be between 1 and 5")]
+    public int Rating { get; init; }
+
+    [MaxLength(8, ErrorMessage = "Maximum 8 files allowed")]
+    public List<IFormFile>? Files { get; init; }
 }

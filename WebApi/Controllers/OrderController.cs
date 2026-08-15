@@ -59,7 +59,7 @@ public class OrderController : ControllerBase
         {
             UserId = GetCurrentUserId(),
             Items = dto.Items,
-            ShippingAddress = dto.shippingAddress,
+            ShippingAddress = dto.ShippingAddress,
         };
 
         var result = await _mediator.Send(command);
@@ -92,17 +92,6 @@ public class OrderController : ControllerBase
     public async Task<IActionResult> ShipOrder(int orderId)
     {
         var command = new InitiateShipmentCommand { OrderId  = orderId };
-
-        await _mediator.Send(command);
-
-        return Ok();
-    }
-
-    [Authorize(Roles = "Admin")]
-    [HttpPost("deliver/{orderId}")]
-    public async Task<IActionResult> DeliverOrder(int orderId)
-    {
-        var command = new DeliverOrderCommand { OrderId = orderId };
 
         await _mediator.Send(command);
 

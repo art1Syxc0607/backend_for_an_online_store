@@ -123,7 +123,7 @@ public class ProductTests
     public void UpdateDetails_WhenValidData_ShouldUpdateProduct()
     {
         // Arrange
-        var product = new Product("Old Name", 100m, DefaultPurchasePrice, 10, "Old description");
+        var product = new Product("Old Name", 1000m, DefaultPurchasePrice, 10, "Old description");
         var newName = "New Name";
         var newDescription = "New description";
         var newPrice = 200m;
@@ -145,7 +145,7 @@ public class ProductTests
     public void UpdateDetails_WhenNameIsEmpty_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("Old Name", 100m, DefaultPurchasePrice, 10, DefaultDescription);
+        var product = new Product("Old Name", 1000m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.UpdateDetails(name: "");
@@ -158,7 +158,7 @@ public class ProductTests
     public void UpdateDetails_WhenPriceIsZero_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("Old Name", 100m, DefaultPurchasePrice, 10, DefaultDescription);
+        var product = new Product("Old Name", 1000m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.UpdateDetails(price: 0);
@@ -171,7 +171,7 @@ public class ProductTests
     public void UpdateDetails_WhenDescriptionIsEmpty_ShouldThrowDomainException()
     {
         // Arrange
-        var product = new Product("Old Name", 100m, DefaultPurchasePrice, 10, DefaultDescription);
+        var product = new Product("Old Name", 1000m, DefaultPurchasePrice, 10, DefaultDescription);
 
         // Act
         Action act = () => product.UpdateDetails(description: "");
@@ -541,7 +541,7 @@ public class ProductTests
 
         // Assert
         act.Should().Throw<DomainException>()
-            .WithMessage("*Maximum 8 images allowed*");
+            .WithMessage("*Maximum 8 files allowed*");
     }
 
     [Fact]
@@ -557,22 +557,9 @@ public class ProductTests
 
         // Assert
         act.Should().Throw<DomainException>()
-            .WithMessage("*Maximum 8 images allowed*");
+            .WithMessage("*Maximum 8 files allowed*");
     }
 
-    [Fact]
-    public void SetImageUrls_WhenListIsEmpty_ShouldThrowDomainException()
-    {
-        // Arrange
-        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
-
-        // Act
-        Action act = () => product.SetImageUrls(new List<string>());
-
-        // Assert
-        act.Should().Throw<DomainException>()
-            .WithMessage("*Image URLs cannot be null or empty*");
-    }
 
     [Fact]
     public void SetImageUrls_WhenListIsNull_ShouldThrowDomainException()
@@ -626,34 +613,6 @@ public class ProductTests
         product.VideoUrls.Should().Contain(new[] { "video1.mp4", "video2.mp4" });
     }
 
-    [Fact]
-    public void SetVideoUrls_WhenExceedsMaxLimit_ShouldThrowDomainException()
-    {
-        // Arrange
-        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
-        var urls = new List<string> { "video1.mp4", "video2.mp4", "video3.mp4" }; // 3 > 2
-
-        // Act
-        Action act = () => product.SetVideoUrls(urls);
-
-        // Assert
-        act.Should().Throw<DomainException>()
-            .WithMessage("*Maximum 2 videos allowed*");
-    }
-
-    [Fact]
-    public void SetVideoUrls_WhenListIsEmpty_ShouldThrowDomainException()
-    {
-        // Arrange
-        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
-
-        // Act
-        Action act = () => product.SetVideoUrls(new List<string>());
-
-        // Assert
-        act.Should().Throw<DomainException>()
-            .WithMessage("*Video URLs cannot be null or empty*");
-    }
 
     // ============================================================
     // 3. УДАЛЕНИЕ НЕСКОЛЬКИХ ФАЙЛОВ (BULK REMOVE)

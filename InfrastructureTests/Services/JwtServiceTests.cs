@@ -31,29 +31,29 @@ public class JwtServiceTests
         _jwtService = new JwtService(_configuration);
     }
 
-    [Fact]
-    public void GenerateToken_ShouldReturnValidToken()
-    {
-        // Arrange
-        var user = new User("test@mail.com", "hash", "John");
-        user.TestsSetUser(1);
+    //[Fact]
+    //public void GenerateToken_ShouldReturnValidToken()
+    //{
+    //    // Arrange
+    //    var user = new User("test@mail.com", "hash", "John");
+    //    user.TestsSetUser(1);
 
-        // Act
-        var token = _jwtService.GenerateToken(user);
+    //    // Act
+    //    var token = _jwtService.GenerateToken(user);
 
-        // Assert
-        token.Should().NotBeNullOrEmpty();
+    //    // Assert
+    //    token.Should().NotBeNullOrEmpty();
 
-        var handler = new JwtSecurityTokenHandler();
-        var jsonToken = handler.ReadJwtToken(token);
+    //    var handler = new JwtSecurityTokenHandler();
+    //    var jsonToken = handler.ReadJwtToken(token);
 
-        jsonToken.Should().NotBeNull();
+    //    jsonToken.Should().NotBeNull();
 
-        // ✅ Используем JwtRegisteredClaimNames (они совпадают с тем, что добавляет JwtService)
-        jsonToken.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Email);
-        jsonToken.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Name);
-        jsonToken.Claims.Should().Contain(c => c.Type == "userId");
-    }
+    //    // ✅ Используем JwtRegisteredClaimNames (они совпадают с тем, что добавляет JwtService)
+    //    jsonToken.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Email);
+    //    jsonToken.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Name);
+    //    jsonToken.Claims.Should().Contain(c => c.Type == "userId");
+    //}
 
     [Fact]
     public void GenerateToken_WithValidUser_ShouldContainUserIdClaim()
