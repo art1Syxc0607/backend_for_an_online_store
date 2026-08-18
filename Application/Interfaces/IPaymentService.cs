@@ -14,7 +14,7 @@ public interface IPaymentService
     /// Инициирует платеж для заказа
     /// </summary>
     /// <returns>URL для перенаправления на страницу оплаты или PaymentIntentId</returns>
-    Task<PaymentResult> InitiatePaymentAsync(int orderId, PaymentMethod method, CancellationToken ct);
+    Task<PaymentResult> InitiatePaymentAsync(int orderId, decimal amount ,PaymentMethod method, CancellationToken ct);
 
     /// <summary>
     /// Подтверждает оплату после возврата с платежного шлюза

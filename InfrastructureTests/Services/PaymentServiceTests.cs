@@ -2,8 +2,10 @@
 using Domain.Enums;
 using FluentAssertions;
 using Infrastructure.Services;
+using Infrastructure.Services.Payment;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 
 namespace InfrastructureTests.Services;
@@ -16,7 +18,7 @@ public class PaymentServiceTests
     public PaymentServiceTests(/*IConfiguration configuration*/)
     {
         //_configuration = configuration;
-        _paymentService = new PaymentService(/*_configuration, */NullLogger<PaymentService>.Instance);
+        _paymentService = new PaymentService(It.IsAny<IPaymentStrategyFactory>(), NullLogger<PaymentService>.Instance);
     }
 
     [Fact]
@@ -25,9 +27,10 @@ public class PaymentServiceTests
         // Arrange
         var orderId = 1;
         var method = PaymentMethod.Card;
+        var totalamount = 1000m;
 
         // Act
-        var result = await _paymentService.InitiatePaymentAsync(orderId, method);
+        var result = await _paymentService.InitiatePaymentAsync(orderId, totalamount, method);
 
         // Assert
         result.Should().NotBeNull();

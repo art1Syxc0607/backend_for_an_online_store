@@ -7,6 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Services\Payment\Strategies\GooglePayPaymentStrategy.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Services\Payment\Strategies\GooglePayPaymentStrategy.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.14" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.14" />

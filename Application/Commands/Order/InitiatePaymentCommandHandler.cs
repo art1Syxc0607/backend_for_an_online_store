@@ -50,7 +50,7 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
             throw new DomainException("Cannot pay for a cancelled order");
 
         // 2. Инициируем оплату через внешний сервис
-        var result = await _paymentService.InitiatePaymentAsync(command.OrderId, command.Method, ct);
+        var result = await _paymentService.InitiatePaymentAsync(command.OrderId, order.TotalAmount, command.Method, ct);
 
         if (!result.Success)
             return result;

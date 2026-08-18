@@ -8,8 +8,8 @@ namespace Domain.Enums;
 
 public enum PaymentMethod
 {
-    Card,
-    GooglePay,
-    ApplePay,
-    SBP // Система быстрых платежей
+    Card = 0,
+    GooglePay = 1,
+    ApplePay = 2,
+    SBP = 3
 }

@@ -2,6 +2,8 @@
 using Infrastructure.Data;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
+using Infrastructure.Services.Payment.Strategies;
+using Infrastructure.Services.Payment;
 using Infrastructure.UnitOfWork;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +36,18 @@ public static class DependencyInjection
 
         // cash
         services.AddSingleton<ICacheService, MemoryCacheService>();
+
+        // Payment
+        // Strategy Pattern
+        // ✅ Регистрируем стратегии
+        services.AddScoped<IPaymentStrategy, CardPaymentStrategy>();
+        //services.AddScoped<IPaymentStrategy, GooglePayPaymentStrategy>();
+        services.AddScoped<IPaymentStrategy, ApplePayPaymentStrategy>();
+        services.AddScoped<IPaymentStrategy, SBPPaymentStrategy>();
+
+        // ✅ Регистрируем фабрику и сервис
+        services.AddScoped<IPaymentStrategyFactory, PaymentStrategyFactory>();
+        services.AddScoped<IPaymentService, PaymentService>();
 
         return services;
     }
