@@ -1,10 +1,12 @@
 ﻿// ApplicationTests/Commands/Product/AddProductHandlerTests.cs
 using Application.Commands.Product;
 using Application.Interfaces;
+using Castle.Core.Logging;
 using Domain.Entities;
 using Domain.Exceptions;
 using FluentAssertions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -39,6 +41,7 @@ public class AddProductHandlerTests
             categoryRepoMock.Object,
             fileStorageMock.Object,
             Mock.Of<ICacheService>(),
+            Mock.Of<ILogger<AddProductCommandHandler>>(),
             unitOfWorkMock.Object
         );
 
@@ -72,6 +75,7 @@ public class AddProductHandlerTests
             categoryRepoMock.Object,
             Mock.Of<IFileStorageService>(),
             Mock.Of<ICacheService>(),
+            Mock.Of<ILogger<AddProductCommandHandler>>(),
             Mock.Of<IUnitOfWork>()
         );
 

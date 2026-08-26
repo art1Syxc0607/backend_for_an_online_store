@@ -2,6 +2,7 @@
 using Application.Interfaces;
 using Domain.Exceptions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,33 +17,64 @@ public class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentCommand, Paym
     private readonly IPaymentRepository _paymentRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly ICacheService _cacheService;
+    private readonly ILogger<ConfirmPaymentHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
     public ConfirmPaymentHandler(IPaymentRepository paymentRepository, IPaymentService paymentService,
-        IOrderRepository orderRepository, ICacheService cacheService, IUnitOfWork unitOfWork)
+        IOrderRepository orderRepository, ICacheService cacheService,
+        ILogger<ConfirmPaymentHandler> logger, IUnitOfWork unitOfWork)
     {
         _orderRepository = orderRepository;
         _paymentService = paymentService;
         _paymentRepository = paymentRepository;
         _cacheService = cacheService;
+        _logger = logger;
         _unitOfWork = unitOfWork;
     }
 
     public async Task<PaymentConfirmation> Handle(ConfirmPaymentCommand command, CancellationToken ct)
     {
+        _logger.LogInformation(
+            "Payment confirmation started: PaymentIntentId {PaymentIntentId}",
+            command.PaymentIntentId
+        );
+
         // 1. Получаем платеж по transactionId
         var payment = await _paymentRepository.GetByTransactionIdAsync(command.PaymentIntentId, ct);
         if (payment == null)
+        {
+            _logger.LogWarning(
+               "Payment confirmation failed: Payment not found. PaymentIntentId {PaymentIntentId}",
+               command.PaymentIntentId
+           );
+
             throw new DomainException("Payment not found");
+        }
 
         // 2. Проверяем статус платежа через внешний сервис
         var result = await _paymentService.ConfirmPaymentAsync(command.PaymentIntentId, ct);
 
-        if (!result.Success)
+        if (result == null)
+            throw new DomainException("Confirmation is null");
+
+        if (result.Success)
         {
-            payment.MarkAsFailed();
-            await _unitOfWork.SaveChangesAsync(ct);
-            return result;
+            _logger.LogInformation(
+                "Payment confirmed successfully: OrderId {OrderId}, PaymentIntentId {PaymentIntentId}, TransactionId {TransactionId}, Amount {Amount}",
+                payment.OrderId,
+                command.PaymentIntentId,
+                result.TransactionId,
+                payment.Amount
+            );
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Payment confirmation failed: OrderId {OrderId}, PaymentIntentId {PaymentIntentId}, Error {Error}",
+                payment.OrderId,
+                command.PaymentIntentId,
+                result.ErrorMessage
+            );
         }
 
         // 3. Обновляем payment

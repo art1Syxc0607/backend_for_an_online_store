@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces;
-using MediatR;
 using Domain.Exceptions;
+using MediatR;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,14 +15,17 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand>
     private readonly IProductRepository _productRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly ICacheService _cacheService;
+    private readonly ILogger<AddProductCommandHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
     public DeleteProductCommandHandler(IProductRepository productRepository, IUnitOfWork unitOfWork,
-        IOrderRepository orderRepository, ICacheService cacheService)
+        IOrderRepository orderRepository, ILogger<AddProductCommandHandler> logger,
+        ICacheService cacheService)
     {
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _orderRepository = orderRepository;
+        _logger = logger;
         _cacheService = cacheService;
     }
 
@@ -31,11 +35,24 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand>
 
         if (product == null) throw new DomainException("No such product");
 
-        if(await _orderRepository.HasProductInOrdersAsync(command.Id, ct))
+        _logger.LogWarning(
+            "Product deletion started: ProductId {ProductId}, Name {Name}",
+            product.Id,
+            product.Name
+        );
+
+        if (await _orderRepository.HasProductInOrdersAsync(command.Id, ct))
             throw new DomainException("Cannot delete product that has orders");
 
         await _productRepository.DeleteProductAsync(product, ct);
         await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogWarning(
+            "Product deleted: ProductId {ProductId}, Name {Name}, Time {Time}",
+            product.Id,
+            product.Name,
+            DateTime.UtcNow
+        );
 
         // ✅ Удаляем из кэша всё
         await _cacheService.RemoveByPrefix("products:");

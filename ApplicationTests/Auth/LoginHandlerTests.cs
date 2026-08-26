@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Domain.Entities;
 using Domain.Exceptions;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -37,7 +38,8 @@ public class LoginHandlerTests
         var handler = new LoginCommandHandler(
             userRepoMock.Object,
             passwordHasherMock.Object,
-            jwtServiceMock.Object
+            jwtServiceMock.Object,
+            Mock.Of<ILogger<LoginCommandHandler>>()
         );
 
         // Act
@@ -67,7 +69,8 @@ public class LoginHandlerTests
         var handler = new LoginCommandHandler(
             userRepoMock.Object,
             Mock.Of<IPasswordHasher>(),
-            Mock.Of<IJwtService>()
+            Mock.Of<IJwtService>(),
+            Mock.Of<ILogger<LoginCommandHandler>>()
         );
 
         // Act
@@ -100,7 +103,8 @@ public class LoginHandlerTests
         var handler = new LoginCommandHandler(
             userRepoMock.Object,
             passwordHasherMock.Object,
-            Mock.Of<IJwtService>()
+            Mock.Of<IJwtService>(),
+            Mock.Of<ILogger<LoginCommandHandler>>()
         );
 
         // Act

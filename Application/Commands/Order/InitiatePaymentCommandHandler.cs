@@ -1,9 +1,10 @@
 ﻿using Application.DTOs.Order;
 using Application.Interfaces;
-using Domain.Enums;
 using Domain.Entities;
+using Domain.Enums;
 using Domain.Exceptions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +19,7 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
     private readonly IUserRepository _userRepository;
     private readonly IPaymentService _paymentService;
     private readonly IPaymentRepository _paymentRepository;
+    private readonly ILogger<InitiatePaymentHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
     public InitiatePaymentHandler(
@@ -25,17 +27,27 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
         IUserRepository userRepository,
         IPaymentService paymentService,
         IPaymentRepository paymentRepository,
+        ILogger<InitiatePaymentHandler> logger,
         IUnitOfWork unitOfWork)
     {
         _orderRepository = orderRepository;
         _userRepository = userRepository;
         _paymentRepository = paymentRepository;
         _paymentService = paymentService;
+        _logger = logger;
         _unitOfWork = unitOfWork;
     }
 
     public async Task<PaymentResult> Handle(InitiatePaymentCommand command, CancellationToken ct)
     {
+        _logger.LogInformation(
+            "Payment initiation started: OrderId {OrderId}, UserId {UserId}, " +
+            "Method {Method}",
+            command.OrderId,
+            command.UserId,
+            command.Method
+        );
+
         // 1. Проверяем заказ
         var order = await _orderRepository.GetOrder(command.OrderId, ct);
         if (order == null)
@@ -52,8 +64,28 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
         // 2. Инициируем оплату через внешний сервис
         var result = await _paymentService.InitiatePaymentAsync(command.OrderId, order.TotalAmount, command.Method, ct);
 
-        if (!result.Success)
-            return result;
+        if (result.Success)
+        {
+            _logger.LogInformation(
+                "Payment initiated successfully: OrderId {OrderId}, UserId {UserId}, " +
+                "Method {Method}, PaymentIntentId {PaymentIntentId}",
+                command.OrderId,
+                command.UserId,
+                command.Method,
+                result.PaymentIntentId
+            );
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Payment initiation failed: OrderId {OrderId}, UserId {UserId}, " +
+                "Method {Method}, Error {Error}",
+                command.OrderId,
+                command.UserId,
+                command.Method,
+                result.ErrorMessage
+            );
+        }
 
         // 3. Создаем Payment со статусом Pending (НЕ помечаем заказ как оплаченный!)
         var payment = new Payment(

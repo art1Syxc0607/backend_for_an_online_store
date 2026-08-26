@@ -17,5 +17,8 @@ public class ChangePasswordCommand : IRequest
     [MinLength(8)]
     [MaxLength(50)]
     public string NewPassword { get; set; } = string.Empty;
+
+    [Required]
+    public string UserIP { get; init; } = "Unknown";
 }
 

@@ -1,11 +1,12 @@
 ﻿using Application.Commands.User;
-using Application.Interfaces;
 using Application.DTOs.Email;
+using Application.Interfaces;
 using Domain.Entities;
 using Domain.Exceptions;
 using FluentAssertions;
-using Moq;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 namespace ApplicationTests.Commands.Auth;
@@ -36,6 +37,7 @@ public class RegisterHandlerTests
             _emailServiceMock.Object,
             _tokenGeneratorMock.Object,
             Mock.Of<IConfiguration>(),
+            Mock.Of<ILogger<RegisterHandler>>(),
             _unitOfWorkMock.Object
         );
     }

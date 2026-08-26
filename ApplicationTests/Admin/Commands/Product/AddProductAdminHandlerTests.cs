@@ -1,9 +1,11 @@
 ﻿using Application.Commands.Product;
-using Application.Interfaces;
 using Application.DTOs.File;
+using Application.Interfaces;
+using Castle.Core.Logging;
 using Domain.Entities;
 using Domain.Exceptions;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -34,6 +36,7 @@ public class AddProductAdminHandlerTests
         var categoryRepoMock = new Mock<ICategoryRepository>();
         var fileStorageMock = new Mock<IFileStorageService>();
         var cacheServiceMock = new Mock<ICacheService>();
+        var logger = new Mock<ILogger<AddProductCommandHandler>>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         var handler = new AddProductCommandHandler(
@@ -41,6 +44,7 @@ public class AddProductAdminHandlerTests
             categoryRepoMock.Object,
             fileStorageMock.Object,
             cacheServiceMock.Object,
+            logger.Object,
             unitOfWorkMock.Object
         );
 
@@ -77,6 +81,7 @@ public class AddProductAdminHandlerTests
             categoryRepoMock.Object,
             Mock.Of<IFileStorageService>(),
             Mock.Of<ICacheService>(),
+            Mock.Of<ILogger<AddProductCommandHandler>>(),
             Mock.Of<IUnitOfWork>()
         );
 
@@ -127,6 +132,7 @@ public class AddProductAdminHandlerTests
             categoryRepoMock.Object,
             fileStorageMock.Object,
             Mock.Of<ICacheService>(),
+            Mock.Of<ILogger<AddProductCommandHandler>>(),
             Mock.Of<IUnitOfWork>()
         );
 

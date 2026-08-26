@@ -4,6 +4,7 @@ using Domain.Entities;
 using Domain.Enums;
 using Domain.Exceptions;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -24,11 +25,14 @@ public class PromoteToAdminHandlerTests
         var userRepoMock = new Mock<IUserRepository>();
         userRepoMock.Setup(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
+        userRepoMock.Setup(x => x.GetByIdAsync(admin.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(admin);
 
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         var handler = new PromoteToAdminHandler(
             userRepoMock.Object,
+            Mock.Of<ILogger<PromoteToAdminHandler>>(),
             unitOfWorkMock.Object
         );
 
@@ -56,6 +60,7 @@ public class PromoteToAdminHandlerTests
 
         var handler = new PromoteToAdminHandler(
             userRepoMock.Object,
+            Mock.Of<ILogger<PromoteToAdminHandler>>(),
             Mock.Of<IUnitOfWork>()
         );
 
@@ -88,6 +93,7 @@ public class PromoteToAdminHandlerTests
 
         var handler = new PromoteToAdminHandler(
             userRepoMock.Object,
+            Mock.Of<ILogger<PromoteToAdminHandler>>(),
             Mock.Of<IUnitOfWork>()
         );
 
@@ -118,6 +124,7 @@ public class PromoteToAdminHandlerTests
 
         var handler = new PromoteToAdminHandler(
             userRepoMock.Object,
+            Mock.Of<ILogger<PromoteToAdminHandler>>(),
             Mock.Of<IUnitOfWork>()
         );
 

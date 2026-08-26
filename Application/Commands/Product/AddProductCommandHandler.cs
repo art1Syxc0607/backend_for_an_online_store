@@ -2,6 +2,7 @@
 using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,21 +17,31 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
     private readonly ICategoryRepository _categoryRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly ICacheService _cacheService;
+    private readonly ILogger<AddProductCommandHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
     public AddProductCommandHandler(IProductRepository productRepository, 
         ICategoryRepository categoryRepository, 
-        IFileStorageService fileStorageService, ICacheService cacheService, IUnitOfWork unitOfWork)
+        IFileStorageService fileStorageService, ICacheService cacheService, ILogger<AddProductCommandHandler> logger,
+        IUnitOfWork unitOfWork)
     {
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _categoryRepository = categoryRepository;
         _cacheService = cacheService;
+        _logger = logger;
         _fileStorageService = fileStorageService;
     }
 
     public async Task<int> Handle(AddProductCommand command, CancellationToken ct)
     {
+        _logger.LogInformation(
+            "Product creation started: Name {Name}, Price {Price}, Stock {Stock}",
+            command.Name,
+            command.Price,
+            command.StockQuantity
+        );
+
         // 1. Проверка категории
         if (command.CategoryId.HasValue)
         {
@@ -83,6 +94,15 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
 
         // 4. Единое сохранение!
         await _unitOfWork.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Product created successfully: ProductId {ProductId}, Name {Name}, Price {Price}, " +
+            "Stock {Stock}",
+            product.Id,
+            product.Name,
+            product.Price,
+            product.StockQuantity
+        );
 
         // ✅ Очищаем кэш товаров
         await _cacheService.RemoveByPrefix("products:");

@@ -27,9 +27,21 @@ public class PaymentService : IPaymentService
 
     public async Task<PaymentResult> InitiatePaymentAsync(int orderId, decimal amount, PaymentMethod method, CancellationToken ct = default)
     {
-        var strategy = _strategyFactory.GetStrategy(method);
+        try
+        {
+            var strategy = _strategyFactory.GetStrategy(method);
+            return await strategy.InitiatePaymentAsync(orderId, amount, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Payment initiation failed for order {OrderId}, method {Method}", orderId, method);
 
-        return await strategy.InitiatePaymentAsync(orderId, amount, ct);
+            return new PaymentResult
+            {
+                Success = false,
+                ErrorMessage = $"Payment initiation failed: {ex.Message}"
+            };
+        }
     }
 
     public async Task<PaymentConfirmation> ConfirmPaymentAsync(string paymentIntentId, CancellationToken ct = default)

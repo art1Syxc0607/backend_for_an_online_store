@@ -1,7 +1,7 @@
 ﻿using Application.DTOs.User;
 using MediatR;
 using System.ComponentModel.DataAnnotations;
-
+using System.Net;
 
 namespace Application.Commands.User;
 
@@ -23,4 +23,7 @@ public class RegisterCommand : IRequest<AuthResponseDto>
     [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$",
         ErrorMessage = "Password must contain at least one uppercase, one lowercase, and one number")]
     public string Password { get; init; } = string.Empty;
+
+    [Required]
+    public string UserIP { get; init; } = "Unknown";
 }

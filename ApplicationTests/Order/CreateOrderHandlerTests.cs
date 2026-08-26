@@ -1,11 +1,12 @@
 ﻿// ApplicationTests/Commands/Order/CreateOrderHandlerTests.cs
 using Application.Commands.Order;
-using Application.Interfaces;
 using Application.DTOs.Order;
+using Application.Interfaces;
 using Domain.Entities;
 using Domain.Exceptions;
 using FluentAssertions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -48,7 +49,7 @@ public class CreateOrderHandlerTests
             orderRepoMock.Object,
             userRepoMock.Object,
             productRepoMock.Object,
-            Mock.Of<IEmailService>(),
+            Mock.Of<ILogger<CreateOrderCommandHandler>>(), 
             Mock.Of<IMediator>(),
             unitOfWorkMock.Object
         );
@@ -90,7 +91,7 @@ public class CreateOrderHandlerTests
             Mock.Of<IOrderRepository>(),
             userRepoMock.Object,
             Mock.Of<IProductRepository>(),
-            Mock.Of<IEmailService>(),
+            Mock.Of<ILogger<CreateOrderCommandHandler>>(),
             Mock.Of<IMediator>(),
             Mock.Of<IUnitOfWork>()
         );
@@ -134,7 +135,7 @@ public class CreateOrderHandlerTests
             Mock.Of<IOrderRepository>(),
             userRepoMock.Object,
             productRepoMock.Object,
-            Mock.Of<IEmailService>(),
+            Mock.Of<ILogger<CreateOrderCommandHandler>>(),
             Mock.Of<IMediator>(),
             Mock.Of<IUnitOfWork>()
         );

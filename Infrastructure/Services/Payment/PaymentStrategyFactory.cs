@@ -18,10 +18,11 @@ public class PaymentStrategyFactory : IPaymentStrategyFactory
 {
     private readonly Dictionary<PaymentMethod, IPaymentStrategy> _strategies;
 
+    // тк стратегии зареганы в DI, DI сам их подставить при создании фабрики
     public PaymentStrategyFactory(IEnumerable<IPaymentStrategy> strategies)
     {
         _strategies = strategies.ToDictionary(s => s.Method);
-    }
+    }   
 
     public IPaymentStrategy GetStrategy(PaymentMethod method)
     {

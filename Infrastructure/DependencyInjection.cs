@@ -41,7 +41,7 @@ public static class DependencyInjection
         // Strategy Pattern
         // ✅ Регистрируем стратегии
         services.AddScoped<IPaymentStrategy, CardPaymentStrategy>();
-        //services.AddScoped<IPaymentStrategy, GooglePayPaymentStrategy>();
+        services.AddScoped<IPaymentStrategy, GooglePayPaymentStrategy>();
         services.AddScoped<IPaymentStrategy, ApplePayPaymentStrategy>();
         services.AddScoped<IPaymentStrategy, SBPPaymentStrategy>();
 
