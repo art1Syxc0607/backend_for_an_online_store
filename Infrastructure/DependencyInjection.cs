@@ -5,6 +5,7 @@ using Infrastructure.Services;
 using Infrastructure.Services.Payment.Strategies;
 using Infrastructure.Services.Payment;
 using Infrastructure.UnitOfWork;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -19,23 +20,29 @@ public static class DependencyInjection
 {
     public static IServiceCollection Extension(this IServiceCollection services, IConfiguration configuration)
     {
-        //services.AddDbContext<AppDbContext>(options =>
-        //    options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
 
 
         services.AddScoped<ICartRepository, CartRepository>();
-        //services.AddScoped<ICategoryRepository, CategoryRepository>
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
-        //services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IUnitOfWork, Infrastructure.UnitOfWork.UnitOfWork>();
         services.AddScoped<IUserRepository, UserRepository>();
 
+        //service
+        services.AddScoped<IFileStorageService, LocalFileStorageService>();
+
         // cash
         services.AddSingleton<ICacheService, MemoryCacheService>();
+        services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<ITokenGenerator, TokenGenerator>();
 
         // Payment
         // Strategy Pattern

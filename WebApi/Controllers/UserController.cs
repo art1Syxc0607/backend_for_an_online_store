@@ -48,7 +48,9 @@ public class UserController : ControllerBase
         await _mediator.Send(command);
 
         // Перенаправляем на фронтенд страницу успеха
-        return Redirect("https://yourstore.com/email-confirmed");
+        //return Redirect("https://yourstore.com/email-confirmed");
+
+        return NoContent();
     }
 
     [HttpPost("login")]
@@ -57,7 +59,7 @@ public class UserController : ControllerBase
         // Получаем IP-адрес
         var userIP = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
-        var command = new RegisterCommand
+        var command = new LoginCommand
         {
             Email = loginDto.Email,
             Password = loginDto.Password,

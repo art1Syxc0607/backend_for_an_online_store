@@ -31,12 +31,6 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
 
     public async Task<AuthResponseDto> Handle(LoginCommand request, CancellationToken ct)
     {
-        //if (!await _userRepository.ExistsByEmailAsync(request.Email, ct))
-        //    throw new DomainException("There isn't a user with this Email");
-
-        //if (!await _userRepository.ExistsByUserNameAsync(request.UserName, ct))
-        //    throw new DomainException("The user with this Name already exist");
-
         // Логируем попытку входа
         _logger.LogInformation(
             "Login attempt: Email {Email}, IP {IP}",
@@ -87,6 +81,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             Email = request.Email,
             UserName = user.UserName,
             Token = _jwtService.GenerateToken(user),
+            ExpiresIn = DateTime.UtcNow.AddHours(1),
             UserId = user.Id,
         };
 

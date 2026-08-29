@@ -6,6 +6,6 @@ public class AuthResponseDto
     public int UserId { get; set; }
     public string Email { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;
-    public int ExpiresIn { get; set; } = 3600;
+    public DateTime ExpiresIn { get; set; } = DateTime.UtcNow.AddHours(1);
     public bool IsEmailConfirmed { get; set; }
 }   

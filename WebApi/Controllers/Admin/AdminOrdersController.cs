@@ -43,8 +43,6 @@ public class AdminOrdersController : ControllerBase
         return await _mediator.Send(command);
     }
 
-    [HttpGet("")]
-
     
     [HttpPost("ship/{orderId}")]
     public async Task<IActionResult> ShipOrder(int orderId)

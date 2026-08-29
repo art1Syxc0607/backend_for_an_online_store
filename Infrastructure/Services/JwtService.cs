@@ -19,20 +19,17 @@ public class JwtService : IJwtService
 
     public string GenerateToken(User user)
     {
-        //var claims = new List<Claim>
-        //{
-        //    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-        //    new Claim(ClaimTypes.Email, user.Email),
-        //    new Claim(ClaimTypes.Name, user.UserName),
-        //    new Claim("userId", user.Id.ToString())
-        //};
 
         var claims = new List<Claim> // for tests
         {
             // Используем JwtRegisteredClaimNames вместо ClaimTypes
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Name, user.UserName),
-            new Claim("userId", user.Id.ToString())
+            new Claim("userId", user.Id.ToString()),
+
+             new Claim(ClaimTypes.Role, user.Role.ToString()), // "User" или "Admin"
+            // или для совместимости с некоторыми системами:
+            // new Claim("role", user.Role.ToString())
         };
 
         var key = new SymmetricSecurityKey(
@@ -43,7 +40,9 @@ public class JwtService : IJwtService
             issuer: _configuration["Jwt:Issuer"],
             audience: _configuration["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
+            //expires: DateTime.UtcNow.AddHours(1),
+            //expires: DateTime.UtcNow.AddDays(7),
+            expires: DateTime.UtcNow.AddMonths(1),
             signingCredentials: credentials
         );
 

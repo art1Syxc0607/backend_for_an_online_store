@@ -6,6 +6,6 @@ public enum OrderStatus
     Paid = 1,
     Shipped = 2,
     Delivered = 3,
-    Received = 5,
-    Cancelled = 4
+    Received = 4,
+    Cancelled = 5
 }

@@ -133,6 +133,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
             UserId = user.Id,
             Email = user.Email,
             UserName = user.UserName,
+            ExpiresIn = DateTime.UtcNow.AddHours(1),
             IsEmailConfirmed = user.IsEmailConfirmed
         };
     }

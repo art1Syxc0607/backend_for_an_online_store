@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Application.Commands.Cart;
 
-public class AddToCartCommandHandler : IRequest<AddToCartCommand>
+public class AddToCartCommandHandler : IRequestHandler<AddToCartCommand>
 {
     private readonly ICartRepository _cartRepository;
     private readonly IProductRepository _productRepository;

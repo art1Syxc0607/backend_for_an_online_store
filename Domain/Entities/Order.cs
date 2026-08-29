@@ -115,7 +115,6 @@ public class Order
         Status = OrderStatus.Received;
 
         _items.ForEach(oi => oi.Product.RecievedInOrder(oi.Quantity)); // увеличиваем количестов 
-        // отмен у продукта
     }
 
     private void RecalculateTotal()

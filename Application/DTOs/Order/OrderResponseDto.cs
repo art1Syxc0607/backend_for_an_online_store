@@ -13,7 +13,7 @@ public record OrderResponseDto
 {
     public List<OrderItemDto> Items { get; init; } = new List<OrderItemDto>();
 
-    public int Id { get; init; }
+    public int OrderId { get; init; }
     public int UserId { get; init; }
     //public string ProductName { get; init; }
     public decimal TotalAmount { get; init; }

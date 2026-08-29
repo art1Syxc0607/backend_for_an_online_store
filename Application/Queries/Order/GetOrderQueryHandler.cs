@@ -27,12 +27,13 @@ public class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, OrderResponse
     public async Task<OrderResponseDto> Handle(
         GetOrderQuery query, CancellationToken ct)
     {
-        var order = await _orderRepository.GetOrder(query.UserId, ct);
+        var order = await _orderRepository.GetOrder(query.OrderId, ct);
         if (order == null) throw new DomainException("No such order");
+        if (order.UserId != query.UserId) throw new DomainException("This order doesn't belong to the user");
 
         var result = new OrderResponseDto
         {
-            Id = order.Id,
+            OrderId = order.Id,
             UserId = order.UserId,
             Items = order.Items.Select(ot => new OrderItemDto
             {

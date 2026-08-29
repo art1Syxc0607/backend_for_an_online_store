@@ -40,8 +40,13 @@ public class User
         SetEmail(email);
         SetPasswordHash(passwordHash);
         SetName(userName);
-        Role = UserRole.Customer;
+        Role = UserRole.User;
         CreatedAt = DateTime.UtcNow;
+        IsActive = true;
+
+        // СОЗДАЁМ КОРЗИНУ ПРИ РЕГИСТРАЦИИ!
+        Cart = new Cart(this);
+
     }
 
     public void TestsSetUser(int? id = null)
@@ -133,9 +138,9 @@ public class User
 
     public void DemoteFromAdmin()
     {
-        if (Role == UserRole.Customer)
+        if (Role == UserRole.User)
             throw new DomainException("User is not an admin.");
-        Role = UserRole.Customer;
+        Role = UserRole.User;
     }
 
     // Приватные методы для валидации

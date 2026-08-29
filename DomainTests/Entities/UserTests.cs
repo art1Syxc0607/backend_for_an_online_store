@@ -27,7 +27,7 @@ public class UserTests
         user.Email.Should().Be(email);
         user.PasswordHash.Should().Be(passwordHash);
         user.UserName.Should().Be(userName);
-        user.Role.Should().Be(UserRole.Customer);
+        user.Role.Should().Be(UserRole.User);
         user.IsEmailConfirmed.Should().BeFalse();
         user.EmailConfirmedAt.Should().BeNull();
         user.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
@@ -233,7 +233,7 @@ public class UserTests
         user.DemoteFromAdmin();
 
         // Assert
-        user.Role.Should().Be(UserRole.Customer);
+        user.Role.Should().Be(UserRole.User);
     }
 
     [Fact]

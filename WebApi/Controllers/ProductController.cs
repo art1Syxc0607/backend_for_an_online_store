@@ -90,7 +90,7 @@ public class ProductController : ControllerBase
     //}
 
     // ========== Фильтрация и Поиск, Сортировка, Плагинация ==========
-    [HttpGet]
+    [HttpGet("filter")]
     public async Task<ActionResult<List<ProductResponseDto>>> GetProductsFilter([FromQuery] ProductFilterDto dto)
     {
         var command = new GetProductsFilterCommand

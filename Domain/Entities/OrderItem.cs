@@ -22,6 +22,8 @@ public class OrderItem
         decimal purchasePriceAtPurchase)
     {
         Order = order ?? throw new DomainException("Order cannot be null.");
+        //OrderId = order.Id;
+
         Product = product ?? throw new DomainException("Product cannot be null.");
         ProductId = product.Id;
 

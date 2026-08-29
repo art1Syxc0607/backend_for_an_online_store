@@ -56,15 +56,15 @@ public class GetOrderHistoryHandlerTests
         result.Should().HaveCount(3);
         result.Should().BeInDescendingOrder(o => o.CreatedAt);
 
-        result[0].Id.Should().Be(3);
+        result[0].OrderId.Should().Be(3);
         result[0].TotalAmount.Should().Be(100.00m);
         result[0].Status.Should().Be(OrderStatus.Pending);
 
-        result[1].Id.Should().Be(1);
+        result[1].OrderId.Should().Be(1);
         result[1].TotalAmount.Should().Be(150.50m);
         result[1].Status.Should().Be(OrderStatus.Paid);
 
-        result[2].Id.Should().Be(2);
+        result[2].OrderId.Should().Be(2);
         result[2].TotalAmount.Should().Be(250.00m);
         result[2].Status.Should().Be(OrderStatus.Delivered);
 
@@ -184,9 +184,9 @@ public class GetOrderHistoryHandlerTests
 
         // Assert
         result.Should().BeInDescendingOrder(o => o.CreatedAt);
-        result[0].Id.Should().Be(1); // самый новый
-        result[1].Id.Should().Be(3); // средний
-        result[2].Id.Should().Be(2); // самый старый
+        result[0].OrderId.Should().Be(1); // самый новый
+        result[1].OrderId.Should().Be(3); // средний
+        result[2].OrderId.Should().Be(2); // самый старый
     }
 
     [Fact]

@@ -30,9 +30,10 @@ public class OrderRepository : IOrderRepository
 
     public async Task<Order?> GetOrder(int id, CancellationToken ct = default)
     {
-        var result = await _dpContext.Orders.
-            Include(o => o.Items).
-            FirstOrDefaultAsync(o => o.Id == id);
+        var result = await _dpContext.Orders
+            .Include(o => o.Items)
+            .ThenInclude(i => i.Product)  // ← ДОБАВИТЬ! Загружаем продукты
+            .FirstOrDefaultAsync(o => o.Id == id);
 
         return result;
     }
@@ -76,10 +77,6 @@ public class OrderRepository : IOrderRepository
     public async Task<bool> HasUserPurchasedProductAsync(int userId, int productId, 
         CancellationToken ct = default)
     {
-        //var orders = await GetAllAsync(userId, ct);
-
-        //var result = orders.Any(order => order.Status == Domain.Enums.OrderStatus.Delivered && 
-        //order.Items.Any(oi => oi.ProductId == productId)); // me
 
         var result = await _dpContext.Orders
         .AnyAsync(o => o.UserId == userId

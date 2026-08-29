@@ -29,7 +29,7 @@ public class GetOrderHistoryQueryHandler : IRequestHandler
 
         var result = orders.Select(o => new OrderResponseDto
         {
-            Id = o.Id,
+            OrderId = o.Id,
             Items = o.Items.Select(ot => new OrderItemDto
             {
                 ProductId = ot.ProductId,
