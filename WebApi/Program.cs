@@ -47,7 +47,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+builder.Services.AddSwaggerGen(c =>   // https://localhost:7197/swagger/index.html
 {
     // Настройка Swagger для JWT
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

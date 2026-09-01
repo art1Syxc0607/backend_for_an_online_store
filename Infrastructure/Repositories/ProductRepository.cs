@@ -83,7 +83,7 @@ public class ProductRepository : IProductRepository
             .WhereIf(SearchText != null, p => p.Name.Contains(SearchText) || p.Description.Contains(SearchText))
             .WhereIf(PriceLimitMin != null, p => p.Price >= PriceLimitMin)
             .WhereIf(PriceLimitMax != null, p => p.Price <= PriceLimitMax)
-            .WhereIf(OnlyAvailable != null, p => p.AvailableQuantity != 0);
+            .WhereIf(OnlyAvailable != null, p => p.StockQuantity - p.ReservedQuantity != 0);
 
         var sortedQuery = search.ApplySorting(sortBy, SortDesc);
 
@@ -179,7 +179,7 @@ public class ProductRepository : IProductRepository
         if (includeReserved)
         {
             // Учитываем резерв: показываем товары, у которых доступно <= limit
-            query = query.Where(p => p.AvailableQuantity <= limit);
+            query = query.Where(p => p.StockQuantity - p.ReservedQuantity <= limit);
         }
         else
         {

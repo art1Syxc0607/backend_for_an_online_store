@@ -26,10 +26,10 @@ public class GetProductReviewscommandHandler : IRequestHandler<GetProductReviews
         if (!await _productRepository.ProductExist(query.ProductId)) throw new DomainException("No such product");
 
         var productReviews = await _reviewRepository.GetProductReviews(query.ProductId, ct);
-        if (productReviews == null || productReviews.Count == 0) throw new DomainException("No commetns left");
 
         var reviewsDto = productReviews.Select(r => new ReviewResponseDto
         {
+            Id = r.Id,
             UserId = r.UserId,
             ProductId = r.ProductId,
             Text = r.Text,

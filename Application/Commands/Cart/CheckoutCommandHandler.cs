@@ -53,7 +53,7 @@ public class CheckoutCommandHandler : IRequestHandler<CheckoutCommand, int> // I
         var order = new Domain.Entities.Order(user, command.ShippingAddress, orderItemsDto);
 
         // Очищаем корзину
-        cart.Clear();
+        //cart.Clear();
 
         await _orderRepository.CreateOrder(order, ct);
         await _unitOf.SaveChangesAsync();
