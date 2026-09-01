@@ -27,15 +27,20 @@ public class GetProductReviewscommandHandler : IRequestHandler<GetProductReviews
 
         var productReviews = await _reviewRepository.GetProductReviews(query.ProductId, ct);
 
+        // если нет, вернется 0
         var reviewsDto = productReviews.Select(r => new ReviewResponseDto
         {
             Id = r.Id,
             UserId = r.UserId,
+            UserName = r.User?.UserName ?? "Unknown", // ← Теперь есть!
             ProductId = r.ProductId,
             Text = r.Text,
             Rating = r.Rating,
+            Status = r.Status,
             CreatedAt = r.CreatedAt,
             UpdatedAt = r.UpdatedAt,
+            AdminResponse = r.AdminResponse,
+            AdminResponseAt = r.AdminResponseAt
         }).ToList();
 
         return reviewsDto;

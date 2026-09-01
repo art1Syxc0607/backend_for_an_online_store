@@ -2,6 +2,7 @@
 using Application.Enums;
 using Domain.Enums;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace WebApi.DTOs.Order;
 
@@ -15,6 +16,9 @@ public class GetAllOrderDto
     public int? PageNumber { get; set; }
     public int? PageSize { get; set; }
 
+    // чтобы Swagger отображал строковые значения enum'а!
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public SortOrderBy OrderBy { get; set; } = SortOrderBy.DateOfCreation;
+
     public bool? SortDesc { get; set; } = true;
 }

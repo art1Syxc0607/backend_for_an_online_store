@@ -1,5 +1,6 @@
 ﻿using Domain.Exceptions;
 using Domain.Enums;
+using System.Text.Json.Serialization;
 
 namespace Domain.Entities;
 
@@ -16,6 +17,7 @@ public class Review
     public string Text { get; private set; }
     public int Rating { get; private set; } // 1-5 stars
     public bool IsVerifiedPurchase { get; private set; }
+
     public ReviewStatus Status { get; private set; } = ReviewStatus.Approved;
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }

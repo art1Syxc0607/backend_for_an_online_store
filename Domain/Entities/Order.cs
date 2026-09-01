@@ -1,6 +1,7 @@
 ﻿using Domain.Enums;
 using Domain.Exceptions;
 using Domain.DTOs.Order;
+using System.Text.Json.Serialization;
 
 namespace Domain.Entities;
 

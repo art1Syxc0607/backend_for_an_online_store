@@ -21,17 +21,26 @@ public class ReviewRepository : IReviewRepository
 
     public async Task<List<Review>> GetUserReviews(int userId, CancellationToken ct)
     {
-        return await _dpcontext.Reviews.Where(r => r.UserId == userId).ToListAsync(ct);
+        return await _dpcontext.Reviews
+            .Include(r => r.User)      // ← подгружаем пользователя
+            .Include(r => r.Product)   // ← подгружаем продукт
+            .Where(r => r.UserId == userId)
+            .ToListAsync(ct);
     }
 
     public async Task<Review?> GetReviewByIdAsync(int id, CancellationToken ct)
     {
-        return await _dpcontext.Reviews.FirstOrDefaultAsync(r => r.Id == id, ct);
+        return await _dpcontext.Reviews
+            .Include(r => r.User)  // ← Загружаем пользователя!
+            .FirstOrDefaultAsync(r => r.Id == id, ct);
     }
 
-    public async Task<List<Review>> GetProductReviews(int productId, CancellationToken ct)
+    public async Task<List<Review>?> GetProductReviews(int productId, CancellationToken ct)
     {
-        return await _dpcontext.Reviews.Where(r => r.ProductId == productId).ToListAsync(ct);
+        return await _dpcontext.Reviews
+            .Include(r => r.User)  // ← Загружаем пользователя!
+            .Where(r => r.ProductId == productId)
+            .ToListAsync(ct);
     }
 
     public async Task AddReviewAsync(Review review, CancellationToken ct)

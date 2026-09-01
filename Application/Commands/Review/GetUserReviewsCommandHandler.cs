@@ -24,12 +24,18 @@ public class GetUserReviewsCommandHandler : IRequestHandler<GetUserReviewsComman
 
         var userReviewsdto = userReviews.Select(r => new ReviewResponseDto
         {
+            Id = r.Id,
+            UserId = r.UserId,
+            UserName = r.User?.UserName ?? "Unknown", // ← Теперь есть!
             ProductId = r.ProductId,
+            ProductName = r.Product?.Name ?? "Unknown",
             Text = r.Text,
             Rating = r.Rating,
+            Status = r.Status,
             CreatedAt = r.CreatedAt,
             UpdatedAt = r.UpdatedAt,
-            UserId = r.UserId,
+            AdminResponse = r.AdminResponse,
+            AdminResponseAt = r.AdminResponseAt
         }).ToList();
 
         return userReviewsdto;

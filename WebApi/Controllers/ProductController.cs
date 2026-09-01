@@ -12,6 +12,7 @@ using System.Security.Claims;
 using System.Xml.Linq;
 using WebApi.Interfaces;
 using WebApi.DTOs.Product;
+using System.Text.Json.Serialization;
 
 namespace WebApi.Controllers;
 
@@ -101,7 +102,7 @@ public class ProductController : ControllerBase
             PriceLimitMin = dto.PriceLimitMin,
             OnlyAvailable = dto.OnlyAvailable,
             PageNumber = dto.PageNumber,
-            PageSize = dto.PageSize,
+            PageSize = dto.PageSize,       
             SortBy = dto.SortBy,
             SortDesc = dto.SortDesc
         };

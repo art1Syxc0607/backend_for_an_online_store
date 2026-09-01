@@ -1,4 +1,5 @@
-﻿using Domain.Enums;
+﻿using System.Text.Json.Serialization;
+using Domain.Enums;
 using Domain.Exceptions;
 
 namespace Domain.Entities;
@@ -15,6 +16,7 @@ public class User
     public string Email { get; set; }= string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public UserRole Role { get; private set; } 
+
     public DateTime CreatedAt { get; private set; }
 
 

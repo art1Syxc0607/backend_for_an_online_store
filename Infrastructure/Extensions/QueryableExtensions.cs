@@ -35,6 +35,10 @@ public static class QueryableExtensions
                 ? query.OrderByDescending(p => p.Name)
                 : query.OrderBy(p => p.Name),
 
+            SortProductBy.AvailableQuantity => sortDesc
+                ? query.OrderByDescending(p => p.AvailableQuantity)
+                : query.OrderBy(p => p.AvailableQuantity),
+
             SortProductBy.Rating => sortDesc
                 ? query.OrderByDescending(p => p.Reviews.Any()
                     ? p.Reviews.Average(r => r.Rating)
@@ -46,6 +50,10 @@ public static class QueryableExtensions
             SortProductBy.ReviewAmount => sortDesc
                 ? query.OrderByDescending(p => p.Reviews.Count)
                 : query.OrderBy(p => p.Reviews.Count),
+
+            SortProductBy.PaymentAmount => sortDesc
+                ? query.OrderByDescending(p => p.AmountOfPaid)
+                : query.OrderBy(p => p.AmountOfPaid),
 
             _ => query.OrderBy(p => p.Name) // // Если ни одно не совпало (default)
         };
