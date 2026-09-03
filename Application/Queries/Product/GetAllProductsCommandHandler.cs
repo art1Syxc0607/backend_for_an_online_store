@@ -48,6 +48,10 @@ public class GetAllProductsCommandHandler: IRequestHandler<GetAllProductsCommand
             Price = p.Price,
             StockQuantity = p.StockQuantity,
             ReservedQuantity = p.ReservedQuantity,
+
+            AverageRating = p.GetAverageRating(),
+            CountOfReviews = p.Reviews.Count,
+
             AmountOfRecieved = p.AmountOfReceived,
             AmountOfPaid = p.AmountOfPaid,
             AmountOfCanceled = p.AmountOfCanceled,

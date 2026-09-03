@@ -9,9 +9,13 @@ namespace Application.DTOs.Order;
 
 public class CreateOrderDto
 {
+    //[Required(ErrorMessage = "Items are required")] // before
+    //[MinLength(1, ErrorMessage = "At least one item is required")]
+    //public List<OrderItemDto> Items { get; init; } = new();
+
     [Required(ErrorMessage = "Items are required")]
     [MinLength(1, ErrorMessage = "At least one item is required")]
-    public List<OrderItemDto> Items { get; init; } = new();
+    public List<CreateOrderItemDto> Items { get; init; } = new();
 
     [Required(ErrorMessage = "Shipping address is required")]
     [MinLength(5, ErrorMessage = "Shipping address must be at least 5 characters")]

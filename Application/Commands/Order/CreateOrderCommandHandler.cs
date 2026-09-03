@@ -1,4 +1,5 @@
 ﻿using Application.Commands.Email;
+using Application.DTOs.Order;
 using Application.Interfaces;
 using Domain.DTOs.Order;
 using Domain.Entities;
@@ -62,21 +63,20 @@ public class CreateOrderCommandHandler : IRequestHandler
         if (products.Count != productIds.Count)
             throw new DomainException("Some products not found");
 
+        // 2. Создаём словарь для быстрого поиска продукта по ID
+        var productDict = products.ToDictionary(p => p.Id);
 
-        // 3. Создаем DTO для заказа (с продуктами)
-        var orderItems = command.Items
-            .Select(i => new Domain.DTOs.Order.OrderItemDomainDto
-                (
-                    products.First(p => p.Id == i.ProductId),   // ← передаем продукт
-                    i.Quantity,
-                    i.PriceAtPurchase
-                )
-            )
+        // 3. Создаём OrderItemDomainDto из command.Items
+        var orderItemDtos = command.Items
+            .Select(item => new OrderItemDomainDto(
+                productDict[item.ProductId], // ← продукт из словаря
+                item.Quantity
+            ))
             .ToList();
 
 
         // 4. Создаем заказ (вся бизнес-логика внутри Order)
-        var order = new Domain.Entities.Order(user, command.ShippingAddress, orderItems);
+        var order = new Domain.Entities.Order(command.UserId, command.ShippingAddress, orderItemDtos);
 
 
 
@@ -92,8 +92,8 @@ public class CreateOrderCommandHandler : IRequestHandler
             order.Items.Count
         );
 
-        var createdOrderEmailCommand = new SendOrderConfirmationCommand { OrderId = order.Id };
-        await _mediator.Send(command, ct);
+        //var createdOrderEmailCommand = new SendOrderConfirmationCommand { OrderId = order.Id };
+        //await _mediator.Send(command, ct);
 
         return order.Id;
     }

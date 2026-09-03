@@ -2,12 +2,13 @@
 using Infrastructure.Data;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
-using Infrastructure.Services.Payment.Strategies;
 using Infrastructure.Services.Payment;
+using Infrastructure.Services.Payment.Strategies;
 using Infrastructure.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,9 +21,25 @@ public static class DependencyInjection
 {
     public static IServiceCollection Extension(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
+        var password = Environment.GetEnvironmentVariable("DB_PASSWORD");
 
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (!string.IsNullOrEmpty(password))
+        {
+            connectionString += $";Password={password}";
+        }
+        else
+        {
+            throw new InvalidOperationException(
+    "Password not found. Set DB_PASSWORD environment variable.");
+        }
+
+        //services.AddDbContext<AppDbContext>(options => // SQLite
+        //    options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
+
+        services.AddDbContext<AppDbContext>(options => // PostgreSQL
+        options.UseNpgsql(connectionString,
+            b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
 
         services.AddScoped<ICartRepository, CartRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();

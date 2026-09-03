@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.Product;
 using Application.Interfaces;
+using AutoMapper;
 using Domain.Exceptions;
 using MediatR;
 using System;
@@ -15,11 +16,14 @@ public class GetProductHandler : IRequestHandler<GetProductQuery, ProductRespons
 {
     private readonly IProductRepository _productRepository;
     private readonly ICacheService _cacheService;
+    private readonly IMapper _mapper;
 
-    public GetProductHandler(IProductRepository productRepository, ICacheService cacheService)
+    public GetProductHandler(IProductRepository productRepository, ICacheService cacheService, 
+        IMapper mapper)
     {
         _productRepository = productRepository;
         _cacheService = cacheService;
+        _mapper = mapper;
     }
 
     public async Task<ProductResponseDto> Handle(GetProductQuery request, CancellationToken ct)

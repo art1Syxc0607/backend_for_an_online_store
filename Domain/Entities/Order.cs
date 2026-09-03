@@ -14,8 +14,13 @@ public class Order
     public decimal TotalAmount { get; private set; } // TotalAmountOfMoney
     public string ShippingAddress { get; private set; }
     public OrderStatus Status { get; private set; }
+    // info
     public DateTime CreatedAt { get; private set; }
     public DateTime? PaidAt { get; private set; }
+    public DateTime? ShippedAt { get; private set; }
+    public DateTime? DeliveredAt { get; private set; }
+    public DateTime? ReceivedAt { get; private set; }
+    public DateTime? CancelledAt { get; private set; }
 
     // Навигационные свойства
     public virtual User User { get; private set; }
@@ -32,12 +37,11 @@ public class Order
         if(status != null) Status = status.Value;
     }
 
-    public Order(User user, string shippingAddress, List<OrderItemDomainDto> items)
+    public Order(int userId, string shippingAddress, List<OrderItemDomainDto> items)
     {
-        User = user ?? throw new DomainException("User cannot be null.");
-        UserId = user.Id;
+        UserId = userId;
 
-        items.ForEach(oi_dto => AddItem(oi_dto.Product, oi_dto.Quantity));
+        items.ForEach(oi_Domaindto => AddItem(oi_Domaindto.Product, oi_Domaindto.Quantity));
 
         ShippingAddress = shippingAddress ?? throw new DomainException("Address cannot be null.");
         Status = OrderStatus.Pending;
@@ -66,7 +70,7 @@ public class Order
         }
         else
         {
-            _items.Add(new OrderItem(this, product, quantity, product.Price, product.PurchasePrice));
+            _items.Add(new OrderItem(Id, product.Id, quantity, product.Name, product.Price, product.PurchasePrice));
         }
 
         RecalculateTotal();
@@ -89,10 +93,12 @@ public class Order
     {
         if (Status == OrderStatus.Paid || Status == OrderStatus.Shipped)
             throw new DomainException("Cannot cancel a paid or shipped order.");
-        Status = OrderStatus.Cancelled;
+
 
         _items.ForEach(oi => oi.Product.ReleaseReservation(oi.Quantity)); // увеличиваем количестов 
-        // отмен у продукта
+                                                                          // отмен у продукта
+        Status = OrderStatus.Cancelled;
+        CancelledAt = DateTime.UtcNow;
     }
 
     public void Ship()
@@ -100,6 +106,7 @@ public class Order
         if (Status != OrderStatus.Paid)
             throw new DomainException("Only paid orders can be shipped.");
         Status = OrderStatus.Shipped;
+        ShippedAt = DateTime.UtcNow;
     }
 
     public void Deliver()
@@ -107,15 +114,17 @@ public class Order
         if (Status != OrderStatus.Shipped)
             throw new DomainException("Only shipped orders can be delivered.");
         Status = OrderStatus.Delivered;
+        DeliveredAt = DateTime.UtcNow;
     }
 
     public void ReceivedByUser()
     {
         if (Status != OrderStatus.Delivered)
             throw new DomainException("Only delivered orders can be received.");
-        Status = OrderStatus.Received;
 
         _items.ForEach(oi => oi.Product.RecievedInOrder(oi.Quantity)); // увеличиваем количестов 
+        Status = OrderStatus.Received;
+        ReceivedAt = DateTime.UtcNow;
     }
 
     private void RecalculateTotal()

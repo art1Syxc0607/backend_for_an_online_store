@@ -7,6 +7,7 @@ using Application.Queries.Order;
 using System.Security.Claims;
 using MediatR;
 using Application.Commands.Order;
+using WebApi.DTOs.Order;
 //using WebApi.DTOs.Order;
 
 namespace WebApi.Controllers;
@@ -23,11 +24,21 @@ public class OrderController : ControllerBase
         => _mediator = mediator;
 
     [HttpGet("history")]
-    public async Task<ActionResult<List<OrderResponseDto>>> GetOrderHistory()
+    public async Task<ActionResult<List<OrderResponseDto>>> GetOrderHistory([FromQuery] GetUserOrderHistoryDto dto)
     {
         var command = new GetOrderHistoryQuery
         {
-            userId = GetCurrentUserId()
+            UserId = GetCurrentUserId(),
+
+            Date = dto.Date,
+            DateSpan = dto.DateSpan,
+            Status = dto.OrderStatus,
+
+            OrderSortBy = dto.OrderBy,
+            SortDesc = dto.SortDesc,
+
+            PageNumber = dto.PageNumber,
+            PageSize = dto.PageSize
         };
 
         var history = await _mediator.Send(command);

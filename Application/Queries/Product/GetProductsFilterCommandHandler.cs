@@ -51,6 +51,10 @@ public class GetProductsFilterCommandHandler : IRequestHandler<GetProductsFilter
             Price = p.Price,
             StockQuantity = p.StockQuantity,
             ReservedQuantity = p.ReservedQuantity,
+
+            AverageRating = p.GetAverageRating(),
+            CountOfReviews = p.Reviews.Count,
+
             AmountOfRecieved = p.AmountOfReceived,
             AmountOfPaid = p.AmountOfPaid,
             AmountOfCanceled = p.AmountOfCanceled,
@@ -60,7 +64,7 @@ public class GetProductsFilterCommandHandler : IRequestHandler<GetProductsFilter
             CategoryId = p.CategoryId,
             CreatedAt = p.CreatedAt,
             UpdatedAt = p.UpdatedAt,
-        }).ToList();
+        }).OrderByDescending(dto => dto.CountOfOrdersContainThisProduct).ToList();
 
         // Кэшируем на 10 минут
         await _cacheService.SetAsync(CacheKey, result, TimeSpan.FromMinutes(10));

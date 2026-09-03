@@ -14,7 +14,7 @@ public class ProductResponseDto
     public decimal Price { get; init; }
     public int StockQuantity { get; init; }
     public int ReservedQuantity { get; init; }
-    public int AvailableQuantity => StockQuantity - ReservedQuantity;
+    public int AvailableQuantity => StockQuantity - ReservedQuantity; // само вычисляется
 
     public double AverageRating { get; init; }
     public int CountOfReviews { get; init; }

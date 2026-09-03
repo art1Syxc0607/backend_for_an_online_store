@@ -57,6 +57,7 @@ public class AdminProductsController : ControllerBase
         {
             Name = dto.Name,
             Price = dto.Price,
+            PurchasePrice = dto.PurchasePrice,
             StockQuantity = dto.StockQuantity,
             CategoryId = dto.CategoryId,
             Description = dto.Description,
@@ -101,9 +102,12 @@ public class AdminProductsController : ControllerBase
         {
             ProductId = dto.Id,
             Price = dto.Price,
+            PurchasePrice = dto.PurchasePrice,
             StockQuantity = dto.StockQuantity,
             CategoryId = dto.CategoryId,
             Name = dto.Name,
+            Description = dto.Description,
+            Sku = dto.Sku
         };
 
         await _mediator.Send(command);

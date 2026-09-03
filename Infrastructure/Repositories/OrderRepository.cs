@@ -4,6 +4,7 @@ using Application.DTOs.Order;
 using Application.DTOs.Product;
 using Application.Enums;
 using Application.Interfaces;
+using Application.Queries.Order;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Data;
@@ -32,23 +33,48 @@ public class OrderRepository : IOrderRepository
     {
         var result = await _dpContext.Orders
             .Include(o => o.Items)
-            .ThenInclude(i => i.Product)  // ← ДОБАВИТЬ! Загружаем продукты
+                .ThenInclude(i => i.Product)  // ← ДОБАВИТЬ! Загружаем продукты
             .FirstOrDefaultAsync(o => o.Id == id);
 
         return result;
     }
 
-    public async Task<List<Order>> GetAllAsync(int userId, 
+    // UserOrderHistory
+    public async Task<List<Order>> GetAllAsync(GetOrderHistoryQuery query, 
         CancellationToken ct = default)
     {
-        var result = await _dpContext.Orders.
-            Include(o => o.Items).
-            Where(
-            o => o.UserId == userId).ToListAsync(ct);
+        //var result = await _dpContext.Orders
+        //    .Include(o => o.Items)
+        //    .Where(
+        //    o => o.UserId == userId).ToListAsync(ct);
 
-        return result;
+        //return result;
+
+        var queryToEf = _dpContext.Orders
+        .Include(o => o.Items)
+        .Include(o => o.User)
+        .WhereIf(query.Status.HasValue, o => o.Status == query.Status)
+        .Where(o => o.UserId == query.UserId);
+
+        if (query.Date.HasValue && query.DateSpan.HasValue)
+        {
+            var referenceDate = query.Date.Value.Date;
+            var maxDaysDiff = GetDateSpan(query.DateSpan.Value, referenceDate);
+
+            queryToEf = queryToEf.Where(o =>
+                o.CreatedAt.Date >= referenceDate.Date.AddDays(-maxDaysDiff) &&
+                o.CreatedAt.Date <= referenceDate.Date.AddDays(maxDaysDiff)
+            );
+        }
+
+        var sortedQuery = queryToEf.ApplyOrderSorting(query.OrderSortBy, query.SortDesc ?? true);
 
 
+        var paginatedOrders = query.PageNumber.HasValue && query.PageSize.HasValue
+                ? sortedQuery.Pagination(query.PageNumber.Value, query.PageSize.Value)
+                : sortedQuery;
+
+        return await paginatedOrders.ToListAsync(ct);
     }
     public async Task CreateOrder(Order order,
         CancellationToken ct = default)
@@ -109,7 +135,7 @@ public class OrderRepository : IOrderRepository
     //}
 
 
-    //public async Task<List<Order>> GetOrdersFilterAsync(GetAllOrderOrFilteredCommand command,
+    //public async Task<List<Order>> GetOrdersFilterAsync(GetAllOrderOrFilteredquery command,
     //    CancellationToken ct)
     //{
     //    var filteredsearch = _dpContext.Orders.Include(o => o.Items)
@@ -134,14 +160,14 @@ public class OrderRepository : IOrderRepository
     //Admin, Order
     public async Task<List<Order>> GetOrdersFilterAsync(GetAllOrderOrFilteredCommand command, CancellationToken ct)
     {
-        var query = _dpContext.Orders.Include(o => o.Items)
+        var query = _dpContext.Orders
+            .Include(o => o.Items)
+            .Include(o => o.User)
             .WhereIf(command.Status.HasValue, o => o.Status == command.Status)
             .WhereIf(command.UserId.HasValue, o => o.UserId == command.UserId);
 
 
-        // вместо
-        //.WhereIf(command.Date.HasValue && command.DateSpan.HasValue, o =>
-    //  IsWithinDateSpan(o.CreatedAt, command.Date.Value, command.DateSpan.Value)) // так нельзя в Ef Core
+
         if (command.Date.HasValue && command.DateSpan.HasValue)
         {
             var referenceDate = command.Date.Value.Date;
@@ -159,9 +185,10 @@ public class OrderRepository : IOrderRepository
 
         var sortedQuery = query.ApplyOrderSorting(command.OrderSortBy, command.SortDesc ?? true);
 
+
         var paginatedOrders = command.PageNumber.HasValue && command.PageSize.HasValue
-            ? sortedQuery.Pagination(command.PageNumber.Value, command.PageSize.Value)
-            : sortedQuery;
+                ? sortedQuery.Pagination(command.PageNumber.Value, command.PageSize.Value)
+                : sortedQuery;
 
         return await paginatedOrders.ToListAsync(ct);
     }

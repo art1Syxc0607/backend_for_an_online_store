@@ -1,6 +1,7 @@
 ﻿using Application.Commands.Admin.Order;
 using Application.DTOs.Order;
 using Application.Enums;
+using Application.Queries.Order;
 using Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,8 @@ namespace Application.Interfaces;
 public interface IOrderRepository
 {
     Task<Order?> GetOrder(int id, CancellationToken ct = default);
-    Task<List<Order>> GetAllAsync(int userId,
+
+    Task<List<Order>> GetAllAsync(GetOrderHistoryQuery query,
         CancellationToken ct = default);
     //Task CreateOrder(User user, 
     //    List<OrderItemDto> items, string shippingAddress,

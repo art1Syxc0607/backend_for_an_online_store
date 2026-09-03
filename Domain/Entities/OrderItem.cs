@@ -18,16 +18,15 @@ public class OrderItem
 
     private OrderItem() { }
 
-    public OrderItem(Order order, Product product, int quantity, decimal priceAtPurchase,
+    public OrderItem(int orderId, int productId, int quantity, string productNameAtPurchase, decimal priceAtPurchase,
         decimal purchasePriceAtPurchase)
     {
-        Order = order ?? throw new DomainException("Order cannot be null.");
-        //OrderId = order.Id;
+        OrderId = orderId;
 
-        Product = product ?? throw new DomainException("Product cannot be null.");
-        ProductId = product.Id;
+        ProductId = productId;
 
-        ProductNameAtPurchase = product.Name;
+
+        ProductNameAtPurchase = productNameAtPurchase;
         Quantity = quantity;
         PriceAtPurchase = priceAtPurchase > 0 ? priceAtPurchase : throw new DomainException("Price must be positive.");
         CreatedAt = DateTime.UtcNow;

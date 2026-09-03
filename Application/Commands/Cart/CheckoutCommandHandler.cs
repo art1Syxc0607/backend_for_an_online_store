@@ -46,11 +46,10 @@ public class CheckoutCommandHandler : IRequestHandler<CheckoutCommand, int> // I
 
         var orderItemsDto = cart.Items.Select(ci => new Domain.DTOs.Order.OrderItemDomainDto(
                 ci.Product,
-                ci.Quantity,
-                ci.Product.Price
+                ci.Quantity
             )).ToList();
 
-        var order = new Domain.Entities.Order(user, command.ShippingAddress, orderItemsDto);
+        var order = new Domain.Entities.Order(user.Id, command.ShippingAddress, orderItemsDto);
 
         // Очищаем корзину
         //cart.Clear();

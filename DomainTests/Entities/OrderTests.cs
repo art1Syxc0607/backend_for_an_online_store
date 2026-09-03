@@ -14,7 +14,8 @@ public class OrderTests
     {
         // Arrange
         var user = new User("test@mail.com", "hash", "John");
-        var order = new Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
+        user.TestsSetUser(1);
+        var order = new Order(user.Id, "ул. Ленина, 1", new List<OrderItemDomainDto>());
         var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
 
         // Act
@@ -31,7 +32,8 @@ public class OrderTests
     {
         // Arrange
         var user = new User("test@mail.com", "hash", "John");
-        var order = new Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
+        user.TestsSetUser(1);
+        var order = new Order(user.Id, "ул. Ленина, 1", new List<OrderItemDomainDto>());
         var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
 
         // Act
@@ -47,7 +49,8 @@ public class OrderTests
     {
         // Arrange
         var user = new User("test@mail.com", "hash", "John");
-        var order = new Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
+        user.TestsSetUser(1);
+        var order = new Order(user.Id, "ул. Ленина, 1", new List<OrderItemDomainDto>());
         var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
         order.AddItem(product, 2);
 
@@ -64,7 +67,8 @@ public class OrderTests
     {
         // Arrange
         var user = new User("test@mail.com", "hash", "John");
-        var order = new Order(user, "ул. Ленина, 1", new List<OrderItemDomainDto>());
+        user.TestsSetUser(1);
+        var order = new Order(user.Id, "ул. Ленина, 1", new List<OrderItemDomainDto>());
         var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
         order.AddItem(product, 2);
         order.MarkAsPaid();
@@ -84,7 +88,8 @@ public class OrderTests
         // Arrange
         var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
         var user = new User("test@mail.com", "hash", "John");
-        var order = new Order(user, "Address", new List<OrderItemDomainDto>());
+        user.TestsSetUser(1);
+        var order = new Order(user.Id, "ул. Ленина, 1", new List<OrderItemDomainDto>());
         order.AddItem(product, 2);
 
         // Act
@@ -102,7 +107,8 @@ public class OrderTests
         // Arrange
         var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
         var user = new User("test@mail.com", "hash", "John");
-        var order = new Order(user, "Address", new List<OrderItemDomainDto>());
+        user.TestsSetUser(1);
+        var order = new Order(user.Id, "ул. Ленина, 1", new List<OrderItemDomainDto>());
         order.AddItem(product, 2);
         order.MarkAsPaid();
         order.Ship();
@@ -121,7 +127,8 @@ public class OrderTests
         // Arrange
         var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
         var user = new User("test@mail.com", "hash", "John");
-        var order = new Order(user, "Address", new List<OrderItemDomainDto>());
+        user.TestsSetUser(1);
+        var order = new Order(user.Id, "ул. Ленина, 1", new List<OrderItemDomainDto>());
         order.AddItem(product, 2);
 
         // Act

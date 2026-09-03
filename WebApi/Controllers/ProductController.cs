@@ -31,6 +31,16 @@ public class ProductController : ControllerBase
 
     }
 
+    [HttpGet("{productId}")]
+    public async Task<ActionResult<ProductResponseDto>> GetProductAsync(int productId)
+    {
+        var command = new GetProductQuery
+        {
+            Id = productId
+        };
+
+        return await _mediator.Send(command);
+    }
 
     [HttpGet]
     public async Task<ActionResult<List<ProductResponseDto>>> GetAllProductsAsync()

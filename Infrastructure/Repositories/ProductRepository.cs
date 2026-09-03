@@ -31,7 +31,10 @@ public class ProductRepository : IProductRepository
 
     public async Task<List<Product>?> GetAllProductsAsync(CancellationToken ct = default)
     {
-        return await _dpContext.Products.ToListAsync(ct);
+        return await _dpContext.Products
+            .Include(p => p.OrderItems)
+            .Include(p => p.Reviews)
+            .ToListAsync(ct);
     }
 
     public async Task<int> AddProductAsync(Product product, CancellationToken ct = default)
@@ -78,7 +81,9 @@ public class ProductRepository : IProductRepository
         decimal? PriceLimitMin, bool? OnlyAvailable, int? pageNumber, int? pageSize, 
         SortProductBy? sortBy = SortProductBy.Name, bool SortDesc = true, CancellationToken ct = default)
     {
-        var search = _dpContext.Products.Include(p => p.Reviews)
+        var search = _dpContext.Products
+            .Include(p => p.OrderItems)
+            .Include(p => p.Reviews)
             .WhereIf(CategoryId != null, p => p.CategoryId == CategoryId)
             .WhereIf(SearchText != null, p => p.Name.Contains(SearchText) || p.Description.Contains(SearchText))
             .WhereIf(PriceLimitMin != null, p => p.Price >= PriceLimitMin)
@@ -189,7 +194,7 @@ public class ProductRepository : IProductRepository
 
         // ✅ Сортировка: сначала те, которых осталось меньше всего
         return await query
-            .OrderBy(p => includeReserved ? p.AvailableQuantity : p.StockQuantity)
+            .OrderBy(p => includeReserved ? p.StockQuantity - p.ReservedQuantity : p.StockQuantity)
             .ThenBy(p => p.Name)
             .ToListAsync(ct);
     }

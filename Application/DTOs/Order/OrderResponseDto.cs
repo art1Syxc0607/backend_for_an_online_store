@@ -20,5 +20,11 @@ public record OrderResponseDto
     public string ShippingAddress { get; init; }
     public OrderStatus Status { get; init; }
     public DateTime CreatedAt { get; init; }
+
+    // info 
     public DateTime? PaidAt { get; init; }
+    public DateTime? ShippedAt { get; init; }
+    public DateTime? DeliveredAt { get; init; }
+    public DateTime? ReceivedAt { get; init; }
+    public DateTime? CancelledAt { get; init; }
 }

@@ -20,7 +20,7 @@ public class Product
     public decimal PurchasePrice { get; private set; } // Цена закупки
 
     public decimal ProfitMargin => Price - PurchasePrice; // Маржа в деньгах
-    public int StockQuantity { get; private set; }
+    public int StockQuantity { get; private set; } = 0;
     public int ReservedQuantity { get; private set; } = 0;
     public int AvailableQuantity => StockQuantity - ReservedQuantity;
     public int AmountOfReceived { get; private set; } = 0;
@@ -72,7 +72,7 @@ public class Product
         if(amountOfReceived != null) AmountOfReceived = amountOfReceived.Value;
 
     }
-    public void UpdateDetails(string? name = null, decimal? price = null, string? description = null,
+    public void UpdateDetails(string? name = null, int? categoryId = null, decimal? price = null, string? description = null,
         int? StockQuantity = null, string? sku = null, decimal? purchasePrice = null)
     {
         //if (name != null)

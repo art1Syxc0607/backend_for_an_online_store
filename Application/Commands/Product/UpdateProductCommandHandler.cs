@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces;
+using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -70,12 +71,13 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand>
 
         // Обновляем остальные поля
         product.UpdateDetails(
+            categoryId: command.CategoryId,
             name: command.Name,
             price: command.Price,
-            description: command.Description,
+            purchasePrice: command.PurchasePrice,
             StockQuantity: command.StockQuantity,
-            sku: command.Sku,
-            purchasePrice: command.PurchasePrice
+            description: command.Description,
+            sku: command.Sku           
         );
 
 

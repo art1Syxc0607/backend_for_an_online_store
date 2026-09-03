@@ -9,7 +9,7 @@ namespace Application.Commands.Order;
 public class CreateOrderCommand : IRequest<int>
 {
     [Required]
-    public List<OrderItemDto> Items { get; init; } = new();
+    public List<CreateOrderItemDto> Items { get; init; } = new();
     [Required]
     public int UserId { get; init; }
     [Required]
