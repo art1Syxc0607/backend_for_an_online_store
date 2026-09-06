@@ -1,8 +1,9 @@
-﻿using Application.Interfaces;
-using MediatR;
-using Domain.Exceptions;
-using Domain.Entities;
+﻿using Application.Commands.Email;
+using Application.Interfaces;
 using Domain.DTOs.Order;
+using Domain.Entities;
+using Domain.Exceptions;
+using MediatR;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,14 +18,16 @@ public class CheckoutCommandHandler : IRequestHandler<CheckoutCommand, int> // I
     private readonly IUserRepository _userRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly IUnitOfWork _unitOf;
+    private readonly IMediator _mediator;
 
     public CheckoutCommandHandler(ICartRepository cartRepository, IUserRepository userRepository, 
-        IUnitOfWork unitOf, IOrderRepository orderRepository)
+        IUnitOfWork unitOf, IOrderRepository orderRepository, IMediator mediator)
     {
         _cartRepository = cartRepository;
         _userRepository = userRepository;
         _orderRepository = orderRepository;
         _unitOf = unitOf;
+        _mediator = mediator;
     }
 
     public async Task<int> Handle(CheckoutCommand command, CancellationToken ct)
@@ -56,6 +59,9 @@ public class CheckoutCommandHandler : IRequestHandler<CheckoutCommand, int> // I
 
         await _orderRepository.CreateOrder(order, ct);
         await _unitOf.SaveChangesAsync();
+
+        var createdOrderEmailCommand = new SendOrderConfirmationCommand { Order = order, User = user };
+        await _mediator.Send(createdOrderEmailCommand, ct);
 
         return order.Id;
     }

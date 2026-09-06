@@ -17,43 +17,40 @@ public class SendOrderConfirmationHandler : IRequestHandler<SendOrderConfirmatio
     private readonly IOrderRepository _orderRepository;
     private readonly IUserRepository _userRepository;
     private readonly IEmailService _emailService;
-    private readonly IUnitOfWork _unitOfWork;
 
     public SendOrderConfirmationHandler(
         IOrderRepository orderRepository,
         IUserRepository userRepository,
-        IEmailService emailService,
-        IUnitOfWork unitOfWork)
+        IEmailService emailService)
     {
         _orderRepository = orderRepository;
         _userRepository = userRepository;
         _emailService = emailService;
-        _unitOfWork = unitOfWork;
     }
 
     public async Task Handle(SendOrderConfirmationCommand command, CancellationToken ct)
     {
-        // 1. Получаем заказ
-        var order = await _orderRepository.GetOrder(command.OrderId, ct);
-        if (order == null)
-            throw new DomainException("Order not found");
+        // 1. Получаем заказ // before
+        //var order = await _orderRepository.GetOrder(command.OrderId, ct);
+        //if (order == null)
+        //    throw new DomainException("Order not found");
 
-        // 2. Получаем пользователя
-        var user = await _userRepository.GetByIdAsync(order.UserId, ct);
-        if (user == null)
-            throw new DomainException("User not found");
+        //// 2. Получаем пользователя
+        //var user = await _userRepository.GetByIdAsync(command.Order.UserId, ct);
+        //if (user == null)
+        //    throw new DomainException("User not found");
 
         // 3. Генерируем письмо
         var emailDto = new EmailDto
         {
-            To = user.Email,
-            Subject = $"Ваш заказ #{order.Id} подтвержден!",
-            Body = GenerateOrderConfirmationHtml(order, user),
+            To = command.User.Email,
+            Subject = $"Ваш заказ #{command.Order.Id} подтвержден!",
+            Body = GenerateOrderConfirmationHtml(command.Order, command.User),
             IsHtml = true
         };
 
         // 4. Отправляем
-        await _emailService.SendEmailAsync(emailDto.To, emailDto.Subject, emailDto.Body, emailDto.IsHtml);
+        await _emailService.SendEmailAsync(emailDto);
     }
 
     private string GenerateOrderConfirmationHtml(Domain.Entities.Order order, Domain.Entities.User user)

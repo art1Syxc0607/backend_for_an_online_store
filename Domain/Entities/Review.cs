@@ -126,7 +126,7 @@ public class Review
 
         AdminResponse = response;
         AdminResponseAt = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
+        //UpdatedAt = DateTime.UtcNow;
     }
 
     public void UpdateAdminResponse(string response)

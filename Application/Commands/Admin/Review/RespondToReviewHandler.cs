@@ -39,6 +39,9 @@ public class RespondToReviewHandler : IRequestHandler<RespondToReviewCommand>
         if (review == null)
             throw new DomainException("Review not found");
 
+        if(!string.IsNullOrWhiteSpace(review.AdminResponse))
+            throw new DomainException("Review is answered");
+
         // 2. Проверяем, что отзыв одобрен
         if (review.Status != ReviewStatus.Approved)
             throw new DomainException("Cannot respond to a review that is not approved");

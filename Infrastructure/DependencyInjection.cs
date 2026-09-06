@@ -41,6 +41,20 @@ public static class DependencyInjection
         options.UseNpgsql(connectionString,
             b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
 
+        // for current reauest
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentRequestService, CurrentRequestService>();
+
+        // ✅ Добавляем HttpClientFactory в DI
+        services.AddHttpClient<ILocationService, LocationService>();
+
+        // Email
+        services.Configure<SmtpSettings>(
+            configuration.GetSection("Smtp"));
+        services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<ILocationService, LocationService>();
+        services.AddScoped<IDeviceInfoService, DeviceInfoService>();
+
         services.AddScoped<ICartRepository, CartRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IJwtService, JwtService>();
@@ -58,7 +72,8 @@ public static class DependencyInjection
 
         // cash
         services.AddSingleton<ICacheService, MemoryCacheService>();
-        services.AddScoped<IEmailService, EmailService>();
+
+        // EmailToken generator
         services.AddScoped<ITokenGenerator, TokenGenerator>();
 
         // Payment

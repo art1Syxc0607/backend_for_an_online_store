@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Application.Queries.Admin.Review;
 
 namespace WebApi.Controllers.Admin;
 
@@ -32,6 +33,17 @@ public class AdminReviewsController : ControllerBase
     //    var result = await _mediator.Send(query);
     //    return Ok(result);
     //}
+
+    [HttpGet("{reviewId}")]
+    public async Task<ActionResult<ReviewResponseDto>> GetReviewById(int reviewId)
+    {
+        var command = new GetReviewByIdCommand
+        {
+            Id = reviewId
+        };
+
+        return await _mediator.Send(command);
+    }
 
     [HttpPost("{reviewId}/respond")]
     public async Task<IActionResult> RespondToReview(int reviewId, [FromBody] RespondToReviewDto dto)

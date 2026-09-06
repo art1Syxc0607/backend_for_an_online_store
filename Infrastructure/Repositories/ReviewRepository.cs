@@ -32,6 +32,7 @@ public class ReviewRepository : IReviewRepository
     {
         return await _dpcontext.Reviews
             .Include(r => r.User)  // ← Загружаем пользователя!
+            .Include(r => r.Product)
             .FirstOrDefaultAsync(r => r.Id == id, ct);
     }
 

@@ -104,6 +104,7 @@ public class AdminProductsController : ControllerBase
             Price = dto.Price,
             PurchasePrice = dto.PurchasePrice,
             StockQuantity = dto.StockQuantity,
+            ReservedQuantity = dto.ReservedQuantity,
             CategoryId = dto.CategoryId,
             Name = dto.Name,
             Description = dto.Description,

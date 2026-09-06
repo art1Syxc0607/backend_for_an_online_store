@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Application.DTOs.Admin.User;
@@ -32,6 +33,8 @@ public class UserFilterDto
     public bool SortDesc { get; set; } = true;
 }
 
+// чтобы Swagger отображал строковые значения enum'а!
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SortUserBy
 {
     CreatedAt,

@@ -17,7 +17,10 @@ public class UploadProductFilesHandler : IRequestHandler<UploadProductFilesComma
     private readonly IFileStorageService _fileStorageService;
     private readonly IUnitOfWork _unitOfWork;
 
-    public UploadProductFilesHandler(IProductRepository productRepository, IFileStorageService fileStorageService, IUnitOfWork unitOfWork)
+    public UploadProductFilesHandler(IProductRepository productRepository, 
+        IFileStorageService fileStorageService, 
+
+        IUnitOfWork unitOfWork)
     {
         _productRepository = productRepository;
         _fileStorageService = fileStorageService;

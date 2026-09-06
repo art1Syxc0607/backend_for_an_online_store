@@ -29,6 +29,8 @@ public class User
     public DateTime? EmailConfirmedAt { get; private set; }
     public string? EmailConfirmationToken { get; private set; }
     public DateTime? EmailConfirmationTokenExpiry { get; private set; }
+    // Resend
+    public DateTime? LastConfirmationEmailSentAt { get; private set; }
 
     // Навигационные свойства
     public Cart? Cart { get; private set; }
@@ -103,6 +105,20 @@ public class User
         EmailConfirmedAt = DateTime.UtcNow;
         EmailConfirmationToken = null;
         EmailConfirmationTokenExpiry = null;
+    }
+
+    public bool CanResendConfirmationEmail()
+    {
+        if (!LastConfirmationEmailSentAt.HasValue)
+            return true;
+
+        // ✅ Не чаще 1 раза в 5 минут
+        return (DateTime.UtcNow - LastConfirmationEmailSentAt.Value).TotalMinutes >= 5;
+    }
+
+    public void SetConfirmationEmailSent()
+    {
+        LastConfirmationEmailSentAt = DateTime.UtcNow;
     }
 
     public void EnsureEmailConfirmed()

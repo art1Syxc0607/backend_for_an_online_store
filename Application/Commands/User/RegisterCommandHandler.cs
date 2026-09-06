@@ -168,5 +168,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
 
 
     }
+
+
 }
 

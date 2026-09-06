@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,11 +13,16 @@ namespace Infrastructure.Services;
 public class LocalFileStorageService : IFileStorageService
 {
     private readonly IWebHostEnvironment _environment;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<LocalFileStorageService> _logger;
+    
 
-    public LocalFileStorageService(IWebHostEnvironment environment, ILogger<LocalFileStorageService> logger)
+    public LocalFileStorageService(IWebHostEnvironment environment,
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<LocalFileStorageService> logger)
     {
         _environment = environment;
+        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
     }
 
@@ -47,11 +53,24 @@ public class LocalFileStorageService : IFileStorageService
         await fileStream.CopyToAsync(fileStreamOutput, ct);
 
         // 4. Возвращаем URL
-        var urlPath = string.IsNullOrEmpty(subFolder)
+        var urlPath = string.IsNullOrEmpty(subFolder) 
             ? $"/{fileType}/{uniqueName}"
             : $"/{fileType}/{subFolder}/{uniqueName}";
 
-        return urlPath;
+        return await GetFileUrlAsync(urlPath);
+    }
+
+    public Task<string> GetFileUrlAsync(string fileName)
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+        if (request == null)
+        {
+            throw new ArgumentNullException("HttpContext is null");
+        }
+
+        // Абсолютный URL
+        var url = $"{request.Scheme}://{request.Host}/{fileName}";
+        return Task.FromResult(url);
     }
 
     public Task DeleteFileAsync(string fileUrl, CancellationToken ct = default)

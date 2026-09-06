@@ -7,8 +7,8 @@ public class Product
     private List<Review> _reviews = new();
     private List<CartItem> _cartItems = new();
     private List<OrderItem> _orderItems = new();
-    private List<string> _imageUrls = new();
-    private List<string> _videoUrls = new();
+    public List<string> _imageUrls { get; private set; } = new();
+    public List<string> _videoUrls { get; private set; } = new();
     //private List<InventoryTransaction> _inventoryTransactions = new();
 
     private const int MaxFiles = 8;
@@ -73,25 +73,25 @@ public class Product
 
     }
     public void UpdateDetails(string? name = null, int? categoryId = null, decimal? price = null, string? description = null,
-        int? StockQuantity = null, string? sku = null, decimal? purchasePrice = null)
+        int? stockQuantity = null, string? sku = null, decimal? purchasePrice = null,
+        int? reservedQuantity = null)
     {
-        //if (name != null)
-        //{
-        //    if (name == "") throw new DomainException("Product name cannot be empty.");
-
-        //}
         if (name != null) SetName(name);
+
+        if(categoryId !=  null) CategoryId = categoryId.Value;
+        if (price != null) SetPrice(price.Value);
 
         if (description != null) 
         {
             if (description == "") throw new DomainException("Description cannot be empty.");
             Description = description;
         } 
-        if (price != null) SetPrice(price.Value);
-        if(StockQuantity  != null) SetStock(StockQuantity.Value);
+        
+        if(stockQuantity  != null) SetStock(stockQuantity.Value);
 
         if (sku != null) Sku = sku;
-        if(purchasePrice.HasValue) PurchasePrice = purchasePrice.Value; 
+        if(purchasePrice.HasValue) SetPurchasePrice(purchasePrice.Value);
+        if (reservedQuantity != null) SetReservedQuantity(reservedQuantity.Value);
 
         UpdatedAt = DateTime.UtcNow;
     }
@@ -199,6 +199,14 @@ public class Product
         if (newStock < ReservedQuantity)
             throw new DomainException($"Cannot set stock below reserved quantity ({ReservedQuantity})");
         StockQuantity = newStock;
+    }
+
+    public void SetReservedQuantity(int newReservedQuantity)
+    {
+        if (ReservedQuantity < 0)
+            throw new DomainException("ReservedQuantity cannot be negative");
+
+        ReservedQuantity = newReservedQuantity;
     }
 
     private void SetPurchasePrice(decimal purchasePrice)

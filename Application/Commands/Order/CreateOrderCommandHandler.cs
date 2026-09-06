@@ -92,8 +92,8 @@ public class CreateOrderCommandHandler : IRequestHandler
             order.Items.Count
         );
 
-        //var createdOrderEmailCommand = new SendOrderConfirmationCommand { OrderId = order.Id };
-        //await _mediator.Send(command, ct);
+        var createdOrderEmailCommand = new SendOrderConfirmationCommand { Order = order, User = user };
+        await _mediator.Send(createdOrderEmailCommand, ct);
 
         return order.Id;
     }

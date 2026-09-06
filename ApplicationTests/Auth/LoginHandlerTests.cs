@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Domain.Entities;
 using Domain.Exceptions;
 using FluentAssertions;
+using Infrastructure.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -39,7 +40,11 @@ public class LoginHandlerTests
             userRepoMock.Object,
             passwordHasherMock.Object,
             jwtServiceMock.Object,
-            Mock.Of<ILogger<LoginCommandHandler>>()
+            Mock.Of<ILogger<LoginCommandHandler>>(),
+            Mock.Of<IEmailService>(),
+            Mock.Of<ICurrentRequestService>(),
+            Mock.Of<ILocationService>(),
+            Mock.Of<IDeviceInfoService>()
         );
 
         // Act
@@ -70,7 +75,11 @@ public class LoginHandlerTests
             userRepoMock.Object,
             Mock.Of<IPasswordHasher>(),
             Mock.Of<IJwtService>(),
-            Mock.Of<ILogger<LoginCommandHandler>>()
+            Mock.Of<ILogger<LoginCommandHandler>>(),
+            Mock.Of<IEmailService>(),
+            Mock.Of<ICurrentRequestService>(),
+            Mock.Of<ILocationService>(),
+            Mock.Of<IDeviceInfoService>()
         );
 
         // Act
@@ -104,7 +113,11 @@ public class LoginHandlerTests
             userRepoMock.Object,
             passwordHasherMock.Object,
             Mock.Of<IJwtService>(),
-            Mock.Of<ILogger<LoginCommandHandler>>()
+            Mock.Of<ILogger<LoginCommandHandler>>(),
+            Mock.Of<IEmailService>(),
+            Mock.Of<ICurrentRequestService>(),
+            Mock.Of<ILocationService>(),
+            Mock.Of<IDeviceInfoService>()
         );
 
         // Act

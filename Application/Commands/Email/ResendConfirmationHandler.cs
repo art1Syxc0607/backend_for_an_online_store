@@ -3,11 +3,9 @@ using Application.Interfaces;
 using Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Domain.Entities;
+using Microsoft.Extensions.Logging;
+
 
 namespace Application.Commands.Email;
 
@@ -17,6 +15,7 @@ public class ResendConfirmationHandler : IRequestHandler<ResendConfirmationComma
     private readonly IEmailService _emailService;
     private readonly ITokenGenerator _tokenGenerator;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<ResendConfirmationHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
     public ResendConfirmationHandler(
@@ -24,12 +23,14 @@ public class ResendConfirmationHandler : IRequestHandler<ResendConfirmationComma
         IEmailService emailService,
         ITokenGenerator tokenGenerator,
         IConfiguration configuration,
+        ILogger<ResendConfirmationHandler> logger,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _emailService = emailService;
         _tokenGenerator = tokenGenerator;
         _configuration = configuration;
+        _logger = logger;
         _unitOfWork = unitOfWork;
     }
 
@@ -42,6 +43,10 @@ public class ResendConfirmationHandler : IRequestHandler<ResendConfirmationComma
         if (user.IsEmailConfirmed)
             throw new DomainException("Email already confirmed");
 
+        // Проверка на спам (не чаще 1 раза в 5 минут)
+        if (!user.CanResendConfirmationEmail())
+            throw new DomainException("Please wait 5 minutes before requesting again");
+
         // Генерируем новый токен
         var token = _tokenGenerator.GenerateEmailConfirmationToken();
         var expiry = DateTime.UtcNow.AddHours(24);
@@ -49,21 +54,39 @@ public class ResendConfirmationHandler : IRequestHandler<ResendConfirmationComma
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // Отправляем письмо
+        // ✅ Отправляем письмо
+        await SendConfirmationEmailAsync(user, token);
+
+        _logger.LogInformation(
+            "Confirmation email resent to {Email}, UserId {UserId}",
+            user.Email,
+            user.Id
+        );
+    }
+
+    private async Task SendConfirmationEmailAsync(Domain.Entities.User user, string token)
+    {
         var baseUrl = _configuration["App:BaseUrl"];
         var confirmationUrl = $"{baseUrl}/api/auth/confirm-email?token={token}&userId={user.Id}";
 
-        string To = user.Email;
-        string Subject = "Подтверждение регистрации";
-        string Body = $@"
-                <h2>Здравствуйте, {user.UserName}!</h2>
-                <p>Подтвердите ваш email по ссылке:</p>
-                <p><a href='{confirmationUrl}'>Подтвердить email</a></p>
-                <p>Ссылка действительна в течение 24 часов.</p>
-            ";
-        bool IsHtml = true;
+        var emailBody = $@"
+            <html>
+                <body>
+                    <h2>Здравствуйте, {user.UserName}!</h2>
+                    <p>Вы запросили повторную отправку письма для подтверждения email.</p>
+                    <p>Перейдите по ссылке для подтверждения:</p>
+                    <p><a href='{confirmationUrl}'>Подтвердить email</a></p>
+                    <p>Ссылка действительна в течение 24 часов.</p>
+                    <p>Если вы не запрашивали повторную отправку, проигнорируйте это письмо.</p>
+                </body>
+            </html>
+        ";
 
-
-        await _emailService.SendEmailAsync(To, Subject, Body, IsHtml);
+        await _emailService.SendEmailAsync(
+            user.Email,
+            "Подтверждение email (повторная отправка)",
+            emailBody,
+            true
+        );
     }
 }

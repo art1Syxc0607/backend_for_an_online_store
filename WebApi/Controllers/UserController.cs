@@ -1,9 +1,11 @@
 using Application.Commands.Email;
 using Application.Commands.User;
 using Application.DTOs.User;
+using Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
 //using Application.Queries.GetProfile;
@@ -36,6 +38,7 @@ public class UserController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize]
     [HttpGet("confirm-email")]
     public async Task<IActionResult> ConfirmEmail([FromQuery] int userId, [FromQuery] string token)
     {
@@ -51,6 +54,34 @@ public class UserController : ControllerBase
         //return Redirect("https://yourstore.com/email-confirmed");
 
         return NoContent();
+    }
+
+    [Authorize]
+    [HttpGet("resend-confirmation-email")]
+    public async Task<IActionResult> ResendConfirmEmail()
+    {
+        try
+        {
+            var command = new ResendConfirmationCommand
+            {
+                Email = GetCurrentUserEmail()
+            };
+
+            await _mediator.Send(command);
+            return NoContent();
+        }
+        catch (DomainException ex) when (ex.Message.Contains("already confirmed"))
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (DomainException ex) when (ex.Message.Contains("wait 5 minutes"))
+        {
+            return StatusCode(429, new { error = ex.Message }); // 429 Too Many Requests
+        }
+        catch (NotFoundException)
+        {
+            return NotFound(new { error = "User not found" });
+        }
     }
 
     [HttpPost("login")]
@@ -95,6 +126,17 @@ public class UserController : ControllerBase
     {
         var claim = User.FindFirst("userId") ?? User.FindFirst(ClaimTypes.NameIdentifier);
         return int.Parse(claim!.Value);
+    }
+
+    private string GetCurrentUserEmail()
+    {
+        var claim = User.FindFirst(ClaimTypes.Email)
+            ?? User.FindFirst(JwtRegisteredClaimNames.Email);
+
+        if (claim == null)
+            throw new UnauthorizedAccessException("Email claim not found in token");
+
+        return claim.Value;
     }
 }
 

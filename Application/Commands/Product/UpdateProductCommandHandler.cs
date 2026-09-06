@@ -75,7 +75,8 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand>
             name: command.Name,
             price: command.Price,
             purchasePrice: command.PurchasePrice,
-            StockQuantity: command.StockQuantity,
+            stockQuantity: command.StockQuantity,
+            reservedQuantity: command.ReservedQuantity,
             description: command.Description,
             sku: command.Sku           
         );

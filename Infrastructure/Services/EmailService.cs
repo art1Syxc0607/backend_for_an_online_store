@@ -1,91 +1,78 @@
-﻿using Application.DTOs.Email;
+﻿using System.Net;
+using System.Net.Mail;
+using Application.DTOs.Email;
 using Application.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using SendGrid;
-using SendGrid.Helpers.Mail;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 
 namespace Infrastructure.Services;
 
-
 public class EmailService : IEmailService
 {
-    private readonly IConfiguration _configuration;
+    private readonly SmtpSettings _smtpSettings;
     private readonly ILogger<EmailService> _logger;
 
     public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
     {
-        _configuration = configuration;
+        _smtpSettings = configuration.GetSection("Smtp").Get<SmtpSettings>()!;
         _logger = logger;
     }
 
     public async Task SendEmailAsync(string to, string subject, string body, bool isHtml = true)
     {
-        try
+        await SendEmailAsync(new EmailDto
         {
-            var apiKey = _configuration["SendGrid:ApiKey"];
-            var fromEmail = _configuration["SendGrid:FromEmail"];
-            var fromName = _configuration["SendGrid:FromName"];
-
-            var client = new SendGridClient(apiKey);
-            var from = new EmailAddress(fromEmail, fromName);
-            var toAddress = new EmailAddress(to);
-
-            var msg = MailHelper.CreateSingleEmail(from, toAddress, subject,
-                plainTextContent: isHtml ? null : body,
-                htmlContent: isHtml ? body : null);
-
-            var response = await client.SendEmailAsync(msg);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Body.ReadAsStringAsync();
-                _logger.LogError($"SendGrid error: {response.StatusCode} - {errorBody}");
-                throw new Exception($"Failed to send email: {response.StatusCode}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Failed to send email to {to}");
-            throw;
-        }
+            To = to,
+            Subject = subject,
+            Body = body,
+            IsHtml = isHtml
+        });
     }
 
     public async Task SendEmailAsync(EmailDto dto)
     {
         try
         {
-            var apiKey = _configuration["SendGrid:ApiKey"];
-            var fromEmail = _configuration["SendGrid:FromEmail"];
-            var fromName = _configuration["SendGrid:FromName"];
-
-            var client = new SendGridClient(apiKey);
-            var from = new EmailAddress(fromEmail, fromName);
-            var toAddress = new EmailAddress(dto.To);
-
-            var msg = MailHelper.CreateSingleEmail(from, toAddress, dto.Subject,
-                plainTextContent: dto.IsHtml ? null : dto.Body,
-                htmlContent: dto.IsHtml ? dto.Body : null);
-
-            var response = await client.SendEmailAsync(msg);
-
-            if (!response.IsSuccessStatusCode)
+            using var client = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port)
             {
-                var errorBody = await response.Body.ReadAsStringAsync();
-                _logger.LogError($"SendGrid error: {response.StatusCode} - {errorBody}");
-                throw new Exception($"Failed to send email: {response.StatusCode}");
-            }
+                EnableSsl = _smtpSettings.EnableSsl,
+                Credentials = new NetworkCredential(_smtpSettings.Username, _smtpSettings.Password),
+                Timeout = 10000 // 10 секунд
+            };
+
+            using var message = new MailMessage
+            {
+                From = new MailAddress(_smtpSettings.FromEmail, _smtpSettings.FromName),
+                Subject = dto.Subject,
+                Body = dto.Body,
+                IsBodyHtml = dto.IsHtml
+            };
+
+            message.To.Add(dto.To);
+
+            await client.SendMailAsync(message);
+            _logger.LogInformation("✅ Email sent to {To}", dto.To);
+        }
+        catch (SmtpException smtpEx)
+        {
+            _logger.LogError(smtpEx, "SMTP error sending email to {To}: {StatusCode}", dto.To, smtpEx.StatusCode);
+            throw new Exception($"SMTP error: {smtpEx.Message}", smtpEx);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Failed to send email to {dto.To}");
+            _logger.LogError(ex, "Failed to send email to {To}", dto.To);
             throw;
         }
     }
+}
+
+public class SmtpSettings
+{
+    public string Host { get; set; } = string.Empty;
+    public int Port { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string FromEmail { get; set; } = string.Empty;
+    public string FromName { get; set; } = string.Empty;
+    public bool EnableSsl { get; set; } = true;
 }

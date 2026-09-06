@@ -137,7 +137,7 @@ public class OrderController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPut]
+    [HttpPut("Cancel")]
     public async Task<IActionResult> CancelOrder([FromBody] CancelOrderDto dto)
     {
         var command = new CancelOrderCommand
