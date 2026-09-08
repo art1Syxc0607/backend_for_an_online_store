@@ -10,5 +10,6 @@ namespace Application.Commands.Admin.Dashboard;
 
 public class GetNumberOfNewOrdersCommand : IRequest<int>
 {
-    public DateSpan DateSpan { get; set; }
+    public DateTime LastDayOfThePriod {  get; set; }
+    public DateTime FirstDayOfThePriod { get; set; }
 }

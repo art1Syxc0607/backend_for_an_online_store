@@ -41,9 +41,11 @@ public class GetAllReviewsHandler : IRequestHandler<GetAllReviewsCommand, List<R
 
         // 2. Формируем DTO
         // AutoMapper автоматически применит все настройки
-        var userReviewsDto = _mapper.Map<List<ReviewResponseDto>>(reviews);
+        var reviewDtos = _mapper.Map<List<ReviewResponseDto>>(reviews);
 
+        _logger.LogInformation("Mapping into dto completed successfully. Count: {Count}"
+            , reviewDtos.Count);
 
-        return userReviewsDto;
+        return reviewDtos;
     }
 }

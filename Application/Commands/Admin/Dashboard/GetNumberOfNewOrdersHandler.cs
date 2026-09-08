@@ -20,6 +20,7 @@ public class GetNumberOfNewOrdersHandler : IRequestHandler<GetNumberOfNewOrdersC
 
     public async Task<int> Handle(GetNumberOfNewOrdersCommand command, CancellationToken ct = default)
     {
-        return await _orderRepository.GetNumberOfNewOrdersAsync(command.DateSpan, ct);
+        return await _orderRepository.GetNumberOfNewOrdersAsync(command.LastDayOfThePriod,
+            command.FirstDayOfThePriod, ct);
     }
 }

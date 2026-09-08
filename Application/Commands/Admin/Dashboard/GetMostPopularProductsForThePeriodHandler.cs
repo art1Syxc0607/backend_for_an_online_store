@@ -31,15 +31,14 @@ public class GetMostPopularProductsForThePeriodHandler : IRequestHandler<GetMost
         CancellationToken ct = default)
     {
 
-        var cacheKey = $"products:popular:{command.Span}_{command.LastDayOfThePriod:yyyyMMdd}";
+        var cacheKey = $"products:popular:{command.FirstDayOfThePriod}_{command.LastDayOfThePriod:yyyyMMdd}";
 
         var cached = await _cacheService.GetAsync<List<PopularProductDto>>(cacheKey);
         if (cached != null)
             return cached;
 
 
-        var result = await _productRepository.GetMostPopularProductsForThePeriod(command.Span,
-            command.LastDayOfThePriod, ct);
+        var result = await _productRepository.GetMostPopularProductsForThePeriod(command, ct);
 
         await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
 

@@ -11,6 +11,8 @@ namespace Application.Commands.Admin.Dashboard;
 
 public class GetMostPopularProductsForThePeriodCommand : IRequest<List<PopularProductDto>>
 {
-    public DateSpan Span { get; set; }
     public DateTime LastDayOfThePriod { get; set; }
+    public DateTime FirstDayOfThePriod { get; set; }
+    public int? PageNumber { get; set; } = 1;
+    public int? PageSize { get; set; } = 20;
 }

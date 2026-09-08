@@ -34,10 +34,12 @@ public interface IOrderRepository
 
 
     // Admin
-    Task<int> GetNumberOfNewOrdersAsync(DateSpan Span, CancellationToken ct = default);
+    Task<int> GetNumberOfNewOrdersAsync(DateTime lastDayOfThePriod,
+           DateTime firstDayOfThePriod, CancellationToken ct = default);
 
-    Task<decimal> GetRevenueForThePeriodAsync(DateTime LastDayOfThePriod, DateSpan Span, CancellationToken ct = default);
-    Task<decimal> GetCostOfGoodsSoldAsync(DateTime lastDayOfThePriod, DateSpan span,
+    Task<decimal> GetRevenueForThePeriodAsync(DateTime lastDayOfThePriod, DateTime firstDayOfThePriod,
+        CancellationToken ct = default);
+    Task<decimal> GetCostOfGoodsSoldAsync(DateTime lastDayOfThePriod, DateTime firstDayOfThePriod,
         CancellationToken ct = default);
     Task<List<Order>> GetOrdersFilterAsync(GetAllOrderOrFilteredCommand command,
         CancellationToken ct = default);

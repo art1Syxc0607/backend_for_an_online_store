@@ -194,11 +194,11 @@ public class OrderRepository : IOrderRepository
     }
 
     //Admin, Dashboard
-    public async Task<int> GetNumberOfNewOrdersAsync(DateSpan span, CancellationToken ct = default)
+    public async Task<int> GetNumberOfNewOrdersAsync(DateTime lastDayOfThePriod,
+           DateTime firstDayOfThePriod, CancellationToken ct = default)
     {
-        var endDate = DateTime.Today.Date;
-        var maxDaysDiff = GetDateSpan(span, endDate);
-        var startDate = endDate.AddDays(-maxDaysDiff);
+        var endDate = lastDayOfThePriod.Date;
+        var startDate = firstDayOfThePriod.Date;
 
 
         return await _dpContext.Orders
@@ -207,33 +207,32 @@ public class OrderRepository : IOrderRepository
                 o.CreatedAt.Date <= endDate);
     }
 
-    public async Task<decimal> GetRevenueForThePeriodAsync(DateTime lastDayOfThePriod, DateSpan span,
+    public async Task<decimal> GetRevenueForThePeriodAsync(DateTime lastDayOfThePriod, DateTime firstDayOfThePriod,
         CancellationToken ct = default)
     {
         var endDate = lastDayOfThePriod.Date;
-        var maxDaysDiff = GetDateSpan(span, endDate);
-        var startDate = endDate.AddDays(-maxDaysDiff);
+        var startDate = firstDayOfThePriod.Date;
 
         var result = await _dpContext.Orders.Where(o => o.CreatedAt <= endDate &&
             o.CreatedAt.Date >= startDate)
-            //.SumAsync(o => o.TotalAmount);
-            .SumAsync(o => (decimal?)o.TotalAmount) ?? 0;
+            .SumAsync(o => o.TotalAmount);
+        //.SumAsync(o => (decimal?)o.TotalAmount) ?? 0;
 
         return result;
     }
 
-    public async Task<decimal> GetCostOfGoodsSoldAsync(DateTime lastDayOfThePriod, DateSpan span,
+    // стоимость закупки за период
+    public async Task<decimal> GetCostOfGoodsSoldAsync(DateTime lastDayOfThePriod, DateTime firstDayOfThePriod,
         CancellationToken ct = default)
     {
         var endDate = lastDayOfThePriod.Date;
-        var maxDaysDiff = GetDateSpan(span, endDate);
-        var startDate = endDate.AddDays(-maxDaysDiff);
+        var startDate = firstDayOfThePriod.Date;
 
         return await _dpContext.OrderItems
             .Where(oi => oi.Order.CreatedAt >= startDate && oi.Order.CreatedAt <= endDate)
             .Where(oi => oi.Order.Status != OrderStatus.Cancelled && oi.Order.Status != OrderStatus.Pending) // ← фильтр!
-            //.SumAsync(oi => oi.PurchasePriceAtPurchase * oi.Quantity);
-            .SumAsync(oi => (decimal?)oi.PurchasePriceAtPurchase * oi.Quantity) ?? 0;
+            .SumAsync(oi => oi.PurchasePriceAtPurchase * oi.Quantity);
+        //.SumAsync(oi => (decimal?)oi.PurchasePriceAtPurchase * oi.Quantity) ?? 0;
     }
 
     private int GetDateSpan(DateSpan span, DateTime referenceDate) // учитывает что за тип года, сколь

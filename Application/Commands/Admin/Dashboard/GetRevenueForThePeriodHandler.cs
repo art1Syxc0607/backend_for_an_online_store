@@ -23,9 +23,9 @@ public class GetRevenueForThePeriodHandler : IRequestHandler<GetRevenueForThePer
     public async Task<RevenueForThePeriodDto> Handle(GetRevenueForThePeriodCommand command, CancellationToken ct = default)
     {
         var revenue = await _orderRepository.GetRevenueForThePeriodAsync(command.LastDayOfThePriod,
-            command.DateSpan, ct);
+            command.FirstDayOfThePriod, ct);
         var cost = await _orderRepository.GetCostOfGoodsSoldAsync(command.LastDayOfThePriod,
-            command.DateSpan, ct);
+            command.FirstDayOfThePriod, ct);
 
 
         return new RevenueForThePeriodDto

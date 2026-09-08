@@ -12,5 +12,5 @@ namespace Application.Commands.Admin.Dashboard;
 public class GetRevenueForThePeriodCommand : IRequest<RevenueForThePeriodDto>
 {
     public DateTime LastDayOfThePriod {  get; set; }
-    public DateSpan DateSpan { get; set; }
+    public DateTime FirstDayOfThePriod { get; set; }
 }

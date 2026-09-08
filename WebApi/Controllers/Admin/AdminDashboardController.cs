@@ -26,38 +26,44 @@ public class AdminDashboardController : ControllerBase
     public AdminDashboardController(IMediator mediator)
         => _mediator = mediator;
 
-    [HttpGet]
-    public async Task<int> NumberOfNewOrders([FromQuery] DateSpan span)
+
+    [HttpGet("numberOfNewOrders")]
+    public async Task<int> NumberOfNewOrders([FromQuery] DateTime lastDayOfThePriod, 
+        [FromQuery] DateTime firstDayOfThePriod)
     {
         var command = new GetNumberOfNewOrdersCommand
         {
-            DateSpan = span
+            LastDayOfThePriod = lastDayOfThePriod,
+            FirstDayOfThePriod = firstDayOfThePriod
         };
 
         return await _mediator.Send(command);
     }
 
-    [HttpGet("/revenue")]
-    public async Task<RevenueForThePeriodDto> RevenueForThePeriod([FromQuery] DateTime lastDayOfThePriod, 
-        [FromQuery] DateSpan span)
+    [HttpGet("revenue")]
+    public async Task<RevenueForThePeriodDto> RevenueForThePeriod([FromQuery] DateTime lastDayOfThePriod,
+        [FromQuery] DateTime firstDayOfThePriod)
     {
         var command = new GetRevenueForThePeriodCommand
         {
             LastDayOfThePriod = lastDayOfThePriod,
-            DateSpan = span
+            FirstDayOfThePriod = firstDayOfThePriod
         };
 
         return await _mediator.Send(command);
     }
 
-    [HttpGet("/popularProducts")]
-    public async Task<List<PopularProductDto>> GetMostPopularProductsForThePeriod([FromQuery] DateSpan span,
-        [FromQuery] DateTime lastDayOfThePriod)
+    [HttpGet("popularProducts")]
+    public async Task<List<PopularProductDto>> GetMostPopularProductsForThePeriod([FromQuery] DateTime firstDayOfThePriod,
+        [FromQuery] DateTime lastDayOfThePriod, [FromQuery] int? pageNumber = 1, 
+        [FromQuery] int? pageSize = 20)
     {
         var command = new GetMostPopularProductsForThePeriodCommand
-        {
-            Span = span,
-            LastDayOfThePriod = lastDayOfThePriod
+        {          
+            LastDayOfThePriod = lastDayOfThePriod,
+            FirstDayOfThePriod = firstDayOfThePriod,
+            PageNumber = pageNumber,
+            PageSize = pageSize
         };
 
         return await _mediator.Send(command);

@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Product;
+﻿using Application.Commands.Admin.Dashboard;
+using Application.DTOs.Product;
 using Application.Enums;
 using Domain.Entities;
 using System;
@@ -37,8 +38,6 @@ public interface IProductRepository
         CancellationToken ct = default);
 
     Task<List<PopularProductDto>> GetMostPopularProductsForThePeriod(
-        DateSpan period,
-        DateTime lastDayOfThePriod,
-        CancellationToken ct = default);
+        GetMostPopularProductsForThePeriodCommand command, CancellationToken ct = default);
 }
 

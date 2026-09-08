@@ -17,5 +17,6 @@ public enum DateSpan
     HalfOfMonth = 4,
     HalfOfYear = 5,
     Year = 6,
+    AllTheTime = 7
 
 }

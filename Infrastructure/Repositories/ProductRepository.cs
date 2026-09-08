@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Product;
+﻿using Application.Commands.Admin.Dashboard;
+using Application.DTOs.Product;
 using Application.Enums;
 using Application.Interfaces;
 using Domain.Entities;
@@ -104,13 +105,12 @@ public class ProductRepository : IProductRepository
     //admin
 
     public async Task<List<PopularProductDto>> GetMostPopularProductsForThePeriod(
-    DateSpan period,
-    DateTime lastDayOfThePriod,
-    CancellationToken ct = default)
+        GetMostPopularProductsForThePeriodCommand command, CancellationToken ct = default)
     {
-        var endDate = lastDayOfThePriod.Date;
-        var maxDaysDiff = GetDateSpan(period, endDate);
-        var startDate = endDate.AddDays(-maxDaysDiff);
+        var endDate = command.LastDayOfThePriod.Date;
+        var startDate = command.FirstDayOfThePriod.Date;
+        var pageNumber = command.PageNumber ?? 1;
+        var pageSize = command.PageNumber ?? 1;
 
         // ✅ ОДИН SQL-запрос с группировкой
         var query = await _dpContext.OrderItems
@@ -135,6 +135,7 @@ public class ProductRepository : IProductRepository
                 UpdatedAt = g.First().Product.UpdatedAt
             })
             .OrderByDescending(p => p.PresenceInOrders)
+            .Pagination(pageNumber, pageSize)
             .ToListAsync(ct);
 
         return query;
