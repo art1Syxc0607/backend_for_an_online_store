@@ -31,6 +31,8 @@ public class GetUserReviewsCommandHandler : IRequestHandler<GetUserReviewsComman
             ProductName = r.Product?.Name ?? "Unknown",
             Text = r.Text,
             Rating = r.Rating,
+            ImagesUrls = r.ImageUrls.ToList(),
+            VideosUrls = r.VideoUrls.ToList(),
             Status = r.Status,
             CreatedAt = r.CreatedAt,
             UpdatedAt = r.UpdatedAt,

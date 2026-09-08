@@ -6,8 +6,8 @@ namespace Domain.Entities;
 
 public class Review
 {
-    private List<string> _imageUrls = new();
-    private List<string> _videoUrls = new();
+    public List<string> _imageUrls { get; private set; } = new();
+    public List<string> _videoUrls { get; private set; } = new();
 
     private const int MaxFiles = 8;
 

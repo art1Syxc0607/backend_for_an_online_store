@@ -1,11 +1,12 @@
-﻿using Domain.Entities;
+﻿using Application.Commands.Admin.Review;
+using Application.Commands.Review;
 using Application.DTOs.Review;
-using Application.Commands.Admin.Review;
+using Application.Queries.Admin.Review;
+using Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using Application.Queries.Admin.Review;
 
 namespace WebApi.Controllers.Admin;
 
@@ -33,6 +34,29 @@ public class AdminReviewsController : ControllerBase
     //    var result = await _mediator.Send(query);
     //    return Ok(result);
     //}
+
+    [HttpGet()]
+    public async Task<ActionResult<List<ReviewResponseDto>>> GetAllReviews([FromQuery] 
+    GetAllReviewsDto dto)
+    {
+        var command = new GetAllReviewsCommand
+        {
+            IsResponded = dto.IsResponded,
+            ProductId = dto.ProductId,
+            UserId = dto.UserId,
+            SortReviewBy = dto.SortReviewBy,
+            Descending = dto.Descending,
+            PageNumber = dto.PageNumber,
+            PageSize = dto.PageSize,
+            SearchTerm = dto.SearchTerm,
+            MinRating = dto.MinRating,
+            MaxRating = dto.MaxRating,
+            Status = dto.Status
+        };
+
+        var result = await _mediator.Send(command);
+        return Ok(result);
+    }
 
     [HttpGet("{reviewId}")]
     public async Task<ActionResult<ReviewResponseDto>> GetReviewById(int reviewId)

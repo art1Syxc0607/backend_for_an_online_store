@@ -81,6 +81,32 @@ public static class QueryableExtensions
         };
     }
 
+    public static IQueryable<Review> ApplySorting(
+    this IQueryable<Review> query,
+    SortReviewBy? sortBy = SortReviewBy.DateOfCreation,
+    bool descending = true)
+    {
+        return (sortBy ?? SortReviewBy.DateOfCreation) switch
+        {
+            SortReviewBy.Rating => descending
+                ? query.OrderByDescending(r => r.Rating)
+                : query.OrderBy(r => r.Rating),
+
+            SortReviewBy.ProductId => descending
+                ? query.OrderByDescending(r => r.ProductId)
+                : query.OrderBy(r => r.ProductId),
+
+            SortReviewBy.Status => descending
+                ? query.OrderByDescending(r => r.Status)
+                : query.OrderBy(r => r.Status),
+
+            SortReviewBy.DateOfCreation or _ => descending
+                ? query.OrderByDescending(r => r.CreatedAt)
+                : query.OrderBy(r => r.CreatedAt)
+        };
+
+    }
+
 
     public static IQueryable<T> Pagination<T>(this IQueryable<T> query, int pageNumber, int pageSize)
     {

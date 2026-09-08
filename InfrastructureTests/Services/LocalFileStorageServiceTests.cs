@@ -1,11 +1,14 @@
 ﻿// InfrastructureTests/Services/LocalFileStorageServiceTests.cs
+using Castle.Core.Logging;
 using FluentAssertions;
 using Infrastructure.Services;
 using InfrastructureTests.Common;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 
 namespace InfrastructureTests.Services;
@@ -24,7 +27,8 @@ public class LocalFileStorageServiceTests : IDisposable
         Directory.CreateDirectory(_testRootPath);
 
         _environment = new TestWebHostEnvironment(_testRootPath);
-        _fileStorageService = new LocalFileStorageService(_environment, NullLogger<LocalFileStorageService>.Instance);
+        _fileStorageService = new LocalFileStorageService(_environment, It.IsAny<IHttpContextAccessor>(),
+            NullLogger<LocalFileStorageService>.Instance);
     }
 
     public void Dispose()

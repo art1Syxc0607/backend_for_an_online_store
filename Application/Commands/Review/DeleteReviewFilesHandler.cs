@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.Product;
 using Application.Interfaces;
+using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -9,50 +10,43 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Product;
+namespace Application.Commands.Review;
 
-// Application/Commands/Product/DeleteFilesHandler.cs
-public class DeleteFilesHandler : IRequestHandler<DeleteFilesCommand, DeleteFilesResponseDto>
+public class DeleteReviewFilesHandler : IRequestHandler<DeleteReviewFilesCommand, DeleteFilesResponseDto>
 {
-    private readonly IProductRepository _productRepository;
+    private readonly IReviewRepository _reviewRepository;
     private readonly IFileStorageService _fileStorageService;
-    private readonly ILogger<DeleteFilesHandler> _logger;
+    private readonly ILogger<DeleteReviewFilesHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
-    public DeleteFilesHandler(
-        IProductRepository productRepository,
-        IFileStorageService fileStorageService,
-        ILogger<DeleteFilesHandler> logger,
+    public DeleteReviewFilesHandler(IReviewRepository reviewRepository, 
+        IFileStorageService fileStorageService, ILogger<DeleteReviewFilesHandler> logger, 
         IUnitOfWork unitOfWork)
     {
-        _productRepository = productRepository;
+        _reviewRepository = reviewRepository;
         _fileStorageService = fileStorageService;
         _logger = logger;
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<DeleteFilesResponseDto> Handle(DeleteFilesCommand command, CancellationToken ct)
+    public async Task<DeleteFilesResponseDto> Handle(DeleteReviewFilesCommand command, CancellationToken ct)
     {
         if (command.FileUrls == null || !command.FileUrls.Any())
             throw new DomainException("No files specified for deletion");
 
-        // 1. Проверяем продукт
-        var product = await _productRepository.GetByIdAsync(command.ProductId, ct);
-        if (product == null)
-        {
-            _logger.LogWarning("Product with ID {command.ProductId} not found",
-                command.ProductId);
+        var review = await _reviewRepository.GetReviewByIdAsync(command.ReviewId, ct);
+        if(review == null) throw new DomainException($"Review with ID {command.ReviewId} not found");
+        if (review.UserId != command.UserId)
+            throw new DomainException($"Review with ID {command.ReviewId} doesn't belong to the user");
 
-            throw new DomainException($"Product with ID {command.ProductId} not found");
-        }
 
         var response = new DeleteFilesResponseDto();
 
         foreach (var fileUrl in command.FileUrls)
         {
             // 2. Проверяем, есть ли такой URL у продукта
-            var isImage = product.ImageUrls.Contains(fileUrl);
-            var isVideo = product.VideoUrls.Contains(fileUrl);
+            var isImage = review.ImageUrls.Contains(fileUrl);
+            var isVideo = review.VideoUrls.Contains(fileUrl);
 
             if (!isImage && !isVideo)
             {
@@ -68,9 +62,9 @@ public class DeleteFilesHandler : IRequestHandler<DeleteFilesCommand, DeleteFile
 
                 // 4. Удаляем URL из сущности
                 if (isImage)
-                    product.RemoveImage(fileUrl);
+                    review.RemoveImage(fileUrl);
                 else if (isVideo)
-                    product.RemoveVideo(fileUrl);
+                    review.RemoveVideo(fileUrl);
 
                 response.DeletedUrls.Add(fileUrl);
             }
@@ -86,5 +80,7 @@ public class DeleteFilesHandler : IRequestHandler<DeleteFilesCommand, DeleteFile
         await _unitOfWork.SaveChangesAsync(ct);
 
         return response;
+
+
     }
 }

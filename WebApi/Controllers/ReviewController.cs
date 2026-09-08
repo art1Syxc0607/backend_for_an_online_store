@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using WebApi.DTOs.Review;
+using Application.DTOs.Product;
 
 namespace WebApi.Controllers;
 
@@ -51,7 +52,7 @@ public class ReviewController : Controller
 
     [Authorize]
     [HttpPost]
-    public async Task<ActionResult<int>> LeaveComment([FromBody] WebApi.DTOs.Review.AddReviewDto dto)
+    public async Task<ActionResult<int>> LeaveComment([FromQuery] WebApi.DTOs.Review.AddReviewDto dto)
     {
         // Проверка файлов
         if (dto.Files != null)
@@ -80,7 +81,7 @@ public class ReviewController : Controller
             ProductId = dto.ProductId,
             Text = dto.Text,
             Rating = dto.Rating,
-            Files = dto.Files?.Select(f => new FileUploadDto
+            Files = dto.Files?.Select(f => new Application.DTOs.File.FileUploadDto
             {
                 Stream = f.OpenReadStream(),
                 FileName = f.FileName,
@@ -111,10 +112,10 @@ public class ReviewController : Controller
 
 
     [Authorize(Roles = "User")]
-    [HttpPost("{productId}/reviews")]
-    public async Task<ActionResult<List<FileUploadResponseDto>>> UploadFiles(
+    [HttpPost("uploadReviewsFiles")]
+    public async Task<ActionResult<List<Application.DTOs.File.FileUploadResponseDto>>> UploadFiles(
     int reviewtId,
-    [FromForm] List<IFormFile> files)
+    [FromQuery] List<IFormFile> files)
     {
         // 1. Проверка количества
         if (files == null || !files.Any())
@@ -142,7 +143,7 @@ public class ReviewController : Controller
         var command = new UploadReviewFilesCommand
         {
             ReviewId = reviewtId,
-            Files = files.Select(f => new FileUploadDto
+            Files = files.Select(f => new Application.DTOs.File.FileUploadDto
             {
                 Stream = f.OpenReadStream(),
                 FileName = f.FileName,
@@ -153,6 +154,20 @@ public class ReviewController : Controller
 
         var result = await _mediator.Send(command);
         return Ok(result);
+    }
+
+    [Authorize(Roles = "User")]
+    [HttpDelete("{reviewId}/files")]
+    public async Task<DeleteFilesResponseDto> DeleteReviewFiles([FromBody] List<string> urls, int reviewId)
+    {
+        var command = new DeleteReviewFilesCommand
+        {
+            ReviewId = reviewId,
+            UserId = GetCurrentUserId(),
+            FileUrls = urls
+        };
+
+        return await _mediator.Send(command);
     }
 
     private bool IsValidFileType(string contentType)

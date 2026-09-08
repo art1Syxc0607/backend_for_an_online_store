@@ -16,6 +16,8 @@ public record class ReviewResponseDto
     public string ProductName { get; init; } = string.Empty;
     public string Text { get; init; }
     public int Rating { get; init; } // 1-5 stars
+    public List<string> ImagesUrls { get; init; } = new List<string>();
+    public List<string> VideosUrls { get; init; } = new List<string>();
     public ReviewStatus Status { get; init; }
     public string? AdminResponse { get; init; }
     public DateTime? AdminResponseAt { get; init; }
