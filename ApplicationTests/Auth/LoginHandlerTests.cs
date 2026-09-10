@@ -41,10 +41,10 @@ public class LoginHandlerTests
             passwordHasherMock.Object,
             jwtServiceMock.Object,
             Mock.Of<ILogger<LoginCommandHandler>>(),
-            Mock.Of<IEmailService>(),
             Mock.Of<ICurrentRequestService>(),
             Mock.Of<ILocationService>(),
-            Mock.Of<IDeviceInfoService>()
+            Mock.Of<IDeviceInfoService>(),
+            Mock.Of<IEmailBackgroundService>()
         );
 
         // Act
@@ -76,10 +76,10 @@ public class LoginHandlerTests
             Mock.Of<IPasswordHasher>(),
             Mock.Of<IJwtService>(),
             Mock.Of<ILogger<LoginCommandHandler>>(),
-            Mock.Of<IEmailService>(),
             Mock.Of<ICurrentRequestService>(),
             Mock.Of<ILocationService>(),
-            Mock.Of<IDeviceInfoService>()
+            Mock.Of<IDeviceInfoService>(),
+            Mock.Of<IEmailBackgroundService>()
         );
 
         // Act
@@ -114,10 +114,10 @@ public class LoginHandlerTests
             passwordHasherMock.Object,
             Mock.Of<IJwtService>(),
             Mock.Of<ILogger<LoginCommandHandler>>(),
-            Mock.Of<IEmailService>(),
             Mock.Of<ICurrentRequestService>(),
             Mock.Of<ILocationService>(),
-            Mock.Of<IDeviceInfoService>()
+            Mock.Of<IDeviceInfoService>(),
+            Mock.Of<IEmailBackgroundService>()
         );
 
         // Act

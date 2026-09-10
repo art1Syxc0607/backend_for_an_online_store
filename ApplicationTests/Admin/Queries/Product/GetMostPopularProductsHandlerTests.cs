@@ -6,6 +6,7 @@ using Application.Queries.Admin.Product;
 using Domain.Entities;
 using Domain.Enums;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -35,8 +36,7 @@ public class GetMostPopularProductsHandlerTests
 
         var productRepoMock = new Mock<IProductRepository>();
         productRepoMock.Setup(x => x.GetMostPopularProductsForThePeriod(
-            It.IsAny<DateSpan>(),
-            It.IsAny<DateTime>(),
+            It.IsAny<GetMostPopularProductsForThePeriodCommand>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(popularProducts);
 
@@ -46,13 +46,14 @@ public class GetMostPopularProductsHandlerTests
 
         var handler = new GetMostPopularProductsForThePeriodHandler(
             productRepoMock.Object,
-            Mock.Of<IOrderRepository>(),
-            cacheServiceMock.Object
+            Mock.Of<IOrderRepository>(), 
+            cacheServiceMock.Object,
+            Mock.Of<ILogger<GetMostPopularProductsForThePeriodHandler>>()
         );
 
         var command = new GetMostPopularProductsForThePeriodCommand
         {
-            Span = DateSpan.Week,
+            FirstDayOfThePriod = DateTime.Today.AddDays(7),
             LastDayOfThePriod = DateTime.Today
         };
 
@@ -87,12 +88,12 @@ public class GetMostPopularProductsHandlerTests
         var handler = new GetMostPopularProductsForThePeriodHandler(
             Mock.Of<IProductRepository>(),
             Mock.Of<IOrderRepository>(),
-            cacheServiceMock.Object
+            cacheServiceMock.Object, Mock.Of<ILogger<GetMostPopularProductsForThePeriodHandler>>()
         );
 
         var command = new GetMostPopularProductsForThePeriodCommand
         {
-            Span = DateSpan.Week,
+            FirstDayOfThePriod = DateTime.Today.AddDays(7),
             LastDayOfThePriod = DateTime.Today
         };
 

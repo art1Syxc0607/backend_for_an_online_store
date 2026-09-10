@@ -83,12 +83,12 @@ public class AdminReviewsController : ControllerBase
         return Ok(new { message = "Response added successfully" });
     }
 
-    [HttpPut("{reviewId}/response")]
-    public async Task<IActionResult> UpdateReviewResponse(int reviewId, [FromBody] EditReviewDto dto)
+    [HttpPut("response")]
+    public async Task<IActionResult> UpdateReviewResponse([FromBody] EditAdminResponseToReviewDto dto)
     {
         var command = new UpdateReviewResponseCommand
         {
-            ReviewId = reviewId,
+            ReviewId = dto.ReviewId,
             NewResponse = dto.NewText
         };
 

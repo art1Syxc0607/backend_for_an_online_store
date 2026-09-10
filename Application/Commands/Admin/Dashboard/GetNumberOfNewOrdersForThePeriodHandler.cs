@@ -1,31 +1,31 @@
-﻿using Application.DTOs.Admin.Order;
+﻿using Application.DTOs.Order;
 using Application.Enums;
 using Application.Interfaces;
-using MediatR;
 using Domain.Exceptions;
+using MediatR;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Application.Commands.Admin.Dashboard;
 
-public class GetRevenueForThePeriodHandler : IRequestHandler<GetRevenueForThePeriodCommand, 
-    RevenueForThePeriodDto>
+public class GetNumberOfNewOrdersForThePeriodHandler : IRequestHandler<GetNumberOfNewOrdersForThePeriodCommand,
+    NumberOfNewOrdersForThePeriodResponseDto>
 {
     private readonly IOrderRepository _orderRepository;
-    private readonly ILogger<GetRevenueForThePeriodHandler> _logger;
+    private readonly ILogger<GetNumberOfNewOrdersForThePeriodHandler> _logger;
 
-    public GetRevenueForThePeriodHandler(IOrderRepository orderRepository, 
-        ILogger<GetRevenueForThePeriodHandler> logger)
+    public GetNumberOfNewOrdersForThePeriodHandler(IOrderRepository orderRepository,
+         ILogger<GetNumberOfNewOrdersForThePeriodHandler> logger)
     {
         _orderRepository = orderRepository;
         _logger = logger;
     }
 
-    public async Task<RevenueForThePeriodDto> Handle(GetRevenueForThePeriodCommand command, CancellationToken ct = default)
+    public async Task<NumberOfNewOrdersForThePeriodResponseDto> Handle(GetNumberOfNewOrdersForThePeriodCommand command, CancellationToken ct = default)
     {
         if (command.FirstDayOfThePriod > command.LastDayOfThePriod)
         {
@@ -36,10 +36,7 @@ public class GetRevenueForThePeriodHandler : IRequestHandler<GetRevenueForThePer
             throw new DomainException("firstDate can't be later than lastDate");
         }
 
-        var revenue = await _orderRepository.GetRevenueForThePeriodAsync(command.LastDayOfThePriod,
+        return await _orderRepository.GetNumberOfNewOrdersAsync(command.LastDayOfThePriod,
             command.FirstDayOfThePriod, ct);
-
-
-        return revenue;
     }
 }

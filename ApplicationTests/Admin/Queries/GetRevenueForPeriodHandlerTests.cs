@@ -3,6 +3,7 @@ using Application.Enums;
 using Application.Interfaces;
 using Application.Queries.Admin.Product;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -17,21 +18,26 @@ public class GetRevenueForPeriodHandlerTests
         var orderRepoMock = new Mock<IOrderRepository>();
         orderRepoMock.Setup(x => x.GetRevenueForThePeriodAsync(
             It.IsAny<DateTime>(),
-            It.IsAny<DateSpan>(),
+            It.IsAny<DateTime>(),
             It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1500.50m);
+            .ReturnsAsync(new Application.DTOs.Admin.Order.RevenueForThePeriodDto
+            {
+                Revenue = 1500.50m,
+                Cost = 1500.50m - 550.20m,
+                Income = 550.20m
+            });
 
         orderRepoMock.Setup(x => x.GetCostOfGoodsSoldAsync(
             It.IsAny<DateTime>(),
-            It.IsAny<DateSpan>(),
+            It.IsAny<DateTime>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(950.30m);
 
-        var handler = new GetRevenueForThePeriodHandler(orderRepoMock.Object);
+        var handler = new GetRevenueForThePeriodHandler(orderRepoMock.Object, It.IsAny<ILogger<GetRevenueForThePeriodHandler>>());
         var command = new GetRevenueForThePeriodCommand
         {
             LastDayOfThePriod = DateTime.Today,
-            DateSpan = DateSpan.Week
+            FirstDayOfThePriod = DateTime.Today
         };
 
         // Act
@@ -50,21 +56,26 @@ public class GetRevenueForPeriodHandlerTests
         var orderRepoMock = new Mock<IOrderRepository>();
         orderRepoMock.Setup(x => x.GetRevenueForThePeriodAsync(
             It.IsAny<DateTime>(),
-            It.IsAny<DateSpan>(),
+            It.IsAny<DateTime>(),
             It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0m);
+            .ReturnsAsync(new Application.DTOs.Admin.Order.RevenueForThePeriodDto
+            {
+                Revenue = 0,
+                Cost = 0,
+                Income = 0
+            });
 
         orderRepoMock.Setup(x => x.GetCostOfGoodsSoldAsync(
             It.IsAny<DateTime>(),
-            It.IsAny<DateSpan>(),
+            It.IsAny<DateTime>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(0m);
 
-        var handler = new GetRevenueForThePeriodHandler(orderRepoMock.Object);
+        var handler = new GetRevenueForThePeriodHandler(orderRepoMock.Object, It.IsAny<ILogger<GetRevenueForThePeriodHandler>>());
         var command = new GetRevenueForThePeriodCommand
         {
             LastDayOfThePriod = DateTime.Today,
-            DateSpan = DateSpan.Week
+            FirstDayOfThePriod = DateTime.Today
         };
 
         // Act

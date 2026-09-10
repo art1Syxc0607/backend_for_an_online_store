@@ -64,7 +64,7 @@ public class GetProductsFilterCommandHandler : IRequestHandler<GetProductsFilter
             CategoryId = p.CategoryId,
             CreatedAt = p.CreatedAt,
             UpdatedAt = p.UpdatedAt,
-        }).OrderByDescending(dto => dto.CountOfOrdersContainThisProduct).ToList();
+        }).ToList();
 
         // Кэшируем на 10 минут
         await _cacheService.SetAsync(CacheKey, result, TimeSpan.FromMinutes(10));

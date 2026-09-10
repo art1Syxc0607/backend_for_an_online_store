@@ -88,6 +88,22 @@ public static class DependencyInjection
         services.AddScoped<IPaymentStrategyFactory, PaymentStrategyFactory>();
         services.AddScoped<IPaymentService, PaymentService>();
 
+        // фоновые сервисы
+        // 1. Очередь - Singleton
+        services.AddSingleton<IEmailBackgroundTaskQueue, EmailBackgroundTaskQueue>();
+
+        // 2. Сервис - Singleton
+        services.AddSingleton<EmailBackgroundService>();
+
+        // 3. Интерфейс для инъекции в handlers
+        services.AddSingleton<IEmailBackgroundService>(provider =>
+            provider.GetRequiredService<EmailBackgroundService>());
+
+        // 4. Регистрация как HostedService
+        services.AddHostedService(provider =>
+            provider.GetRequiredService<EmailBackgroundService>());
+
+
         return services;
     }
 }

@@ -27,11 +27,11 @@ public class AdminDashboardController : ControllerBase
         => _mediator = mediator;
 
 
-    [HttpGet("numberOfNewOrders")]
-    public async Task<int> NumberOfNewOrders([FromQuery] DateTime lastDayOfThePriod, 
+    [HttpGet("numberOfNewOrdersForThePeriod")]
+    public async Task<NumberOfNewOrdersForThePeriodResponseDto> NumberOfNewOrders([FromQuery] DateTime lastDayOfThePriod, 
         [FromQuery] DateTime firstDayOfThePriod)
     {
-        var command = new GetNumberOfNewOrdersCommand
+        var command = new GetNumberOfNewOrdersForThePeriodCommand
         {
             LastDayOfThePriod = lastDayOfThePriod,
             FirstDayOfThePriod = firstDayOfThePriod

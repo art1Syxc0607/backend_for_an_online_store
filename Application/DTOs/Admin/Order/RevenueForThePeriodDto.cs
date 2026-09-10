@@ -9,6 +9,7 @@ namespace Application.DTOs.Admin.Order;
 public class RevenueForThePeriodDto
 {
     public decimal Revenue { get; init;  }
+    public decimal Cost { get; init; }
     public decimal Income {  get; init; }
 
 }

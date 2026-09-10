@@ -18,6 +18,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
     private readonly ITokenGenerator _tokenGenerator;
     private readonly IConfiguration _configuration;
     private readonly ILogger<RegisterHandler> _logger;
+    private readonly IEmailBackgroundService _emailBackgroundService; // ← Внедряем фоновый сервис!
     private readonly IUnitOfWork _unitOfWork;
 
     public RegisterHandler(
@@ -28,6 +29,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
         ITokenGenerator tokenGenerator,
         IConfiguration configuration,
         ILogger<RegisterHandler> logger,
+        IEmailBackgroundService emailBackgroundService,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
@@ -37,6 +39,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
         _tokenGenerator = tokenGenerator;
         _configuration = configuration;
         _logger = logger;
+        _emailBackgroundService = emailBackgroundService;
         _unitOfWork = unitOfWork;
     }
 
@@ -98,25 +101,14 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
         );
 
         // 6. Отправляем письмо с подтверждением
-        try
+        // добавление в очередь фонового сервиса для отправки Email
+        await _emailBackgroundService.Enqueue(new EmailDto
         {
-            await SendConfirmationEmailAsync(user, token, null);
-            _logger.LogInformation(
-                "Confirmation email sent: Email {Email}, UserId {UserId}",
-                user.Email,
-                user.Id
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send confirmation email: Email {Email}, UserId {UserId}",
-                user.Email,
-                user.Id
-            );
-            // Продолжаем — письмо не критично для регистрации
-        }
+            To = user.Email,
+            Subject = $"🔐 Вход в аккаунт {time}",
+            Body = emailBody,
+            IsHtml = true
+        });
 
         // 7. Генерируем JWT токен
         var jwtToken = _jwtService.GenerateToken(user);
@@ -141,7 +133,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
     private async Task SendConfirmationEmailAsync(Domain.Entities.User user, string token, string? returnUrl)
     {
         var baseUrl = _configuration["App:BaseUrl"];
-        var confirmationUrl = $"{baseUrl}/api/auth/confirm-email?token={token}&userId={user.Id}";
+        var confirmationUrl = $"{baseUrl}/api/auth/confirm-email?userId={user.Id}&token={token}";
 
         //var emailDto = new EmailDto
         //{

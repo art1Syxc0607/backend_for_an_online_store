@@ -107,7 +107,6 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
             result.PaymentIntentId
         );
 
-        order.MarkAsPaid();
 
         await _paymentRepository.AddAsync(payment, ct);
         await _unitOfWork.SaveChangesAsync(ct);

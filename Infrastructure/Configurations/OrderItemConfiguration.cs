@@ -21,6 +21,10 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
             .HasDatabaseName("IX_OrderItems_ProductId");
 
         // ✅ Индекс для фильтрации по CreatedAt (через Order)
+        builder.HasIndex(oi => oi.CreatedAt)
+            .HasDatabaseName("IX_OrderItems_CreatedAt");
+
+
         builder.HasOne(oi => oi.Order)
             .WithMany(o => o.Items)
             .HasForeignKey(oi => oi.OrderId);

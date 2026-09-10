@@ -110,35 +110,102 @@ public class ProductRepository : IProductRepository
         var endDate = command.LastDayOfThePriod.Date;
         var startDate = command.FirstDayOfThePriod.Date;
         var pageNumber = command.PageNumber ?? 1;
-        var pageSize = command.PageNumber ?? 1;
+        var pageSize = command.PageSize ?? 20;
 
         // ✅ ОДИН SQL-запрос с группировкой
-        var query = await _dpContext.OrderItems
-            .Include(oi => oi.Product)  // ← загружаем Product
-            .Where(oi => oi.Order.CreatedAt.Date >= startDate &&
-                         oi.Order.CreatedAt.Date <= endDate)
+        //var query = await _dpContext.OrderItems
+        //    .Where(oi => oi.Order.CreatedAt.Date >= startDate &&
+        //                 oi.Order.CreatedAt.Date <= endDate)
+        //    .GroupBy(oi => oi.ProductId)
+        //    .Select(gOfOi => new PopularProductDto
+        //    {
+        //        ProductId = gOfOi.Key,
+        //        // Используем проекцию внутри Select
+        //        Name = gOfOi.Select(oi => oi.Product.Name).FirstOrDefault(),
+        //        Description = gOfOi.Select(oi => oi.Product.Description).FirstOrDefault(),
+        //        Price = gOfOi.Select(oi => oi.Product.Price).FirstOrDefault(),
+        //        StockQuantity = gOfOi.Select(oi => oi.Product.StockQuantity).FirstOrDefault(),
+        //        ReservedQuantity = gOfOi.Select(oi => oi.Product.ReservedQuantity).FirstOrDefault(),
+        //        ImageUrls = gOfOi.Select(oi => oi.Product.ImageUrls.ToList()).FirstOrDefault(),
+        //        VideoUrls = gOfOi.Select(oi => oi.Product.VideoUrls.ToList()).FirstOrDefault(),
+        //        CategoryId = gOfOi.Select(oi => oi.Product.CategoryId).FirstOrDefault(),
+        //        CreatedAt = gOfOi.Select(oi => oi.Product.CreatedAt).FirstOrDefault(),
+        //        UpdatedAt = gOfOi.Select(oi => oi.Product.UpdatedAt).FirstOrDefault(),
+
+        //        TotalPurchases = gOfOi.Sum(oi => oi.Quantity),
+        //        PresenceInOrders = gOfOi.Count()
+        //    })
+        //    .OrderByDescending(p => p.PresenceInOrders)
+        //    .Pagination(pageNumber, pageSize)
+        //    .ToListAsync(ct);
+
+
+        // 1. Получаем агрегированные данные
+        var stats = await _dpContext.OrderItems
+            .Where(oi => oi.CreatedAt.Date >= startDate &&
+                         oi.CreatedAt.Date <= endDate)
             .GroupBy(oi => oi.ProductId)
-            .Select(g => new PopularProductDto
+            .Select(g => new // EF Core как-то сам подгрузить нужные поле в Order
             {
                 ProductId = g.Key,
-                Name = g.First().Product.Name,  // ← теперь работает!
-                Description = g.First().Product.Description,
-                Price = g.First().Product.Price,
-                StockQuantity = g.First().Product.StockQuantity,
-                ReservedQuantity = g.First().Product.ReservedQuantity,
-                TotalPurchases = g.Sum(oi => oi.Quantity),
-                PresenceInOrders = g.Count(),
-                ImageUrls = g.First().Product.ImageUrls.ToList(),
-                VideoUrls = g.First().Product.VideoUrls.ToList(),
-                CategoryId = g.First().Product.CategoryId,
-                CreatedAt = g.First().Product.CreatedAt,
-                UpdatedAt = g.First().Product.UpdatedAt
+                TotalAmountOfProductInOrders = g.Sum(oi => oi.Quantity),
+                PresenceOfProductInOrders = g.Count(),
+                // ✅ EF Core подгрузит ТОЛЬКО Order.Status
+                AmountOfPendingForThePeriod = g.Count(oi => oi.Order.Status == Domain.Enums.OrderStatus.Pending),
+                AmountOfPaidForThePeriod = g.Count(oi => oi.Order.Status == Domain.Enums.OrderStatus.Paid),
+                AmountOfShippedForThePeriod = g.Count(oi => oi.Order.Status == Domain.Enums.OrderStatus.Shipped),
+                AmountOfDeliveredForThePeriod = g.Count(oi => oi.Order.Status == Domain.Enums.OrderStatus.Delivered),
+                AmountOfReceivedForThePeriod = g.Count(oi => oi.Order.Status == Domain.Enums.OrderStatus.Received),
+                AmountOfCancelledForThePeriod = g.Count(oi => oi.Order.Status == Domain.Enums.OrderStatus.Cancelled),
             })
-            .OrderByDescending(p => p.PresenceInOrders)
+            .OrderByDescending(x => x.PresenceOfProductInOrders)
             .Pagination(pageNumber, pageSize)
             .ToListAsync(ct);
 
-        return query;
+        // 2. Загружаем только нужные продукты (по ID)
+        var productIds = stats.Select(x => x.ProductId).ToList();
+        var products = await _dpContext.Products
+            .Where(p => productIds.Contains(p.Id))
+            .ToListAsync(ct);
+
+        // 1. Создаём словарь: O(M) — один проход по products
+        var productDict = products.ToDictionary(p => p.Id);
+        //var statsDict = stats.ToDictionary(s => s.Id);
+
+        // 2. Проекция: O(N) — один проход по stats
+        var result = stats.Select(stat =>
+        {
+            var product = productDict[stat.ProductId]; // ← O(1)
+            return new PopularProductDto
+            {
+                ProductId = stat.ProductId,
+                Name = product.Name,
+                Description = product.Description,
+                Price = product.Price,
+                StockQuantity = product.StockQuantity,
+                ReservedQuantity = product.ReservedQuantity,
+                ImageUrls = product.ImageUrls.ToList() ?? new List<string>(),
+                VideoUrls = product.VideoUrls.ToList() ?? new List<string>(),
+
+                // stat of product for the period: startDate - endDate
+                AmountOfPendingForThePeriod = stat.AmountOfPendingForThePeriod,
+                AmountOfPaidForThePeriod = stat.AmountOfPaidForThePeriod,
+                AmountOfShippedForThePeriod = stat.AmountOfShippedForThePeriod,
+                AmountOfDeliveredForThePeriod = stat.AmountOfDeliveredForThePeriod,
+                AmountOfReceivedForThePeriod = stat.AmountOfReceivedForThePeriod,
+                AmountOfCancelledForThePeriod = stat.AmountOfCancelledForThePeriod,
+
+                CategoryId = product.CategoryId,
+                CreatedAt = product.CreatedAt,
+                UpdatedAt = product.UpdatedAt,
+                TotalPurchases = stat.TotalAmountOfProductInOrders,
+                PresenceInOrders = stat.PresenceOfProductInOrders
+            };
+        }).ToList();
+        // стоит добавить индексы на 
+        //на CreatedAt в OrderItems, на ProductId в OrderItems 
+
+        return result;
     }
 
     private int GetDateSpan(DateSpan span, DateTime referenceDate) // учитывает что за тип года, сколь

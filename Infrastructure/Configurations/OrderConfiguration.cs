@@ -19,6 +19,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.ShippingAddress).IsRequired().HasMaxLength(256);
         builder.Property(o => o.Status).IsRequired();
         builder.Property(o => o.CreatedAt).IsRequired();
+          
 
 
         builder.HasMany(o => o.Items)
@@ -26,7 +27,8 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .HasForeignKey(oi => oi.OrderId)
             .OnDelete(DeleteBehavior.Cascade);
 
-
+        builder.HasIndex(o => o.CreatedAt)
+            .HasDatabaseName("IX_Order_CreatedAt");
 
     }
 

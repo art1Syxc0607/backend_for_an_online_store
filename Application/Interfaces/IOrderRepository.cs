@@ -1,4 +1,5 @@
 ﻿using Application.Commands.Admin.Order;
+using Application.DTOs.Admin.Order;
 using Application.DTOs.Order;
 using Application.Enums;
 using Application.Queries.Order;
@@ -34,10 +35,10 @@ public interface IOrderRepository
 
 
     // Admin
-    Task<int> GetNumberOfNewOrdersAsync(DateTime lastDayOfThePriod,
+    Task<NumberOfNewOrdersForThePeriodResponseDto> GetNumberOfNewOrdersAsync(DateTime lastDayOfThePriod,
            DateTime firstDayOfThePriod, CancellationToken ct = default);
 
-    Task<decimal> GetRevenueForThePeriodAsync(DateTime lastDayOfThePriod, DateTime firstDayOfThePriod,
+    Task<RevenueForThePeriodDto> GetRevenueForThePeriodAsync(DateTime lastDayOfThePriod, DateTime firstDayOfThePriod,
         CancellationToken ct = default);
     Task<decimal> GetCostOfGoodsSoldAsync(DateTime lastDayOfThePriod, DateTime firstDayOfThePriod,
         CancellationToken ct = default);

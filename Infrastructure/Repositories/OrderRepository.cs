@@ -194,31 +194,75 @@ public class OrderRepository : IOrderRepository
     }
 
     //Admin, Dashboard
-    public async Task<int> GetNumberOfNewOrdersAsync(DateTime lastDayOfThePriod,
+    public async Task<NumberOfNewOrdersForThePeriodResponseDto> GetNumberOfNewOrdersAsync(DateTime lastDayOfThePriod,
            DateTime firstDayOfThePriod, CancellationToken ct = default)
     {
         var endDate = lastDayOfThePriod.Date;
         var startDate = firstDayOfThePriod.Date;
 
+        // ✅ Один запрос, все агрегации на стороне БД
+        var result = await _dpContext.Orders
+            .Where(o => o.CreatedAt >= startDate && o.CreatedAt < endDate)
+            .GroupBy(o => 1) // Фиктивная группировка
+            .Select(g => new
+            {
+                Pending = g.Count(o => o.Status == OrderStatus.Pending),
+                Paid = g.Count(o => o.Status == OrderStatus.Paid),
+                Shipped = g.Count(o => o.Status == OrderStatus.Shipped),
+                Delivered = g.Count(o => o.Status == OrderStatus.Delivered),
+                Received = g.Count(o => o.Status == OrderStatus.Received),
+                Cancelled = g.Count(o => o.Status == OrderStatus.Cancelled),
+                Total = g.Count()
+            })
+            .FirstOrDefaultAsync(ct) ?? new
+            {
+                Pending = 0,
+                Paid = 0,
+                Shipped = 0,
+                Delivered = 0,
+                Received = 0,
+                Cancelled = 0,
+                Total = 0
+            };
 
-        return await _dpContext.Orders
-            .CountAsync(o =>
-                o.CreatedAt.Date >= startDate &&
-                o.CreatedAt.Date <= endDate);
+        return new NumberOfNewOrdersForThePeriodResponseDto
+        {
+            NumberOfPending = result.Pending,
+            NumberOfPaid = result.Paid,
+            NumberOfShipped = result.Shipped,
+            NumberOfDelivered = result.Delivered,
+            NumberOfReceived = result.Received,
+            NumberOfCancelled = result.Cancelled,
+            TotalOrders = result.Total // Добавляем общее количество
+        };
     }
 
-    public async Task<decimal> GetRevenueForThePeriodAsync(DateTime lastDayOfThePriod, DateTime firstDayOfThePriod,
+    public async Task<RevenueForThePeriodDto> GetRevenueForThePeriodAsync(DateTime lastDayOfThePriod, DateTime firstDayOfThePriod,
         CancellationToken ct = default)
     {
-        var endDate = lastDayOfThePriod.Date;
+        var endDate = lastDayOfThePriod.Date.AddDays(1);
         var startDate = firstDayOfThePriod.Date;
 
-        var result = await _dpContext.Orders.Where(o => o.CreatedAt <= endDate &&
-            o.CreatedAt.Date >= startDate)
-            .SumAsync(o => o.TotalAmount);
-        //.SumAsync(o => (decimal?)o.TotalAmount) ?? 0;
+        // ✅ Один запрос для получения и дохода, и себестоимости
+        var result = await _dpContext.Orders
+            .Where(o => o.CreatedAt >= startDate && o.CreatedAt < endDate)
+            .Where(o => o.Status != OrderStatus.Cancelled && o.Status != OrderStatus.Pending)
+            .Select(o => new
+            {
+                Revenue = o.TotalAmount,
+                Cost = o.Items.Sum(oi => oi.PurchasePriceAtPurchase * oi.Quantity)
+            })
+            .ToListAsync(ct);
 
-        return result;
+        var revenue = result.Sum(x => x.Revenue);
+        var cost = result.Sum(x => x.Cost);
+
+        return new RevenueForThePeriodDto
+        {
+            Revenue = revenue,
+            Cost = cost,
+            Income = revenue - cost
+        };
     }
 
     // стоимость закупки за период
@@ -230,7 +274,8 @@ public class OrderRepository : IOrderRepository
 
         return await _dpContext.OrderItems
             .Where(oi => oi.Order.CreatedAt >= startDate && oi.Order.CreatedAt <= endDate)
-            .Where(oi => oi.Order.Status != OrderStatus.Cancelled && oi.Order.Status != OrderStatus.Pending) // ← фильтр!
+            .Where(oi => oi.Order.Status != OrderStatus.Cancelled 
+            && oi.Order.Status != OrderStatus.Pending) // ← фильтр!
             .SumAsync(oi => oi.PurchasePriceAtPurchase * oi.Quantity);
         //.SumAsync(oi => (decimal?)oi.PurchasePriceAtPurchase * oi.Quantity) ?? 0;
     }
