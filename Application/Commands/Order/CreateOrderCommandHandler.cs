@@ -16,21 +16,25 @@ public class CreateOrderCommandHandler : IRequestHandler
     private readonly IUserRepository _userRepository;
     private readonly IProductRepository _productRepository;
     private readonly ILogger<CreateOrderCommandHandler> _logger;
+    private readonly IEmailTemplateService _emailTamplate;
+    private readonly IEmailBackgroundService _emailBackgroundService;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMediator _mediator;
 
     public CreateOrderCommandHandler(
         IOrderRepository orderRepository,
         IUserRepository userRepository, IProductRepository productRepository,
         ILogger<CreateOrderCommandHandler> logger,
-        IMediator mediator, IUnitOfWork unitOfWork)
+        IEmailTemplateService emailTamplate,
+        IEmailBackgroundService emailBackgroundService,
+        IUnitOfWork unitOfWork)
     {
         _orderRepository = orderRepository;
         _userRepository = userRepository;
         _productRepository = productRepository;
         _logger = logger;
+        _emailTamplate = emailTamplate;
+        _emailBackgroundService = emailBackgroundService;
         _unitOfWork = unitOfWork;
-        _mediator = mediator;
     }
 
     public async Task<int> Handle(CreateOrderCommand command,
@@ -92,8 +96,10 @@ public class CreateOrderCommandHandler : IRequestHandler
             order.Items.Count
         );
 
-        var createdOrderEmailCommand = new SendOrderConfirmationCommand { Order = order, User = user };
-        await _mediator.Send(createdOrderEmailCommand, ct);
+        var emailToSend = _emailTamplate
+            .CreateOrderConfirmationEmail(order, user);
+
+        await _emailBackgroundService.Enqueue(emailToSend);
 
         return order.Id;
     }

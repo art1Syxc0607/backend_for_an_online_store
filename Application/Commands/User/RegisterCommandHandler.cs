@@ -18,6 +18,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
     private readonly ITokenGenerator _tokenGenerator;
     private readonly IConfiguration _configuration;
     private readonly ILogger<RegisterHandler> _logger;
+    private readonly IEmailTemplateService _emailTamplate;
     private readonly IEmailBackgroundService _emailBackgroundService; // ← Внедряем фоновый сервис!
     private readonly IUnitOfWork _unitOfWork;
 
@@ -29,6 +30,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
         ITokenGenerator tokenGenerator,
         IConfiguration configuration,
         ILogger<RegisterHandler> logger,
+        IEmailTemplateService emailTamplate,
         IEmailBackgroundService emailBackgroundService,
         IUnitOfWork unitOfWork)
     {
@@ -39,6 +41,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
         _tokenGenerator = tokenGenerator;
         _configuration = configuration;
         _logger = logger;
+        _emailTamplate = emailTamplate;
         _emailBackgroundService = emailBackgroundService;
         _unitOfWork = unitOfWork;
     }
@@ -84,9 +87,9 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
         );
 
         // 4. Генерируем токен подтверждения
-        var token = _tokenGenerator.GenerateEmailConfirmationToken();
+        var emailConfirmationToken = _tokenGenerator.GenerateEmailConfirmationToken();
         var expiry = DateTime.UtcNow.AddHours(24);
-        user.GenerateEmailConfirmationToken(token, expiry);
+        user.GenerateEmailConfirmationToken(emailConfirmationToken, expiry);
 
         // 5. Сохраняем пользователя
         await _userRepository.AddAsync(user, ct);
@@ -100,16 +103,6 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
             command.UserIP
         );
 
-        // 6. Отправляем письмо с подтверждением
-        // добавление в очередь фонового сервиса для отправки Email
-        await _emailBackgroundService.Enqueue(new EmailDto
-        {
-            To = user.Email,
-            Subject = $"🔐 Вход в аккаунт {time}",
-            Body = emailBody,
-            IsHtml = true
-        });
-
         // 7. Генерируем JWT токен
         var jwtToken = _jwtService.GenerateToken(user);
 
@@ -118,6 +111,13 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
             user.Id,
             user.Email
         );
+
+        // 6. Отправляем письмо с подтверждением
+        // добавление в очередь фонового сервиса для отправки Email
+        var emailToSend = _emailTamplate
+            .CreateRegisterNotificationEmail(user, emailConfirmationToken);
+
+        await _emailBackgroundService.Enqueue(emailToSend);
 
         return new AuthResponseDto
         {
@@ -130,36 +130,36 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
         };
     }
 
-    private async Task SendConfirmationEmailAsync(Domain.Entities.User user, string token, string? returnUrl)
-    {
-        var baseUrl = _configuration["App:BaseUrl"];
-        var confirmationUrl = $"{baseUrl}/api/auth/confirm-email?userId={user.Id}&token={token}";
+    //private async Task SendConfirmationEmailAsync(Domain.Entities.User user, string token, string? returnUrl)
+    //{
+    //    var baseUrl = _configuration["App:BaseUrl"];
+    //    var confirmationUrl = $"{baseUrl}/api/auth/confirm-email?userId={user.Id}&token={token}";
 
-        //var emailDto = new EmailDto
-        //{
+    //    //var emailDto = new EmailDto
+    //    //{
 
-        //};
+    //    //};
 
-        string To = user.Email;
-        string Subject = "Подтверждение регистрации";
-        string Body = $@"
-                <html>
-                    <body>
-                        <h2>Здравствуйте, {user.UserName}!</h2>
-                        <p>Спасибо за регистрацию в нашем магазине.</p>
-                        <p>Для подтверждения email, пожалуйста, перейдите по ссылке:</p>
-                        <p><a href='{confirmationUrl}'>Подтвердить email</a></p>
-                        <p>Ссылка действительна в течение 24 часов.</p>
-                        <p>Если вы не регистрировались, проигнорируйте это письмо.</p>
-                    </body>
-                </html>
-            ";
-        bool IsHtml = true;
+    //    string To = user.Email;
+    //    string Subject = "Подтверждение регистрации";
+    //    string Body = $@"
+    //            <html>
+    //                <body>
+    //                    <h2>Здравствуйте, {user.UserName}!</h2>
+    //                    <p>Спасибо за регистрацию в нашем магазине.</p>
+    //                    <p>Для подтверждения email, пожалуйста, перейдите по ссылке:</p>
+    //                    <p><a href='{confirmationUrl}'>Подтвердить email</a></p>
+    //                    <p>Ссылка действительна в течение 24 часов.</p>
+    //                    <p>Если вы не регистрировались, проигнорируйте это письмо.</p>
+    //                </body>
+    //            </html>
+    //        ";
+    //    bool IsHtml = true;
 
-        await _emailService.SendEmailAsync(To, Subject, Body, IsHtml);
+    //    await _emailService.SendEmailAsync(To, Subject, Body, IsHtml);
 
 
-    }
+    //}
 
 
 }

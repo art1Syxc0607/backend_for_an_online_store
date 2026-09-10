@@ -12,7 +12,7 @@ public class EmailTemplateService : IEmailTemplateService
         _configuration = configuration;
     }
 
-    public EmailDto CreateConfirmationEmail(User user, string token, string? returnUrl = null)
+    public EmailDto CreateRegisterNotificationEmail(User user, string token, string? returnUrl = null)
     {
         var baseUrl = _configuration["App:BaseUrl"] ?? "https://localhost:7197";
         var confirmationUrl = $"{baseUrl}/api/auth/confirm-email?token={token}&userId={user.Id}";
@@ -79,6 +79,9 @@ public class EmailTemplateService : IEmailTemplateService
                 </html>"
         };
     }
+
+
+
 
     // ... остальные методы
 }

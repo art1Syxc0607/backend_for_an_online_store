@@ -2,10 +2,10 @@
 
 public interface ILocationService
 {
-    Task<LocationInfo?> GetLocationByIpAsync(string ip, CancellationToken ct = default);
+    Task<LocationInfoDto?> GetLocationByIpAsync(string ip, CancellationToken ct = default);
 }
 
-public class LocationInfo
+public class LocationInfoDto
 {
     public string? Country { get; set; }
     public string? City { get; set; }

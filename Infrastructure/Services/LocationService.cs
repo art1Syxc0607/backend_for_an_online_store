@@ -16,7 +16,7 @@ public class LocationService : ILocationService
         _logger = logger;
     }
 
-    public async Task<LocationInfo?> GetLocationByIpAsync(string ip, CancellationToken ct = default)
+    public async Task<LocationInfoDto?> GetLocationByIpAsync(string ip, CancellationToken ct = default)
     {
         try
         {
@@ -31,7 +31,7 @@ public class LocationService : ILocationService
                 return null;
             }
 
-            return new LocationInfo
+            return new LocationInfoDto
             {
                 Country = response.Country,
                 City = response.City,

@@ -22,6 +22,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
     private readonly ICurrentRequestService _currentRequest;
     private readonly ILocationService _locationService;
     private readonly IDeviceInfoService _deviceInfoService;
+    private readonly IEmailTemplateService _emailTemlateService;
     private readonly IEmailBackgroundService _emailBackgroundService; // ← Внедряем фоновый сервис!
 
     public LoginCommandHandler(
@@ -29,7 +30,9 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
     IPasswordHasher passwordHasher,
     IJwtService jwtService, ILogger<LoginCommandHandler> logger,
     ICurrentRequestService currentRequestService, ILocationService location,
-    IDeviceInfoService deviceInfoService, IEmailBackgroundService emailBackgroundService)
+    IDeviceInfoService deviceInfoService, 
+    IEmailTemplateService emailTemplateService,
+    IEmailBackgroundService emailBackgroundService)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
@@ -38,6 +41,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
         _currentRequest = currentRequestService;
         _locationService = location;
         _deviceInfoService = deviceInfoService;
+        _emailTemlateService = emailTemplateService;
         _emailBackgroundService = emailBackgroundService;
     }
 
@@ -104,66 +108,18 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             request.UserIP ?? "Unknown"
         );
 
-        // ✅ Получаем локацию
-        var location = await _locationService.GetLocationByIpAsync(request.UserIP ?? "Unknown", ct);
+        var location = await _locationService
+            .GetLocationByIpAsync(request.UserIP, ct);
 
-        // ✅ Получаем информацию об устройстве
-        var userAgent = _currentRequest.GetUserAgent();
-        var deviceInfo = _deviceInfoService.GetDeviceInfo(userAgent);
-
-        var time = DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm:ss UTC");
-        var emailBody = $@"
-                <html>
-                    <body style='font-family: Arial, sans-serif;'>
-                        <h2>🔐 Вход в аккаунт</h2>
-                        <p>Здравствуйте, <strong>{user.UserName}</strong>!</p>
-                        <p>В ваш аккаунт был выполнен вход.</p>
-                        
-                        <table style='border-collapse: collapse; width: 100%; max-width: 500px;'>
-                            <tr>
-                                <td style='padding: 8px; background: #f5f5f5; font-weight: bold;'>Время:</td>
-                                <td style='padding: 8px;'>{time}</td>
-                            </tr>
-                            <tr>
-                                <td style='padding: 8px; background: #f5f5f5; font-weight: bold;'>IP-адрес:</td>
-                                <td style='padding: 8px;'>{request.UserIP ?? "Unknown"}</td>
-                            </tr>
-                            <tr>
-                                <td style='padding: 8px; background: #f5f5f5; font-weight: bold;'>Устройство:</td>
-                                <td style='padding: 8px;'>{deviceInfo.FullInfo}</td>
-                            </tr>
-                            <tr>
-                                <td style='padding: 8px; background: #f5f5f5; font-weight: bold;'>Тип устройства:</td>
-                                <td style='padding: 8px;'>{deviceInfo.DeviceType}</td>
-                            </tr>
-                            <tr>
-                                <td style='padding: 8px; background: #f5f5f5; font-weight: bold;'>Местоположение:</td>
-                                <td style='padding: 8px;'>{location}</td>
-                            </tr>
-                            <tr>
-                                <td style='padding: 8px; background: #f5f5f5; font-weight: bold;'>Провайдер:</td>
-                                <td style='padding: 8px;'>{location?.Isp ?? "Не определено"}</td>
-                            </tr>
-                        </table>
-
-                        <p style='margin-top: 20px; color: #d32f2f; font-weight: bold;'>
-                            ⚠️ Если это были не вы, немедленно смените пароль и свяжитесь с поддержкой.
-                        </p>
-                        <p style='color: #999; font-size: 12px;'>
-                            Это автоматическое сообщение. Пожалуйста, не отвечайте на него.
-                        </p>
-                    </body>
-                </html>
-            ";
+        var emailToSend = _emailTemlateService
+            .CreateLoginNotificationEmail(user, DateTime.UtcNow,
+            _deviceInfoService.GetDeviceInfo(_currentRequest.GetUserAgent()),
+           location);
 
         // добавление в очередь фонового сервиса для отправки Email
-        await _emailBackgroundService.Enqueue(new EmailDto
-        {
-            To = user.Email,
-            Subject = $"🔐 Вход в аккаунт {time}",
-            Body = emailBody,
-            IsHtml = true
-        });
+        await _emailBackgroundService.Enqueue(
+                emailToSend
+            );
 
         return response;
     }
