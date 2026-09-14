@@ -96,10 +96,24 @@ public class CreateOrderCommandHandler : IRequestHandler
             order.Items.Count
         );
 
-        var emailToSend = _emailTamplate
-            .CreateOrderConfirmationEmail(order, user);
 
-        await _emailBackgroundService.Enqueue(emailToSend);
+        // Отправляем email уведомление
+        try
+        {
+            // 6. Отправляем письмо с подтверждением
+            // добавление в очередь фонового сервиса для отправки Email
+            var emailToSend = _emailTamplate
+                .CreateOrderConfirmationEmail(order, user, command.BaseUrl);
+            await _emailBackgroundService.Enqueue(emailToSend);
+
+            _logger.LogInformation("Order confirmation sent to {Email}", user.Email);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send Order confirmation to {Email}", user.Email);
+            // Не бросаем исключение, чтобы не откатывать транзакцию
+            // Логируем ошибку, но заказ уже отправлен
+        }
 
         return order.Id;
     }

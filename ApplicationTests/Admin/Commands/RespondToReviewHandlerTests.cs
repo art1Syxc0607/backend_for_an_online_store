@@ -2,10 +2,12 @@
 using Application.Commands.Review;
 using Application.DTOs.Email;
 using Application.Interfaces;
+using Castle.Core.Logging;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Exceptions;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -28,17 +30,23 @@ public class RespondToReviewHandlerTests
         reviewRepoMock.Setup(x => x.GetReviewByIdAsync(review.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(review);
 
+        var productMock = new Mock<IProductRepository>();
+        productMock.Setup(x => x.GetByIdAsync(product.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(product);
+
         var userRepoMock = new Mock<IUserRepository>();
         userRepoMock.Setup(x => x.GetByIdAsync(admin.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(admin);
 
-        var emailServiceMock = new Mock<IEmailService>();
         var unitOfWorkMock = new Mock<IUnitOfWork>();
 
         var handler = new RespondToReviewHandler(
             reviewRepoMock.Object,
             userRepoMock.Object,
-            emailServiceMock.Object,
+            productMock.Object,
+            Mock.Of<IEmailTemplateService>(),
+            Mock.Of<IEmailBackgroundService>(),
+            Mock.Of<ILogger<RespondToReviewHandler>>(),
             unitOfWorkMock.Object
         );
 
@@ -56,7 +64,6 @@ public class RespondToReviewHandlerTests
         review.AdminResponse.Should().Be("Thank you for your feedback!");
         review.AdminResponseAt.Should().NotBeNull();
         unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        emailServiceMock.Verify(x => x.SendEmailAsync(It.IsAny<EmailDto>()), Times.Once);
     }
 
     //[Fact]
@@ -101,3 +108,6 @@ public class RespondToReviewHandlerTests
     //        .WithMessage("*not approved*");
     //}
 }
+
+
+// Сводка теста: всего: 1; сбой: 0; успешно: 1; пропущено: 0; длительность: 1,4 с

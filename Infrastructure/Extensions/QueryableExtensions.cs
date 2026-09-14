@@ -36,8 +36,8 @@ public static class QueryableExtensions
                 : query.OrderBy(p => p.Name),
 
             SortProductBy.AvailableQuantity => sortDesc
-                ? query.OrderByDescending(p => p.AvailableQuantity)
-                : query.OrderBy(p => p.AvailableQuantity),
+                ? query.OrderByDescending(p => p.StockQuantity - p.ReservedQuantity)
+                : query.OrderBy(p => p.StockQuantity - p.ReservedQuantity),
 
             SortProductBy.Rating => sortDesc
                 ? query.OrderByDescending(p => p.Reviews.Any()

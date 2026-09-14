@@ -53,7 +53,7 @@ public class GetMostPopularProductsHandlerTests
 
         var command = new GetMostPopularProductsForThePeriodCommand
         {
-            FirstDayOfThePriod = DateTime.Today.AddDays(7),
+            FirstDayOfThePriod = DateTime.Today.AddDays(-7),
             LastDayOfThePriod = DateTime.Today
         };
 
@@ -93,7 +93,7 @@ public class GetMostPopularProductsHandlerTests
 
         var command = new GetMostPopularProductsForThePeriodCommand
         {
-            FirstDayOfThePriod = DateTime.Today.AddDays(7),
+            FirstDayOfThePriod = DateTime.Today.AddDays(-7),
             LastDayOfThePriod = DateTime.Today
         };
 
@@ -110,5 +110,5 @@ public class GetMostPopularProductsHandlerTests
     }
 
     //done 
-    //Сводка теста: всего: 2; сбой: 0; успешно: 2; пропущено: 0; длительность: 1,9 с
+    //Сводка теста: всего: 2; сбой: 0; успешно: 2; пропущено: 0; длительность: 1,2 с
 }

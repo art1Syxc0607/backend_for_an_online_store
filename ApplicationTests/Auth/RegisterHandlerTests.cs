@@ -38,6 +38,8 @@ public class RegisterHandlerTests
             _tokenGeneratorMock.Object,
             Mock.Of<IConfiguration>(),
             Mock.Of<ILogger<RegisterHandler>>(),
+            Mock.Of<IEmailTemplateService>(),
+            Mock.Of<IEmailBackgroundService>(),
             _unitOfWorkMock.Object
         );
     }

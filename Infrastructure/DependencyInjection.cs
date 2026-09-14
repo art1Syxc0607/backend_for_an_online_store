@@ -1,10 +1,13 @@
 ﻿using Application.Interfaces;
+using Infrastructure.Cleanup;
 using Infrastructure.Data;
+using Infrastructure.Options;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Infrastructure.Services.Payment;
 using Infrastructure.Services.Payment.Strategies;
 using Infrastructure.UnitOfWork;
+using IPinfo;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,13 +49,11 @@ public static class DependencyInjection
         services.AddScoped<ICurrentRequestService, CurrentRequestService>();
 
         // ✅ Добавляем HttpClientFactory в DI
-        services.AddHttpClient<ILocationService, LocationService>();
+        services.AddHttpClient<ILocationService, IpInfoLocationService>();
 
-        // Email
-        services.Configure<SmtpSettings>(
-            configuration.GetSection("Smtp"));
+
         services.AddScoped<IEmailService, EmailService>();
-        services.AddScoped<ILocationService, LocationService>();
+        services.AddScoped<ILocationService, IpInfoLocationService>();
         services.AddScoped<IDeviceInfoService, DeviceInfoService>();
 
         services.AddScoped<ICartRepository, CartRepository>();
@@ -66,6 +67,9 @@ public static class DependencyInjection
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IUnitOfWork, Infrastructure.UnitOfWork.UnitOfWork>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
+        services.AddScoped<IPasswordResetService, PasswordResetService>();
+
 
         //service
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
@@ -88,12 +92,17 @@ public static class DependencyInjection
         services.AddScoped<IPaymentStrategyFactory, PaymentStrategyFactory>();
         services.AddScoped<IPaymentService, PaymentService>();
 
-        // фоновые сервисы
+
+        // Email
+        services.Configure<SmtpSettings>(
+            configuration.GetSection("Smtp"));
+        // фоновые сервисы for email
         // 1. Очередь - Singleton
         services.AddSingleton<IEmailBackgroundTaskQueue, EmailBackgroundTaskQueue>();
 
         // 2. Сервис - Singleton
         services.AddSingleton<EmailBackgroundService>();
+        services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 
         // 3. Интерфейс для инъекции в handlers
         services.AddSingleton<IEmailBackgroundService>(provider =>
@@ -103,6 +112,29 @@ public static class DependencyInjection
         services.AddHostedService(provider =>
             provider.GetRequiredService<EmailBackgroundService>());
 
+
+        // ✅ Background Cleanup tasks
+        services.AddScoped<ICleanupTask, PasswordResetCodesCleanupTask>();
+        services.AddScoped<ICleanupTask, ExpiredOrdersCleanupTask>();
+
+        // ✅ Планировщик
+        services.AddHostedService<CleanupBackgroundService>();
+
+
+        // location API
+        services.AddSingleton<IPinfoClient>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            return new IPinfoClient.Builder()
+                .AccessToken(config["IpInfo:ApiKey"])
+                .Build();
+        });
+
+        services.AddScoped<ILocationService, IpInfoLocationService>();
+
+        // for service deleting orders
+        services.Configure<ExpiredOrdersOptions>(
+            configuration.GetSection(ExpiredOrdersOptions.SectionName));
 
         return services;
     }

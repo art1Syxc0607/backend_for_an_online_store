@@ -11,4 +11,5 @@ public class ReceiveOrderCommand : IRequest
 {
     public int OrderId { get; set; }
     public int UserId { get; set; }
+    public string BaseUrl { get; set; } = string.Empty;
 }

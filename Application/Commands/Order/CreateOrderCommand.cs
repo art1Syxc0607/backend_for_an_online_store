@@ -14,4 +14,6 @@ public class CreateOrderCommand : IRequest<int>
     public int UserId { get; init; }
     [Required]
     public string ShippingAddress { get; init; }
+    [Required]
+    public string BaseUrl { get; set; } = string.Empty; // ✅ Из контроллера
 }

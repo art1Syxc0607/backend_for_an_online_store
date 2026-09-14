@@ -4,6 +4,7 @@ using Domain.Entities;
 using Domain.Enums;
 using Domain.Exceptions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,18 +18,27 @@ public class RespondToReviewHandler : IRequestHandler<RespondToReviewCommand>
 {
     private readonly IReviewRepository _reviewRepository;
     private readonly IUserRepository _userRepository;
-    private readonly IEmailService _emailService;
+    private readonly IProductRepository _productRepository;
+    private readonly IEmailTemplateService _emailTemplateService;
+    private readonly IEmailBackgroundService _emailBackgroundService;
+    private readonly ILogger<RespondToReviewHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
     public RespondToReviewHandler(
         IReviewRepository reviewRepository,
         IUserRepository userRepository,
-        IEmailService emailService,
+        IProductRepository productRepository,
+        IEmailTemplateService emailTemplateService,
+        IEmailBackgroundService emailBackgroundService,
+        ILogger<RespondToReviewHandler> logger,
         IUnitOfWork unitOfWork)
     {
         _reviewRepository = reviewRepository;
         _userRepository = userRepository;
-        _emailService = emailService;
+        _productRepository = productRepository;
+        _emailTemplateService = emailTemplateService;
+        _emailBackgroundService = emailBackgroundService;
+        _logger = logger;
         _unitOfWork = unitOfWork;
     }
 
@@ -46,6 +56,14 @@ public class RespondToReviewHandler : IRequestHandler<RespondToReviewCommand>
         if (review.Status != ReviewStatus.Approved)
             throw new DomainException("Cannot respond to a review that is not approved");
 
+        var user = await _userRepository.GetByIdAsync(review.UserId, ct);
+        if (user == null)
+            throw new DomainException("User not found");
+
+        var product = await _productRepository.GetByIdAsync(review.ProductId, ct);
+        if (product == null)
+            throw new DomainException("Product not found");
+
         // 3. Проверяем, что админ существует
         var admin = await _userRepository.GetByIdAsync(command.AdminId, ct);
         if (admin == null)
@@ -59,33 +77,26 @@ public class RespondToReviewHandler : IRequestHandler<RespondToReviewCommand>
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // 5. Отправляем уведомление пользователю (опционально)
-        await SendNotificationAsync(review.User, review.Product, review, command.Response, ct);
-    }
-
-    private async Task SendNotificationAsync(Domain.Entities.User user, Domain.Entities.Product product,
-        Domain.Entities.Review review, string response, CancellationToken ct)
-    {
-        var emailDto = new EmailDto
+        // ✅ Отправляем email в фоне
+        try
         {
-            To = user.Email,
-            Subject = $"Ответ на ваш отзыв о товаре \"{product.Name}\"",
-            Body = $@"
-                <html>
-                    <body>
-                        <h2>Здравствуйте, {user.UserName}!</h2>
-                        <p>Администратор ответил на ваш отзыв о товаре <strong>\{product.Name}\</strong>:</p>
-                        < div style = 'background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 15px 0;' >
-                            < p >< strong > Ваш отзыв:</ strong > {review.Text}</ p >
-                            < p >< strong > Ответ администратора:</ strong > {response}</ p >
-                        </ div >
-                        < p > С уважением, команда магазина.</ p >
-                    </ body >
-                </ html >
-            ",
-            IsHtml = true
-        };
+            var email = _emailTemplateService.CreateReviewResponseNotificationEmail(
+                review,
+                user,
+                product,
+                command.BaseUrl
+            );
 
-        await _emailService.SendEmailAsync(emailDto);
+            await _emailBackgroundService.Enqueue(email);
+
+            _logger.LogInformation(
+                "Review response notification email queued for {Email}, ReviewId {ReviewId}",
+                user.Email, review.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to queue review response email for {Email}", user.Email);
+        }
     }
 }

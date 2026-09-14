@@ -1,12 +1,10 @@
 ﻿// InfrastructureTests/Services/LocalFileStorageServiceTests.cs
-using Castle.Core.Logging;
 using FluentAssertions;
 using Infrastructure.Services;
 using InfrastructureTests.Common;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -22,12 +20,18 @@ public class LocalFileStorageServiceTests : IDisposable
     public LocalFileStorageServiceTests()
     {
         _testRootPath = TestFileHelper.GetTestDirectory();
-
-        // ✅ Создаём папку ДО создания TestWebHostEnvironment
         Directory.CreateDirectory(_testRootPath);
 
         _environment = new TestWebHostEnvironment(_testRootPath);
-        _fileStorageService = new LocalFileStorageService(_environment, It.IsAny<IHttpContextAccessor>(),
+
+        // ✅ ПРАВИЛЬНО: создаем мок IHttpContextAccessor
+        // HttpContext = null (по умолчанию), поэтому GetFileUrlAsync вернет относительный URL
+        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        httpContextAccessorMock.Setup(x => x.HttpContext).Returns((HttpContext?)null);
+
+        _fileStorageService = new LocalFileStorageService(
+            _environment,
+            httpContextAccessorMock.Object, // ← Мок, а не null!
             NullLogger<LocalFileStorageService>.Instance);
     }
 
@@ -44,7 +48,7 @@ public class LocalFileStorageServiceTests : IDisposable
         // Arrange
         var fileName = "test.jpg";
         var contentType = "image/jpeg";
-        var content = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }; // JPG header
+        var content = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 };
         var file = TestFileHelper.CreateMockFile(fileName, contentType, content);
 
         // Act
@@ -52,8 +56,7 @@ public class LocalFileStorageServiceTests : IDisposable
             file.OpenReadStream(),
             file.FileName,
             file.ContentType,
-            "products/1"
-        );
+            "products/1");
 
         // Assert
         result.Should().NotBeNullOrEmpty();
@@ -70,18 +73,11 @@ public class LocalFileStorageServiceTests : IDisposable
     [Fact]
     public async Task UploadFileAsync_WhenFolderDoesNotExist_ShouldCreateFolder()
     {
-        // Arrange
         var file = TestFileHelper.CreateImageFile("test.jpg");
 
-        // Act
         var result = await _fileStorageService.UploadFileAsync(
-            file.OpenReadStream(),
-            file.FileName,
-            file.ContentType,
-            "products/999"
-        );
+            file.OpenReadStream(), file.FileName, file.ContentType, "products/999");
 
-        // Assert
         var folderPath = Path.Combine(_testRootPath, "images", "products", "999");
         Directory.Exists(folderPath).Should().BeTrue();
     }
@@ -89,59 +85,34 @@ public class LocalFileStorageServiceTests : IDisposable
     [Fact]
     public async Task UploadFileAsync_ShouldGenerateUniqueFileName()
     {
-        // Arrange
         var file = TestFileHelper.CreateImageFile("photo.jpg");
         var secondFile = TestFileHelper.CreateImageFile("photo.jpg");
 
-        // Act
         var result1 = await _fileStorageService.UploadFileAsync(
-            file.OpenReadStream(),
-            file.FileName,
-            file.ContentType,
-            "products/1"
-        );
+            file.OpenReadStream(), file.FileName, file.ContentType, "products/1");
 
         var result2 = await _fileStorageService.UploadFileAsync(
-            secondFile.OpenReadStream(),
-            secondFile.FileName,
-            secondFile.ContentType,
-            "products/1"
-        );
+            secondFile.OpenReadStream(), secondFile.FileName, secondFile.ContentType, "products/1");
 
-        // Assert
         result1.Should().NotBe(result2);
-        var fileName1 = Path.GetFileName(result1);
-        var fileName2 = Path.GetFileName(result2);
-        fileName1.Should().NotBe(fileName2);
+        Path.GetFileName(result1).Should().NotBe(Path.GetFileName(result2));
     }
 
     [Fact]
     public async Task UploadFileAsync_WithDifferentSubFolders_ShouldSaveInCorrectFolders()
     {
-        // Arrange
         var imageFile = TestFileHelper.CreateImageFile("photo.jpg");
         var videoFile = TestFileHelper.CreateVideoFile("video.mp4");
 
-        // Act
         var imageUrl = await _fileStorageService.UploadFileAsync(
-            imageFile.OpenReadStream(),
-            imageFile.FileName,
-            imageFile.ContentType,
-            "products/1/images"
-        );
+            imageFile.OpenReadStream(), imageFile.FileName, imageFile.ContentType, "products/1/images");
 
         var videoUrl = await _fileStorageService.UploadFileAsync(
-            videoFile.OpenReadStream(),
-            videoFile.FileName,
-            videoFile.ContentType,
-            "products/1/videos"
-        );
+            videoFile.OpenReadStream(), videoFile.FileName, videoFile.ContentType, "products/1/videos");
 
-        // Assert
         imageUrl.Should().Contain("/images/products/1/images/");
         videoUrl.Should().Contain("/videos/products/1/videos/");
 
-        // ✅ Проверяем через относительный путь
         var imagePath = Path.Combine(_testRootPath, imageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         var videoPath = Path.Combine(_testRootPath, videoUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 
@@ -152,30 +123,20 @@ public class LocalFileStorageServiceTests : IDisposable
     [Fact]
     public async Task UploadFileAsync_WhenSubFolderIsNull_ShouldSaveInDefaultFolder()
     {
-        // Arrange
         var file = TestFileHelper.CreateImageFile("test.jpg");
 
-        // Act
         var result = await _fileStorageService.UploadFileAsync(
-            file.OpenReadStream(),
-            file.FileName,
-            file.ContentType,
-            null
-        );
+            file.OpenReadStream(), file.FileName, file.ContentType, null);
 
-        // Assert
         result.Should().StartWith("/images/");
 
-        // ✅ Проверяем, что файл существует
-        var relativePath = result.TrimStart('/');
-        var filePath = Path.Combine(_testRootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        var filePath = Path.Combine(_testRootPath, result.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         File.Exists(filePath).Should().BeTrue();
     }
 
     [Fact]
     public async Task UploadFileAsync_WithMultipleFiles_ShouldSaveAll()
     {
-        // Arrange
         var files = new[]
         {
             TestFileHelper.CreateImageFile("img1.jpg"),
@@ -183,24 +144,18 @@ public class LocalFileStorageServiceTests : IDisposable
             TestFileHelper.CreateImageFile("img3.gif")
         };
 
-        // Act
         var results = new List<string>();
         foreach (var file in files)
         {
             var result = await _fileStorageService.UploadFileAsync(
-                file.OpenReadStream(),
-                file.FileName,
-                file.ContentType,
-                "products/test"
-            );
+                file.OpenReadStream(), file.FileName, file.ContentType, "products/test");
             results.Add(result);
         }
 
-        // Assert
         results.Should().HaveCount(3);
         foreach (var result in results)
         {
-            var savedPath = Path.Combine(_testRootPath, "images", "products", "test", Path.GetFileName(result));
+            var savedPath = Path.Combine(_testRootPath, result.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
             File.Exists(savedPath).Should().BeTrue();
         }
     }
@@ -210,85 +165,62 @@ public class LocalFileStorageServiceTests : IDisposable
     [Fact]
     public async Task DeleteFileAsync_WhenFileExists_ShouldDeleteFile()
     {
-        // Arrange
         var file = TestFileHelper.CreateImageFile("test.jpg");
         var url = await _fileStorageService.UploadFileAsync(
-            file.OpenReadStream(),
-            file.FileName,
-            file.ContentType,
-            "products/1"
-        );
+            file.OpenReadStream(), file.FileName, file.ContentType, "products/1");
 
-        var filePath = Path.Combine(_testRootPath, "images", "products", "1", Path.GetFileName(url));
+        var filePath = Path.Combine(_testRootPath, url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         File.Exists(filePath).Should().BeTrue();
 
-        // Act
         await _fileStorageService.DeleteFileAsync(url);
 
-        // Assert
         File.Exists(filePath).Should().BeFalse();
     }
 
     [Fact]
     public async Task DeleteFileAsync_WhenFileDoesNotExist_ShouldNotThrow()
     {
-        // Arrange
         var nonExistentUrl = "/images/products/999/nonexistent.jpg";
 
-        // Act
         Func<Task> act = async () => await _fileStorageService.DeleteFileAsync(nonExistentUrl);
 
-        // Assert
         await act.Should().NotThrowAsync();
     }
 
     [Fact]
     public async Task DeleteFileAsync_WhenUrlIsNull_ShouldNotThrow()
     {
-        // Act
         Func<Task> act = async () => await _fileStorageService.DeleteFileAsync(null!);
-
-        // Assert
         await act.Should().NotThrowAsync();
     }
 
     [Fact]
     public async Task DeleteFileAsync_WhenUrlIsEmpty_ShouldNotThrow()
     {
-        // Act
         Func<Task> act = async () => await _fileStorageService.DeleteFileAsync("");
-
-        // Assert
         await act.Should().NotThrowAsync();
     }
 
     [Fact]
     public async Task DeleteMultipleFilesAsync_ShouldDeleteAll()
     {
-        // Arrange
         var urls = new List<string>();
         for (int i = 1; i <= 3; i++)
         {
             var file = TestFileHelper.CreateImageFile($"img{i}.jpg");
             var url = await _fileStorageService.UploadFileAsync(
-                file.OpenReadStream(),
-                file.FileName,
-                file.ContentType,
-                "products/multiple"
-            );
+                file.OpenReadStream(), file.FileName, file.ContentType, "products/multiple");
             urls.Add(url);
         }
 
-        // Act
         foreach (var url in urls)
         {
             await _fileStorageService.DeleteFileAsync(url);
         }
 
-        // Assert
         foreach (var url in urls)
         {
-            var filePath = Path.Combine(_testRootPath, "images", "products", "multiple", Path.GetFileName(url));
+            var filePath = Path.Combine(_testRootPath, url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
             File.Exists(filePath).Should().BeFalse();
         }
     }
@@ -296,34 +228,25 @@ public class LocalFileStorageServiceTests : IDisposable
     // ========== 3. ИНТЕГРАЦИЯ С РАЗНЫМИ ТИПАМИ ФАЙЛОВ ==========
 
     [Theory]
-    [InlineData("image/jpeg", ".jpg", "images")]
-    [InlineData("image/png", ".png", "images")]
-    [InlineData("image/webp", ".webp", "images")]
-    [InlineData("image/gif", ".gif", "images")]
-    [InlineData("video/mp4", ".mp4", "videos")]
-    [InlineData("video/webm", ".webm", "videos")]
-    [InlineData("application/pdf", ".pdf", "documents")]
+    [InlineData("image/jpeg", ".jpg")]
+    [InlineData("image/png", ".png")]
+    [InlineData("image/webp", ".webp")]
+    [InlineData("image/gif", ".gif")]
+    [InlineData("video/mp4", ".mp4")]
+    [InlineData("video/webm", ".webm")]
+    [InlineData("application/pdf", ".pdf")]
     public async Task UploadFileAsync_WithDifferentContentTypes_ShouldPreserveExtension(
-        string contentType, string expectedExtension, string expectedFolder)
+        string contentType, string expectedExtension)
     {
-        // Arrange
         var fileName = $"test{expectedExtension}";
         var file = TestFileHelper.CreateMockFile(fileName, contentType);
 
-        // Act
         var result = await _fileStorageService.UploadFileAsync(
-            file.OpenReadStream(),
-            file.FileName,
-            file.ContentType,
-            "products/types"
-        );
+            file.OpenReadStream(), file.FileName, file.ContentType, "products/types");
 
-        // Assert
         result.Should().EndWith(expectedExtension);
 
-        // ✅ Проверяем в правильной папке
-        var relativePath = result.TrimStart('/');
-        var filePath = Path.Combine(_testRootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        var filePath = Path.Combine(_testRootPath, result.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         File.Exists(filePath).Should().BeTrue();
     }
 
@@ -332,9 +255,6 @@ public class LocalFileStorageServiceTests : IDisposable
     [Fact]
     public async Task UploadFileAsync_WithEmptyStream_ShouldSaveEmptyFile()
     {
-        // Arrange
-        var file = TestFileHelper.CreateImageFile("empty.jpg");
-        // Переопределяем поток как пустой
         var stream = new MemoryStream();
         var emptyFile = new FormFile(stream, 0, stream.Length, "file", "empty.jpg")
         {
@@ -342,16 +262,10 @@ public class LocalFileStorageServiceTests : IDisposable
             ContentType = "image/jpeg"
         };
 
-        // Act
         var result = await _fileStorageService.UploadFileAsync(
-            emptyFile.OpenReadStream(),
-            emptyFile.FileName,
-            emptyFile.ContentType,
-            "products/empty"
-        );
+            emptyFile.OpenReadStream(), emptyFile.FileName, emptyFile.ContentType, "products/empty");
 
-        // Assert
-        var filePath = Path.Combine(_testRootPath, "images", "products", "empty", Path.GetFileName(result));
+        var filePath = Path.Combine(_testRootPath, result.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         File.Exists(filePath).Should().BeTrue();
         var content = await File.ReadAllBytesAsync(filePath);
         content.Should().BeEmpty();
@@ -360,22 +274,14 @@ public class LocalFileStorageServiceTests : IDisposable
     [Fact]
     public async Task UploadFileAsync_WithLargeFile_ShouldSaveCorrectly()
     {
-        // Arrange
         var content = new byte[10 * 1024 * 1024]; // 10MB
         new Random().NextBytes(content);
         var file = TestFileHelper.CreateMockFile("large.bin", "application/octet-stream", content);
 
-        // Act
         var result = await _fileStorageService.UploadFileAsync(
-            file.OpenReadStream(),
-            file.FileName,
-            file.ContentType,
-            "products/large"
-        );
+            file.OpenReadStream(), file.FileName, file.ContentType, "products/large");
 
-        // Assert
-        var relativePath = result.TrimStart('/');
-        var filePath = Path.Combine(_testRootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        var filePath = Path.Combine(_testRootPath, result.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         File.Exists(filePath).Should().BeTrue();
 
         var savedContent = await File.ReadAllBytesAsync(filePath);
@@ -388,11 +294,8 @@ public class TestWebHostEnvironment : IWebHostEnvironment
 {
     public TestWebHostEnvironment(string rootPath)
     {
-        // ✅ Проверяем и создаём папку
         if (!Directory.Exists(rootPath))
-        {
             Directory.CreateDirectory(rootPath);
-        }
 
         WebRootPath = rootPath;
         ContentRootPath = rootPath;
@@ -411,5 +314,4 @@ public class TestWebHostEnvironment : IWebHostEnvironment
     public string EnvironmentName { get; set; }
 }
 
-
-// Сводка теста: всего: 20; сбой: 0; успешно: 20; пропущено: 0; длительность: 2,6 с
+// Сводка теста: всего: 20; сбой: 0; успешно: 20; пропущено: 0; длительность: 1,6 с

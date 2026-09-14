@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.Order;
 using Application.Interfaces;
+using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -16,19 +17,26 @@ public class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentCommand, Paym
     private readonly IPaymentService _paymentService;
     private readonly IPaymentRepository _paymentRepository;
     private readonly IOrderRepository _orderRepository;
+    private readonly IUserRepository _userRepository;
     private readonly ICacheService _cacheService;
     private readonly ILogger<ConfirmPaymentHandler> _logger;
+    private readonly IEmailTemplateService _emailTemplateService;
+    private readonly IEmailBackgroundService _emailBackgroundService;
     private readonly IUnitOfWork _unitOfWork;
 
     public ConfirmPaymentHandler(IPaymentRepository paymentRepository, IPaymentService paymentService,
         IOrderRepository orderRepository, ICacheService cacheService,
-        ILogger<ConfirmPaymentHandler> logger, IUnitOfWork unitOfWork)
+        ILogger<ConfirmPaymentHandler> logger, IEmailTemplateService emailTemplateService,
+        IEmailBackgroundService emailBackgroundService,
+        IUnitOfWork unitOfWork)
     {
         _orderRepository = orderRepository;
         _paymentService = paymentService;
         _paymentRepository = paymentRepository;
         _cacheService = cacheService;
         _logger = logger;
+        _emailTemplateService = emailTemplateService;
+        _emailBackgroundService = emailBackgroundService;
         _unitOfWork = unitOfWork;
     }
 
@@ -77,6 +85,9 @@ public class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentCommand, Paym
             );
         }
 
+        var user = await _userRepository.GetByIdAsync(payment.UserId);
+        if (user == null) throw new DomainException("User isn't found.");
+
         // 3. Обновляем payment
         payment.MarkAsPaid(result.TransactionId);
 
@@ -89,6 +100,23 @@ public class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentCommand, Paym
 
         // ✅ Очищаем кэш товаров
         await _cacheService.RemoveByPrefix("products:");
+
+        try
+        {
+            var email = _emailTemplateService.CreatePaymentConfirmationEmail(
+                order,
+                user,
+                payment,
+                command.BaseUrl
+            );
+
+            await _emailBackgroundService.Enqueue(email);
+            _logger.LogInformation("Payment confirmation email queued for {Email}", user.Email);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to queue payment confirmation for {Email}", user.Email);
+        }
 
         return result;
     }

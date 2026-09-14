@@ -119,20 +119,21 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
             result.PaymentIntentId
         );
 
-        if (result.Success)
-        {
-            // 5. Отправляем email уведомление об инициации оплаты (только при успехе)
-            try
-            {
-                await SendPaymentInitiationEmailAsync(order, user, command.Method.ToString(), result.PaymentIntentId);
-                _logger.LogInformation("Payment initiation email sent to {Email}", user.Email);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send payment initiation email for OrderId {OrderId}", order.Id);
-                // Не бросаем исключение, чтобы не прерывать процесс оплаты
-            }
-        }
+
+        //if (result.Success)
+        //{
+        //    // 5. Отправляем email уведомление об инициации оплаты (только при успехе)
+        //    try
+        //    {
+        //        await SendPaymentInitiationEmailAsync(order, user, command.Method.ToString(), result.PaymentIntentId);
+        //        _logger.LogInformation("Payment initiation email sent to {Email}", user.Email);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Failed to send payment initiation email for OrderId {OrderId}", order.Id);
+        //        // Не бросаем исключение, чтобы не прерывать процесс оплаты
+        //    }
+        //}
 
 
         return result;

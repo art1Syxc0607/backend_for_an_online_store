@@ -108,18 +108,29 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             request.UserIP ?? "Unknown"
         );
 
-        var location = await _locationService
-            .GetLocationByIpAsync(request.UserIP, ct);
 
-        var emailToSend = _emailTemlateService
-            .CreateLoginNotificationEmail(user, DateTime.UtcNow,
-            _deviceInfoService.GetDeviceInfo(_currentRequest.GetUserAgent()),
-           location);
+        // Отправляем email уведомление
+        try
+        {
+            var location = await _locationService
+                .GetLocationByIpAsync(request.UserIP, ct);
+            var emailToSend = _emailTemlateService
+                .CreateLoginNotificationEmail(user, DateTime.UtcNow, request.BaseUrl,
+                _deviceInfoService.GetDeviceInfo(_currentRequest.GetUserAgent()),
+               location);
 
-        // добавление в очередь фонового сервиса для отправки Email
-        await _emailBackgroundService.Enqueue(
-                emailToSend
-            );
+            // добавление в очередь фонового сервиса для отправки Email
+            await _emailBackgroundService.Enqueue(
+                    emailToSend
+                );
+            _logger.LogInformation("Email confirmation sent to {Email}", user.Email);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send Email confirmation to {Email}", user.Email);
+            // Не бросаем исключение, чтобы не откатывать транзакцию
+            // Логируем ошибку, но заказ уже отправлен
+        }
 
         return response;
     }

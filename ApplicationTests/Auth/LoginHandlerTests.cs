@@ -44,6 +44,7 @@ public class LoginHandlerTests
             Mock.Of<ICurrentRequestService>(),
             Mock.Of<ILocationService>(),
             Mock.Of<IDeviceInfoService>(),
+            Mock.Of<IEmailTemplateService>(),
             Mock.Of<IEmailBackgroundService>()
         );
 
@@ -79,6 +80,7 @@ public class LoginHandlerTests
             Mock.Of<ICurrentRequestService>(),
             Mock.Of<ILocationService>(),
             Mock.Of<IDeviceInfoService>(),
+            Mock.Of<IEmailTemplateService>(),
             Mock.Of<IEmailBackgroundService>()
         );
 
@@ -117,6 +119,7 @@ public class LoginHandlerTests
             Mock.Of<ICurrentRequestService>(),
             Mock.Of<ILocationService>(),
             Mock.Of<IDeviceInfoService>(),
+            Mock.Of<IEmailTemplateService>(),
             Mock.Of<IEmailBackgroundService>()
         );
 

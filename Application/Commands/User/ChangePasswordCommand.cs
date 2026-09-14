@@ -5,20 +5,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Application.Commands.User;
 
-public class ChangePasswordCommand : IRequest
+public class ChangePasswordCommand : IRequest<Unit>
 {
     [Required]
-    public int UserId { get; set; }
-    [Required]
-    [MinLength(8)]
-    [MaxLength(50)]
-    public string CurrentPassword { get; set; } = string.Empty;
-    [Required]
-    [MinLength(8)]
-    [MaxLength(50)]
-    public string NewPassword { get; set; } = string.Empty;
-
-    [Required]
-    public string UserIP { get; init; } = "Unknown";
+    [EmailAddress]
+    public string Email { get; set; } = string.Empty;
+    
+    public string? IpAddress { get; set; }
 }
 

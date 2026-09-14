@@ -63,9 +63,17 @@ public class LocalFileStorageService : IFileStorageService
     public Task<string> GetFileUrlAsync(string fileName)
     {
         var request = _httpContextAccessor.HttpContext?.Request;
+
+
+        //if (request == null)
+        //{
+        //    throw new ArgumentNullException("HttpContext is null");
+        //}
+
+        // ✅ Если HttpContext нет (тесты, фоновые задачи) — возвращаем относительный URL
         if (request == null)
         {
-            throw new ArgumentNullException("HttpContext is null");
+            return Task.FromResult(fileName);
         }
 
         // Абсолютный URL

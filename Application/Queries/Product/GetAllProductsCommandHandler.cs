@@ -26,7 +26,7 @@ public class GetAllProductsCommandHandler: IRequestHandler<GetAllProductsCommand
         
 
 
-    public async Task<List<ProductResponseDto>> Handle(GetAllProductsCommand command, CancellationToken ct)
+    public async Task<List<ProductResponseDto>> Handle(GetAllProductsCommand request, CancellationToken ct)
     {
         var cached = await _cacheService.GetAsync<List<ProductResponseDto>>(CacheKey);
         if (cached != null)

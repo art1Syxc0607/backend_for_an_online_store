@@ -26,4 +26,8 @@ public class RegisterCommand : IRequest<AuthResponseDto>
 
     [Required]
     public string UserIP { get; init; } = "Unknown";
+
+    [Required]
+    // ✅ BaseUrl передаётся из контроллера
+    public string BaseUrl { get; set; } = string.Empty;
 }

@@ -10,4 +10,5 @@ namespace Application.Commands.Order;
 public class DeliverOrderCommand : IRequest
 {
     public int OrderId { get; set; }
+    public string BaseUrl { get; set; } = string.Empty;
 }

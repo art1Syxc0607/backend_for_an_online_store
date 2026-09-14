@@ -8,6 +8,7 @@ public class User
 {
     private List<Review> _reviews = new();
     private List<Order> _orders = new();
+    private List<Payment> _payments = new();
     //private List<FavoriteProduct> _favoriteProducts = new();
     //private List<FavoriteSeller> _favoriteSellers = new();
 
@@ -28,7 +29,7 @@ public class User
     public bool IsEmailConfirmed { get; private set; }
     public DateTime? EmailConfirmedAt { get; private set; }
     public string? EmailConfirmationToken { get; private set; }
-    public DateTime? EmailConfirmationTokenExpiry { get; private set; }
+    public DateTime? EmailConfirmationTokenExpiryAt { get; private set; }
     // Resend
     public DateTime? LastConfirmationEmailSentAt { get; private set; }
 
@@ -36,6 +37,7 @@ public class User
     public Cart? Cart { get; private set; }
     public virtual IReadOnlyCollection<Review> Reviews => _reviews.AsReadOnly();
     public virtual IReadOnlyCollection<Order> Orders => _orders.AsReadOnly();
+    public virtual IReadOnlyCollection<Payment> Payments => _payments.AsReadOnly();
     //public virtual IReadOnlyCollection<FavoriteProduct> FavoriteProducts => _favoriteProducts.AsReadOnly();
     //public virtual IReadOnlyCollection<FavoriteSeller> FavoriteSellers => _favoriteSellers.AsReadOnly();
 
@@ -82,10 +84,10 @@ public class User
     }
 
     // Метод для генерации токена подтверждения
-    public void GenerateEmailConfirmationToken(string token, DateTime expiry)
+    public void GenerateEmailConfirmationToken(string token, DateTime expiryAt)
     {
         EmailConfirmationToken = token;
-        EmailConfirmationTokenExpiry = expiry;
+        EmailConfirmationTokenExpiryAt = expiryAt;
         IsEmailConfirmed = false;
     }
 
@@ -98,13 +100,13 @@ public class User
         if (EmailConfirmationToken != token)
             throw new DomainException("Invalid confirmation token");
 
-        if (EmailConfirmationTokenExpiry < DateTime.UtcNow)
+        if (EmailConfirmationTokenExpiryAt < DateTime.UtcNow)
             throw new DomainException("Confirmation token expired");
 
         IsEmailConfirmed = true;
         EmailConfirmedAt = DateTime.UtcNow;
         EmailConfirmationToken = null;
-        EmailConfirmationTokenExpiry = null;
+        EmailConfirmationTokenExpiryAt = null;
     }
 
     public bool CanResendConfirmationEmail()
@@ -142,7 +144,7 @@ public class User
         Cart = cart;
     }
 
-    public void UpdatePassword(string newPasswordHash)
+    public void ChangePassword(string newPasswordHash)
     {
         SetPasswordHash(newPasswordHash);
     }

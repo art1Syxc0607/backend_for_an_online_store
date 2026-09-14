@@ -10,4 +10,5 @@ namespace Application.Commands.Email;
 public class ResendConfirmationCommand : IRequest
 {
     public string Email { get; init; }
+    public string BaseUrl { get; set; } = string.Empty;
 }

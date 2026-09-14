@@ -71,6 +71,8 @@ public class OrderController : ControllerBase
             UserId = GetCurrentUserId(),
             Items = dto.Items,
             ShippingAddress = dto.ShippingAddress,
+
+            BaseUrl = $"{Request.Scheme}://{Request.Host}" // ✅ Из HTTP-запроса
         };
 
         var result = await _mediator.Send(command);
@@ -98,23 +100,15 @@ public class OrderController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Admin")]
-    [HttpPost("ship/{orderId}")]
-    public async Task<IActionResult> ShipOrder(int orderId)
-    {
-        var command = new InitiateShipmentCommand { OrderId  = orderId };
-
-        await _mediator.Send(command);
-
-        return Ok();
-    }
-
-
     [Authorize(Roles = "User")]
     [HttpPost("receive/{orderId}")]
     public async Task<IActionResult> ReceiveOrder(int orderId)
     {
-        var command = new ReceiveOrderCommand { OrderId = orderId , UserId = GetCurrentUserId()};
+        var command = new ReceiveOrderCommand { 
+            OrderId = orderId, 
+            UserId = GetCurrentUserId(),
+            BaseUrl = $"{Request.Scheme}://{Request.Host}"
+        };
 
         await _mediator.Send(command);
 
@@ -126,7 +120,8 @@ public class OrderController : ControllerBase
     {
         var command = new ConfirmPaymentCommand
         {
-            PaymentIntentId = dto.PaymentIntentId
+            PaymentIntentId = dto.PaymentIntentId,
+            BaseUrl = $"{Request.Scheme}://{Request.Host}"
         };
 
         var result = await _mediator.Send(command);

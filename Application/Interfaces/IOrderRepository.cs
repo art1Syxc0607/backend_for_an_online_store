@@ -44,4 +44,13 @@ public interface IOrderRepository
         CancellationToken ct = default);
     Task<List<Order>> GetOrdersFilterAsync(GetAllOrderOrFilteredCommand command,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Получить неоплаченные заказы старше указанного времени
+    /// Cleanup
+    /// </summary>
+    Task<List<Order>> GetExpiredPendingOrdersAsync(
+        DateTime olderThan,
+        int limit,
+        CancellationToken ct = default);
 }

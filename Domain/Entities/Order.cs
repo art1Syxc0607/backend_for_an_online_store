@@ -70,7 +70,7 @@ public class Order
         }
         else
         {
-            _items.Add(new OrderItem(Id, product.Id, quantity, product.Name, product.Price, product.PurchasePrice));
+            _items.Add(new OrderItem(this, product, quantity));
         }
 
         RecalculateTotal();
@@ -97,6 +97,7 @@ public class Order
 
         _items.ForEach(oi => oi.Product.ReleaseReservation(oi.Quantity)); // увеличиваем количестов 
                                                                           // отмен у продукта
+                                                                          // и отпускаем резерв товаров, котрый брал этот заказ
         Status = OrderStatus.Cancelled;
         CancelledAt = DateTime.UtcNow;
     }

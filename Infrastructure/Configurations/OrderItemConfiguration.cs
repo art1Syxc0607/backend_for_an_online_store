@@ -21,6 +21,7 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
             .HasDatabaseName("IX_OrderItems_ProductId");
 
         // ✅ Индекс для фильтрации по CreatedAt (через Order)
+        // 1. for deleting old pending orders
         builder.HasIndex(oi => oi.CreatedAt)
             .HasDatabaseName("IX_OrderItems_CreatedAt");
 

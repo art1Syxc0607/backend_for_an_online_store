@@ -76,7 +76,8 @@ public class AdminReviewsController : ControllerBase
         {
             ReviewId = reviewId,
             AdminId = GetCurrentUserId(),
-            Response = dto.Response
+            Response = dto.Response,
+            BaseUrl = $"{Request.Scheme}://{Request.Host}"
         };
 
         await _mediator.Send(command);

@@ -18,19 +18,19 @@ public class OrderItem
 
     private OrderItem() { }
 
-    public OrderItem(int orderId, int productId, int quantity, string productNameAtPurchase, decimal priceAtPurchase,
-        decimal purchasePriceAtPurchase)
+    public OrderItem(Order order, Product product, int quantity)
     {
-        OrderId = orderId;
+        OrderId = order.Id;
+        Order = order;
 
-        ProductId = productId;
+        ProductId = product.Id;
+        Product = product;
 
-
-        ProductNameAtPurchase = productNameAtPurchase;
+        ProductNameAtPurchase = product.Name;
         Quantity = quantity;
-        PriceAtPurchase = priceAtPurchase > 0 ? priceAtPurchase : throw new DomainException("Price must be positive.");
+        PriceAtPurchase = product.Price > 0 ? product.Price : throw new DomainException("Price must be positive.");
         CreatedAt = DateTime.UtcNow;
-        PurchasePriceAtPurchase = purchasePriceAtPurchase;
+        PurchasePriceAtPurchase = product.PurchasePrice;
     }
 
     public void IncreaseQuantity(int additionalQuantity)

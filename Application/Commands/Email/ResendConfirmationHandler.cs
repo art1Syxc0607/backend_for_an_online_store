@@ -12,7 +12,8 @@ namespace Application.Commands.Email;
 public class ResendConfirmationHandler : IRequestHandler<ResendConfirmationCommand>
 {
     private readonly IUserRepository _userRepository;
-    private readonly IEmailService _emailService;
+    private readonly IEmailTemplateService _emailTemplateService;
+    private readonly IEmailBackgroundService _emailBackgroundService;
     private readonly ITokenGenerator _tokenGenerator;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ResendConfirmationHandler> _logger;
@@ -20,14 +21,16 @@ public class ResendConfirmationHandler : IRequestHandler<ResendConfirmationComma
 
     public ResendConfirmationHandler(
         IUserRepository userRepository,
-        IEmailService emailService,
+        IEmailTemplateService emailTemplateService,
+        IEmailBackgroundService emailBackgroundService,
         ITokenGenerator tokenGenerator,
         IConfiguration configuration,
         ILogger<ResendConfirmationHandler> logger,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
-        _emailService = emailService;
+        _emailTemplateService = emailTemplateService;
+        _emailBackgroundService = emailBackgroundService;
         _tokenGenerator = tokenGenerator;
         _configuration = configuration;
         _logger = logger;
@@ -54,8 +57,25 @@ public class ResendConfirmationHandler : IRequestHandler<ResendConfirmationComma
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // ✅ Отправляем письмо
-        await SendConfirmationEmailAsync(user, token);
+        // ✅ Отправляем email в фоне
+        try
+        {
+            var email = _emailTemplateService.ResendEmailConfirmation(
+                user,
+                token,
+                command.BaseUrl
+            );
+
+            await _emailBackgroundService.Enqueue(email);
+
+            _logger.LogInformation(
+                "Resend confirmation email queued for {Email}", user.Email);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to queue resend confirmation email for {Email}", user.Email);
+        }
 
         _logger.LogInformation(
             "Confirmation email resent to {Email}, UserId {UserId}",
@@ -64,29 +84,29 @@ public class ResendConfirmationHandler : IRequestHandler<ResendConfirmationComma
         );
     }
 
-    private async Task SendConfirmationEmailAsync(Domain.Entities.User user, string token)
-    {
-        var baseUrl = _configuration["App:BaseUrl"];
-        var confirmationUrl = $"{baseUrl}/api/auth/confirm-email?token={token}&userId={user.Id}";
+    //private async Task SendConfirmationEmailAsync(Domain.Entities.User user, string token)
+    //{
+    //    var baseUrl = _configuration["App:BaseUrl"];
+    //    var confirmationUrl = $"{baseUrl}/api/auth/confirm-email?token={token}&userId={user.Id}";
 
-        var emailBody = $@"
-            <html>
-                <body>
-                    <h2>Здравствуйте, {user.UserName}!</h2>
-                    <p>Вы запросили повторную отправку письма для подтверждения email.</p>
-                    <p>Перейдите по ссылке для подтверждения:</p>
-                    <p><a href='{confirmationUrl}'>Подтвердить email</a></p>
-                    <p>Ссылка действительна в течение 24 часов.</p>
-                    <p>Если вы не запрашивали повторную отправку, проигнорируйте это письмо.</p>
-                </body>
-            </html>
-        ";
+    //    var emailBody = $@"
+    //        <html>
+    //            <body>
+    //                <h2>Здравствуйте, {user.UserName}!</h2>
+    //                <p>Вы запросили повторную отправку письма для подтверждения email.</p>
+    //                <p>Перейдите по ссылке для подтверждения:</p>
+    //                <p><a href='{confirmationUrl}'>Подтвердить email</a></p>
+    //                <p>Ссылка действительна в течение 24 часов.</p>
+    //                <p>Если вы не запрашивали повторную отправку, проигнорируйте это письмо.</p>
+    //            </body>
+    //        </html>
+    //    ";
 
-        await _emailService.SendEmailAsync(
-            user.Email,
-            "Подтверждение email (повторная отправка)",
-            emailBody,
-            true
-        );
-    }
+    //    await _emailService.SendEmailAsync(
+    //        user.Email,
+    //        "Подтверждение email (повторная отправка)",
+    //        emailBody,
+    //        true
+    //    );
+    //}
 }

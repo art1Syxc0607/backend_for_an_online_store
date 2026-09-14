@@ -89,7 +89,7 @@ public class ProductRepository : IProductRepository
             .WhereIf(SearchText != null, p => p.Name.Contains(SearchText) || p.Description.Contains(SearchText))
             .WhereIf(PriceLimitMin != null, p => p.Price >= PriceLimitMin)
             .WhereIf(PriceLimitMax != null, p => p.Price <= PriceLimitMax)
-            .WhereIf(OnlyAvailable != null, p => p.StockQuantity - p.ReservedQuantity != 0);
+            .WhereIf(OnlyAvailable != null, p => p.StockQuantity - p.ReservedQuantity > 0); // or !=
 
         var sortedQuery = search.ApplySorting(sortBy, SortDesc);
 

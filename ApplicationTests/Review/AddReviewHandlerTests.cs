@@ -116,6 +116,6 @@ public class AddReviewHandlerTests
 
         // Assert
         await act.Should().ThrowAsync<DomainException>()
-            .WithMessage("*User didn't buy or recieved this product*");
+            .WithMessage("*User didn't recieved this product*");
     }
 }

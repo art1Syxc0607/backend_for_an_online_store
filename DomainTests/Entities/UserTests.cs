@@ -174,7 +174,7 @@ public class UserTests
         var newHash = "newHash123";
 
         // Act
-        user.UpdatePassword(newHash);
+        user.ChangePassword(newHash);
 
         // Assert
         user.PasswordHash.Should().Be(newHash);
@@ -187,7 +187,7 @@ public class UserTests
         var user = new User("test@mail.com", "oldHash", "John");
 
         // Act
-        Action act = () => user.UpdatePassword("");
+        Action act = () => user.ChangePassword("");
 
         // Assert
         act.Should().Throw<DomainException>().WithMessage("*Password hash cannot be empty*");
@@ -264,7 +264,7 @@ public class UserTests
 
         // Assert
         user.EmailConfirmationToken.Should().Be(token);
-        user.EmailConfirmationTokenExpiry.Should().Be(expiry);
+        user.EmailConfirmationTokenExpiryAt.Should().Be(expiry);
         user.IsEmailConfirmed.Should().BeFalse();
     }
 
@@ -284,7 +284,7 @@ public class UserTests
         user.IsEmailConfirmed.Should().BeTrue();
         user.EmailConfirmedAt.Should().NotBeNull();
         user.EmailConfirmationToken.Should().BeNull();
-        user.EmailConfirmationTokenExpiry.Should().BeNull();
+        user.EmailConfirmationTokenExpiryAt.Should().BeNull();
     }
 
     [Fact]

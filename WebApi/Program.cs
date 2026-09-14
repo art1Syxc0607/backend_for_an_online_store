@@ -148,3 +148,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+// Нужно для интеграционных тестов
+public partial class Program { }

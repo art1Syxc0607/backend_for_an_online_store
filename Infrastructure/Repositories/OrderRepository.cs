@@ -10,6 +10,7 @@ using Domain.Enums;
 using Infrastructure.Data;
 using Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
+using SendGrid.Helpers.Mail;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -294,6 +295,23 @@ public class OrderRepository : IOrderRepository
             DateSpan.Year => (referenceDate.AddYears(1) - referenceDate).Days,
             _ => TimeSpan.Zero.Days
         };
+    }
+
+
+    // Cleanup
+    public async Task<List<Order>> GetExpiredPendingOrdersAsync(
+        DateTime olderThan,
+        int limit,
+        CancellationToken ct = default)
+    {
+        return await _dpContext.Orders
+            .Include(o => o.Items)
+                .ThenInclude(oi => oi.Product)
+            .Where(o => o.Status == OrderStatus.Pending)
+            .Where(o => o.CreatedAt < olderThan)
+            .OrderBy(o => o.CreatedAt)
+            .Take(limit)
+            .ToListAsync(ct);
     }
 
     //private int GetMaxDays(DateSpan span)

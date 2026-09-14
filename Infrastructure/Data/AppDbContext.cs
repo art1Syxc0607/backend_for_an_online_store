@@ -14,7 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<CartItem> CartItems { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<Review> Reviews { get; set; }
-    public DbSet<Payment> Payments { get; set; }
+    public DbSet<Payment> Payments { get; set; } 
+    public DbSet<PasswordResetCode> PasswordResetCodes { get; set; } 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder builder)

@@ -88,8 +88,8 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
 
         // 4. Генерируем токен подтверждения
         var emailConfirmationToken = _tokenGenerator.GenerateEmailConfirmationToken();
-        var expiry = DateTime.UtcNow.AddHours(24);
-        user.GenerateEmailConfirmationToken(emailConfirmationToken, expiry);
+        var expiryAt = DateTime.UtcNow.AddHours(24);
+        user.GenerateEmailConfirmationToken(emailConfirmationToken, expiryAt);
 
         // 5. Сохраняем пользователя
         await _userRepository.AddAsync(user, ct);
@@ -112,12 +112,24 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, AuthResponseDto>
             user.Email
         );
 
-        // 6. Отправляем письмо с подтверждением
-        // добавление в очередь фонового сервиса для отправки Email
-        var emailToSend = _emailTamplate
-            .CreateRegisterNotificationEmail(user, emailConfirmationToken);
+        // Отправляем email уведомление
+        try
+        {
+            // 6. Отправляем письмо с подтверждением
+            // добавление в очередь фонового сервиса для отправки Email
+            var emailToSend = _emailTamplate
+                .CreateRegisterNotificationEmail(user, emailConfirmationToken, command.BaseUrl);
+            await _emailBackgroundService.Enqueue(emailToSend);
 
-        await _emailBackgroundService.Enqueue(emailToSend);
+            _logger.LogInformation("Email confirmation sent to {Email}", user.Email);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send Email confirmation to {Email}", user.Email);
+            // Не бросаем исключение, чтобы не откатывать транзакцию
+            // Логируем ошибку, но заказ уже отправлен
+        }
+
 
         return new AuthResponseDto
         {

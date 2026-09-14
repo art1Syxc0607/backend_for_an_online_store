@@ -5,6 +5,7 @@ using Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
@@ -32,7 +33,10 @@ public class UserController : ControllerBase
             Email = dto.Email,
             UserName = dto.UserName,
             Password = dto.Password,
-            UserIP = clientIp
+            UserIP = clientIp,
+
+            // Формируем BaseUrl здесь — единственное место
+            BaseUrl = $"{Request.Scheme}://{Request.Host}"
         };
         var result = await _mediator.Send(command);
         return Ok(result);
@@ -64,7 +68,8 @@ public class UserController : ControllerBase
         {
             var command = new ResendConfirmationCommand
             {
-                Email = GetCurrentUserEmail()
+                Email = GetCurrentUserEmail(),
+                BaseUrl = $"{Request.Scheme}://{Request.Host}"
             };
 
             await _mediator.Send(command);
@@ -95,6 +100,9 @@ public class UserController : ControllerBase
             Email = loginDto.Email,
             Password = loginDto.Password,
             UserIP = userIP,
+
+            // Формируем BaseUrl здесь — единственное место
+            BaseUrl = $"{Request.Scheme}://{Request.Host}"
         };
 
         var result = await _mediator.Send(command);
@@ -102,24 +110,37 @@ public class UserController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize]
+    [AllowAnonymous]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
     {
-        // Получаем IP-адрес
-        var userIP = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-
-        var userId = GetCurrentUserId();
         var command = new ChangePasswordCommand
         {
-            UserId = userId,
-            CurrentPassword = dto.CurrentPassword,
-            NewPassword = dto.NewPassword,
-            UserIP = userIP
+            Email = dto.Email,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         };
 
         await _mediator.Send(command);
-        return NoContent();
+
+        // Всегда возвращаем 200 OK (не раскрываем существование email)
+        return Ok(new { Message = "If the email exists, a reset code has been sent." });
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    //[EnableRateLimiting("auth")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+    {
+        var command = new ResetPasswordCommand
+        {
+            Email = dto.Email,
+            Code = dto.Code,
+            NewPassword = dto.NewPassword,
+            ConfirmPassword = dto.ConfirmPassword
+        };
+
+        await _mediator.Send(command);
+        return Ok(new { Message = "Password successfully changed" });
     }
 
     private int GetCurrentUserId()

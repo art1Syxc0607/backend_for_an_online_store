@@ -43,11 +43,14 @@ public class AdminOrdersController : ControllerBase
         return await _mediator.Send(command);
     }
 
-    
     [HttpPost("ship/{orderId}")]
     public async Task<IActionResult> ShipOrder(int orderId)
     {
-        var command = new InitiateShipmentCommand { OrderId = orderId };
+        var command = new InitiateShipmentCommand
+        {
+            OrderId = orderId,
+            BaseUrl = $"{Request.Scheme}://{Request.Host}"
+        };
 
         await _mediator.Send(command);
 
@@ -57,7 +60,10 @@ public class AdminOrdersController : ControllerBase
     [HttpPost("deliver/{orderId}")]
     public async Task<IActionResult> DeliverOrder(int orderId)
     {
-        var command = new DeliverOrderCommand { OrderId = orderId };
+        var command = new DeliverOrderCommand { 
+            OrderId = orderId,
+            BaseUrl = $"{Request.Scheme}://{Request.Host}"
+        };
 
         await _mediator.Send(command);
 
