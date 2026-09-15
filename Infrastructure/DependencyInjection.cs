@@ -94,8 +94,8 @@ public static class DependencyInjection
 
 
         // Email
-        services.Configure<SmtpSettings>(
-            configuration.GetSection("Smtp"));
+        // Регистрация
+        services.ConfigureOptions<SmtpSettingsConfigureOptions>();
         // фоновые сервисы for email
         // 1. Очередь - Singleton
         services.AddSingleton<IEmailBackgroundTaskQueue, EmailBackgroundTaskQueue>();
@@ -122,11 +122,15 @@ public static class DependencyInjection
 
 
         // location API
+        services.ConfigureOptions<IpInfoOptionsConfigureOptions>();
+
+        // ✅ Клиент создаётся через IOptions<IpInfoOptions>
         services.AddSingleton<IPinfoClient>(sp =>
         {
-            var config = sp.GetRequiredService<IConfiguration>();
+            var options = sp.GetRequiredService<IOptions<IpInfoOptions>>().Value;
+
             return new IPinfoClient.Builder()
-                .AccessToken(config["IpInfo:ApiKey"])
+                .AccessToken(options.ApiKey)  // ← уже из env variable!
                 .Build();
         });
 
