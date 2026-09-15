@@ -79,4 +79,17 @@ public class ReviewRepository : IReviewRepository
 
         return await pagination.ToListAsync(ct);
     }
+
+
+    public async Task<bool> HasUserReviewedProductAsync(
+        int userId,
+        int productId,
+        CancellationToken ct = default)
+    {
+        return await _dpcontext.Reviews
+            .AsNoTracking()
+            .AnyAsync(r => r.UserId == userId
+                        && r.ProductId == productId
+                        && r.Status == ReviewStatus.Approved, ct);
+    }
 }

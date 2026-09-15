@@ -24,9 +24,12 @@ public class Payment
 
     private Payment() { }
 
-    public Payment(int orderId, decimal amount, PaymentMethod method, string? transactionId = null)
+    public Payment(Order order, decimal amount, PaymentMethod method, string? transactionId = null)
     {
-        OrderId = orderId;
+        OrderId = order.Id;
+        UserId = order.UserId;
+        Order = order;
+
         Amount = amount;
         Method = method;
         Status = PaymentStatus.Pending;

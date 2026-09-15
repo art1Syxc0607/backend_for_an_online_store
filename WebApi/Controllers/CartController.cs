@@ -60,6 +60,19 @@ public class CartController : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("clear")]
+    public async Task<IActionResult> Clear()
+    {
+        var command = new ClearCartCommand
+        {
+            UserId = GetCurrentUserId()
+        };
+
+        await _mediator.Send(command);
+
+        return NoContent();
+    }
+
     // 1. Удалить весь товар из корзины
     [HttpDelete("items/{productId}")]
     public async Task<IActionResult> RemoveItemFromCart(int productId)

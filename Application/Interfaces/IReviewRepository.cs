@@ -19,4 +19,9 @@ public interface IReviewRepository
     Task<List<Review>> GetAllWithFiltersAsync(
            GetAllReviewsCommand command, CancellationToken ct);
 
+
+    Task<bool> HasUserReviewedProductAsync(
+        int userId,
+        int productId,
+        CancellationToken ct = default);
 }

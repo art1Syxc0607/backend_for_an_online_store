@@ -30,8 +30,9 @@ public class AdminOrdersController : ControllerBase
     {
         var command = new GetAllOrderOrFilteredCommand
         {
-            Date = dto.Date,
-            DateSpan = dto.DateSpan,
+            LastDayOfThePeriod = dto.LastDayOfThePeriod,
+            FirstDayOfThePeriod = dto.FirstDayOfThePeriod,
+
             Status = dto.OrderStatus,
             UserId = dto.UserID,
             OrderSortBy = dto.OrderBy,

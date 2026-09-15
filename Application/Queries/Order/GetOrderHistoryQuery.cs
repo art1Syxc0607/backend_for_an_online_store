@@ -13,8 +13,9 @@ public class GetOrderHistoryQuery : IRequest<List<OrderResponseDto>>
     public int UserId { get; init; }
 
     public OrderStatus? Status { get; set; }
-    public DateTime? Date { get; set; }
-    public DateSpan? DateSpan { get; set; }
+
+    public DateTime? LastDayOfThePeriod { get; set; }
+    public DateTime? FirstDayOfThePeriod { get; set; }
 
     public SortOrderBy? OrderSortBy { get; set; }
     public bool? SortDesc { get; set; } = true;

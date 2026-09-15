@@ -43,6 +43,15 @@ public class AddReviewCommandHandler : IRequestHandler<AddReviewCommand, int>
         if (!await _orderRepository.HasUserPurchasedProductAsync(command.UserId, command.ProductId, ct))
             throw new DomainException("User didn't recieved this product.");
 
+        // ✅ Проверка 2: не оставлял ли уже отзыв
+        if (await _reviewRepository.HasUserReviewedProductAsync(
+                command.UserId, command.ProductId, ct))
+        {
+            throw new DomainException(
+                "You have already reviewed this product. " +
+                "Only one review per product is allowed.");
+        }
+
         // 4. Создаём отзыв
         var review = new Domain.Entities.Review(user, product, command.Text, command.Rating, true);
 

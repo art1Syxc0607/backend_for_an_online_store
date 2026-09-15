@@ -57,14 +57,14 @@ public class OrderRepository : IOrderRepository
         .WhereIf(query.Status.HasValue, o => o.Status == query.Status)
         .Where(o => o.UserId == query.UserId);
 
-        if (query.Date.HasValue && query.DateSpan.HasValue)
+        if (query.LastDayOfThePeriod.HasValue && query.FirstDayOfThePeriod.HasValue)
         {
-            var referenceDate = query.Date.Value.Date;
-            var maxDaysDiff = GetDateSpan(query.DateSpan.Value, referenceDate);
+            var lastDayOfThePeriod = query.LastDayOfThePeriod.Value.Date;
+            var firstDayOfThePeriod = query.FirstDayOfThePeriod.Value.Date;
 
             queryToEf = queryToEf.Where(o =>
-                o.CreatedAt.Date >= referenceDate.Date.AddDays(-maxDaysDiff) &&
-                o.CreatedAt.Date <= referenceDate.Date.AddDays(maxDaysDiff)
+                o.CreatedAt.Date >= firstDayOfThePeriod &&
+                o.CreatedAt.Date <= lastDayOfThePeriod
             );
         }
 
@@ -169,18 +169,18 @@ public class OrderRepository : IOrderRepository
 
 
 
-        if (command.Date.HasValue && command.DateSpan.HasValue)
+        if (command.LastDayOfThePeriod.HasValue && command.FirstDayOfThePeriod.HasValue)
         {
-            var referenceDate = command.Date.Value.Date;
-            var maxDaysDiff = GetDateSpan(command.DateSpan.Value, referenceDate);
+            var lastDayOfThePeriod = command.LastDayOfThePeriod.Value.Date;
+            var firstDayOfThePeriod = command.FirstDayOfThePeriod.Value.Date;
 
             //query = query.Where(o =>
             //    EF.Functions.DateDiffDay(o.CreatedAt.Date, referenceDate) <= maxDays);
 
             // Для SQLite (используем EntityFunctions или вычисляем разницу)
             query = query.Where(o =>
-                o.CreatedAt.Date >= referenceDate.Date.AddDays(-maxDaysDiff) &&
-                o.CreatedAt.Date <= referenceDate.Date.AddDays(maxDaysDiff)
+                o.CreatedAt.Date >= firstDayOfThePeriod &&
+                o.CreatedAt.Date <= lastDayOfThePeriod
             );
         }
 

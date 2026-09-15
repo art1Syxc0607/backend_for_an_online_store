@@ -13,8 +13,10 @@ namespace Application.Commands.Admin.Order;
 public class GetAllOrderOrFilteredCommand : IRequest<List<OrderResponseDto>>
 {
     public OrderStatus? Status { get; set; }
-    public DateTime? Date { get; set; }
-    public DateSpan? DateSpan { get; set; }
+
+    public DateTime? LastDayOfThePeriod { get; set; }
+    public DateTime? FirstDayOfThePeriod { get; set; }
+
     public int? UserId { get; set; }
 
 

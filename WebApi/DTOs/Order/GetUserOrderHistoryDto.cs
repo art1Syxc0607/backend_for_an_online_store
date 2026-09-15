@@ -7,8 +7,9 @@ namespace WebApi.DTOs.Order;
 public class GetUserOrderHistoryDto
 {
     public OrderStatus? OrderStatus { get; set; }
-    public DateTime? Date { get; set; }
-    public DateSpan? DateSpan { get; set; }
+
+    public DateTime? LastDayOfThePeriod { get; set; }
+    public DateTime? FirstDayOfThePeriod { get; set; }
 
     public int? PageNumber { get; set; }
     public int? PageSize { get; set; }

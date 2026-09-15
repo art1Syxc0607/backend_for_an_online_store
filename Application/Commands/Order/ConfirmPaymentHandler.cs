@@ -26,6 +26,7 @@ public class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentCommand, Paym
 
     public ConfirmPaymentHandler(IPaymentRepository paymentRepository, IPaymentService paymentService,
         IOrderRepository orderRepository, ICacheService cacheService,
+        IUserRepository userRepository,
         ILogger<ConfirmPaymentHandler> logger, IEmailTemplateService emailTemplateService,
         IEmailBackgroundService emailBackgroundService,
         IUnitOfWork unitOfWork)
@@ -33,6 +34,7 @@ public class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentCommand, Paym
         _orderRepository = orderRepository;
         _paymentService = paymentService;
         _paymentRepository = paymentRepository;
+        _userRepository = userRepository;
         _cacheService = cacheService;
         _logger = logger;
         _emailTemplateService = emailTemplateService;

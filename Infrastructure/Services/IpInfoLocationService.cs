@@ -31,7 +31,7 @@ public class IpInfoLocationService : ILocationService
 
         try
         {
-            var response = await _client.IPApi.GetDetailsAsync(ip);
+            var response = await _client.IPApi.GetDetailsAsync(ip, ct);
 
             if (response == null)
             {

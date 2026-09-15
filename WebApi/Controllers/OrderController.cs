@@ -30,8 +30,9 @@ public class OrderController : ControllerBase
         {
             UserId = GetCurrentUserId(),
 
-            Date = dto.Date,
-            DateSpan = dto.DateSpan,
+            LastDayOfThePeriod = dto.LastDayOfThePeriod,
+            FirstDayOfThePeriod = dto.FirstDayOfThePeriod,
+
             Status = dto.OrderStatus,
 
             OrderSortBy = dto.OrderBy,
