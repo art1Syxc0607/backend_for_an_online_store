@@ -32,5 +32,9 @@ public interface IEmailTemplateService
         Order order,
         User user,
         string baseUrl);
-    
+
+
+    // ✅ Новый метод для Checkout
+    EmailDto CreateCheckoutEmail(Order order, User user, string baseUrl);
+
 }

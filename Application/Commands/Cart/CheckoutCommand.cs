@@ -9,4 +9,6 @@ public class CheckoutCommand : IRequest<int> // Id of an Order
     public int UserId { get; init; }
     [Required]
     public string ShippingAddress { get; init; }
+    [Required]
+    public string BaseUrl { get; init; }
 }

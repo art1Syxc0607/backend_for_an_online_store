@@ -38,7 +38,8 @@ public class CartController : ControllerBase
         var command = new CheckoutCommand
         {
             UserId = GetCurrentUserId(),
-            ShippingAddress = dto.ShippingAddress
+            ShippingAddress = dto.ShippingAddress,
+            BaseUrl = $"{Request.Scheme}://{Request.Host}" // ✅ Из HTTP-запроса
         };
 
         var id = await _mediator.Send(command);

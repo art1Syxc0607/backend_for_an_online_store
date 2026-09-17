@@ -52,7 +52,7 @@ public static class DependencyInjection
         services.AddHttpClient<ILocationService, IpInfoLocationService>();
 
 
-        services.AddScoped<IEmailService, EmailService>();
+        
         services.AddScoped<ILocationService, IpInfoLocationService>();
         services.AddScoped<IDeviceInfoService, DeviceInfoService>();
 
@@ -93,8 +93,9 @@ public static class DependencyInjection
         services.AddScoped<IPaymentService, PaymentService>();
 
 
-        // Email
+        // 1
         // Регистрация
+        services.AddScoped<IEmailService, EmailService>();
         services.ConfigureOptions<SmtpSettingsConfigureOptions>();
         // фоновые сервисы for email
         // 1. Очередь - Singleton

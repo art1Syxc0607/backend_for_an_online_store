@@ -1643,4 +1643,185 @@ public class EmailTemplateService : IEmailTemplateService
             IsHtml = true
         };
     }
+
+    // Infrastructure/Services/EmailTemplateService.cs
+    public EmailDto CreateCheckoutEmail(Order order, User user, string baseUrl)
+    {
+        var orderDetailsUrl = $"{baseUrl}/api/orders/{order.Id}";
+        var paymentUrl = $"{baseUrl}/api/orders/{order.Id}/initiate-payment";
+        var catalogUrl = $"{baseUrl}/api/products";
+        var supportUrl = $"{baseUrl}/api/auth/support";
+
+        // Формируем HTML таблицу с товарами
+        var itemsHtml = string.Join("", order.Items.Select(item => $@"
+            <tr>
+                <td style='padding: 10px; border: 1px solid #ddd;'>{item.ProductNameAtPurchase}</td>
+                <td style='padding: 10px; border: 1px solid #ddd; text-align: center;'>{item.Quantity}</td>
+                <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>{item.PriceAtPurchase:C}</td>
+                <td style='padding: 10px; border: 1px solid #ddd; text-align: right;'>{item.PriceAtPurchase * item.Quantity:C}</td>
+            </tr>
+        "));
+
+        // Определяем, есть ли уже оплата
+        var isPaid = order.Status == OrderStatus.Paid;
+        var statusText = isPaid ? "Оплачен" : "Ожидает оплаты";
+        var statusColor = isPaid ? "#28a745" : "#ffc107";
+        var statusIcon = isPaid ? "✅" : "⏳";
+
+        var subject = isPaid
+            ? $"✅ Заказ #{order.Id} оформлен и оплачен!"
+            : $"🛒 Заказ #{order.Id} оформлен! Ожидает оплаты";
+
+        var body = $@"
+            <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; color: #333; line-height: 1.6; }}
+                        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; text-align: center; }}
+                        .content {{ padding: 20px; max-width: 600px; margin: 0 auto; }}
+                        .order-details {{ background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0; }}
+                        .status-box {{ background-color: {(isPaid ? "#d4edda" : "#fff3cd")}; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid {statusColor}; }}
+                        .order-table {{ width: 100%; border-collapse: collapse; margin: 15px 0; }}
+                        .order-table th {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px; text-align: left; }}
+                        .order-table td {{ padding: 10px; border: 1px solid #ddd; }}
+                        .order-table tr:nth-child(even) {{ background-color: #f9f9f9; }}
+                        .total-row {{ font-weight: bold; background-color: #f2f2f2; }}
+                        .button {{
+                            display: inline-block;
+                            padding: 14px 35px;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            text-decoration: none;
+                            border-radius: 5px;
+                            margin: 15px 0;
+                            font-weight: bold;
+                        }}
+                        .button-pay {{
+                            display: inline-block;
+                            padding: 14px 35px;
+                            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+                            color: white;
+                            text-decoration: none;
+                            border-radius: 5px;
+                            margin: 15px 0;
+                            font-weight: bold;
+                        }}
+                        .button:hover, .button-pay:hover {{ opacity: 0.9; }}
+                        .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; text-align: center; }}
+                        .cart-icon {{ font-size: 48px; margin-bottom: 10px; }}
+                        .status-badge {{
+                            display: inline-block;
+                            padding: 6px 18px;
+                            background-color: {statusColor};
+                            color: {(isPaid ? "white" : "#333")};
+                            border-radius: 20px;
+                            font-weight: bold;
+                        }}
+                        .info-box {{
+                            background-color: #e7f3ff;
+                            padding: 15px;
+                            border-radius: 5px;
+                            margin: 15px 0;
+                            border-left: 4px solid #17a2b8;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class='header'>
+                        <div class='cart-icon'>🛒</div>
+                        <h1>Заказ оформлен!</h1>
+                        <p style='font-size: 18px; margin: 5px 0 0 0;'>Заказ #{order.Id}</p>
+                    </div>
+
+                    <div class='content'>
+                        <h2>Здравствуйте, {user.UserName}!</h2>
+
+                        <p>Спасибо за оформление заказа! Мы получили его и уже начали обработку.</p>
+
+                        <div class='status-box'>
+                            <p style='margin: 0; color: #333; font-size: 16px;'>
+                                {statusIcon} <strong>Статус заказа:</strong> 
+                                <span class='status-badge'>{statusText}</span>
+                            </p>
+                            {(isPaid
+                                    ? "<p style='margin: 10px 0 0 0; color: #155724;'>✅ Оплата получена! Заказ передан в обработку.</p>"
+                                    : "<p style='margin: 10px 0 0 0; color: #856404;'>⏳ Не забудьте оплатить заказ. После оплаты он будет передан в обработку.</p>")}
+                        </div>
+
+                        <div class='order-details'>
+                            <p><strong>📋 Номер заказа:</strong> #{order.Id}</p>
+                            <p><strong>📅 Дата оформления:</strong> {order.CreatedAt:dd.MM.yyyy HH:mm}</p>
+                            <p><strong>📍 Адрес доставки:</strong> {order.ShippingAddress}</p>
+                            <p><strong>💰 Сумма к оплате:</strong> <strong style='color: #667eea; font-size: 18px;'>{order.TotalAmount:C}</strong></p>
+                        </div>
+
+                        <h3>🛍️ Состав заказа:</h3>
+                        <table class='order-table'>
+                            <thead>
+                                <tr>
+                                    <th>Товар</th>
+                                    <th style='text-align: center;'>Кол-во</th>
+                                    <th style='text-align: right;'>Цена</th>
+                                    <th style='text-align: right;'>Сумма</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {itemsHtml}
+                            </tbody>
+                            <tfoot>
+                                <tr class='total-row'>
+                                    <td colspan='3' style='text-align: right; padding: 12px;'>
+                                        <strong>Итого:</strong>
+                                    </td>
+                                    <td style='text-align: right; padding: 12px;'>
+                                        <strong>{order.TotalAmount:C}</strong>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        {(!isPaid ? $@"
+                        <div style='text-align: center;'>
+                            <a href='{paymentUrl}' class='button-pay'>💳 Оплатить заказ</a>
+                        </div>
+                        " : "")}
+
+                        <div style='text-align: center;'>
+                            <a href='{orderDetailsUrl}' class='button'>📋 Посмотреть детали заказа</a>
+                        </div>
+
+                        <div class='info-box'>
+                            <p style='margin: 0; color: #0c5460; font-size: 14px;'>
+                                💡 <strong>Что дальше?</strong>
+                                {(isPaid
+                                        ? "Мы передадим заказ в обработку и сообщим, когда он будет отправлен."
+                                        : "После оплаты заказ будет передан в обработку. Как только он будет отправлен, вы получите уведомление.")}
+                            </p>
+                        </div>
+
+                        <div style='background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;'>
+                            <p style='margin: 0; color: #666; font-size: 13px;'>
+                                📧 Если у вас есть вопросы, свяжитесь с нашей 
+                                <a href='{supportUrl}' style='color: #667eea;'>службой поддержки</a>, 
+                                указав номер заказа: <strong>#{order.Id}</strong>.
+                            </p>
+                        </div>
+
+                        <div class='footer'>
+                            <p>Это автоматическое сообщение. Пожалуйста, не отвечайте на него.</p>
+                            <p>© {DateTime.Now.Year} Интернет-магазин. Все права защищены.</p>
+                        </div>
+                    </div>
+                </body>
+            </html>
+        ";
+
+        return new EmailDto
+        {
+            To = user.Email,
+            Subject = subject,
+            Body = body,
+            IsHtml = true
+        };
+    }
 }
