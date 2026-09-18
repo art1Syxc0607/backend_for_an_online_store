@@ -44,7 +44,17 @@ public class GetMostPopularProductsForThePeriodHandler : IRequestHandler<GetMost
             throw new DomainException("firstDate can't be later than lastDate");
         }
 
-        var cacheKey = $"products:popular:{command.FirstDayOfThePriod}_{command.LastDayOfThePriod:yyyyMMdd}";
+        var pageNumber = command.PageNumber ?? 1;
+        var pageSize = command.PageSize ?? 20;
+        var firstDay = command.FirstDayOfThePriod.Date;  // только дата, без времени
+        var lastDay = command.LastDayOfThePriod.Date;
+
+        // 3. ✅ Формирование ключа с явным форматом
+        var cacheKey = $"products:popular:" +
+                       $"{firstDay:yyyyMMdd}_" +
+                       $"{lastDay:yyyyMMdd}_" +
+                       $"p{pageNumber}_" +
+                       $"s{pageSize}";
 
         var cached = await _cacheService.GetAsync<List<PopularProductDto>>(cacheKey);
         if (cached != null)
@@ -53,8 +63,28 @@ public class GetMostPopularProductsForThePeriodHandler : IRequestHandler<GetMost
 
         var result = await _productRepository.GetMostPopularProductsForThePeriod(command, ct);
 
-        await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
+        var ttl = GetCacheTtl(command.LastDayOfThePriod);
+        if (ttl > TimeSpan.Zero)
+        {
+            await _cacheService.SetAsync(cacheKey, result, ttl);
+        }
 
         return result;
+    }
+
+    private static TimeSpan GetCacheTtl(DateTime lastDay)
+    {
+        var now = DateTime.UtcNow;
+
+        // ✅ Если период уже закончился (прошлое) — кешируем дольше
+        if (lastDay.Date < now.Date)
+            return TimeSpan.FromHours(24);
+
+        // ✅ Если период включает сегодня — кешируем меньше
+        if (lastDay.Date == now.Date)
+            return TimeSpan.FromMinutes(15);
+
+        // ✅ Будущий период — не кешируем
+        return TimeSpan.Zero;
     }
 }
