@@ -35,19 +35,19 @@ public class GetMostPopularProductsForThePeriodHandler : IRequestHandler<GetMost
     public async Task<List<PopularProductDto>> Handle(GetMostPopularProductsForThePeriodCommand command,
         CancellationToken ct = default)
     {
-        if (command.FirstDayOfThePriod > command.LastDayOfThePriod)
+        if (command.FirstDayOfThePeriod > command.LastDayOfThePeriod)
         {
             _logger.LogWarning("firstDate - {command.FirstDayOfThePriod}, " +
-                "is later than lastDate - {command.LastDayOfThePriod}.", command.FirstDayOfThePriod,
-                 command.LastDayOfThePriod);
+                "is later than lastDate - {command.LastDayOfThePriod}.", command.FirstDayOfThePeriod,
+                 command.LastDayOfThePeriod);
 
             throw new DomainException("firstDate can't be later than lastDate");
         }
 
         var pageNumber = command.PageNumber ?? 1;
         var pageSize = command.PageSize ?? 20;
-        var firstDay = command.FirstDayOfThePriod.Date;  // только дата, без времени
-        var lastDay = command.LastDayOfThePriod.Date;
+        var firstDay = command.FirstDayOfThePeriod.Date;  // только дата, без времени
+        var lastDay = command.LastDayOfThePeriod.Date;
 
         // 3. ✅ Формирование ключа с явным форматом
         var cacheKey = $"products:popular:" +
@@ -63,7 +63,7 @@ public class GetMostPopularProductsForThePeriodHandler : IRequestHandler<GetMost
 
         var result = await _productRepository.GetMostPopularProductsForThePeriod(command, ct);
 
-        var ttl = GetCacheTtl(command.LastDayOfThePriod);
+        var ttl = GetCacheTtl(command.LastDayOfThePeriod);
         if (ttl > TimeSpan.Zero)
         {
             await _cacheService.SetAsync(cacheKey, result, ttl);

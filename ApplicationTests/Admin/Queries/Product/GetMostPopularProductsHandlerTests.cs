@@ -41,7 +41,8 @@ public class GetMostPopularProductsHandlerTests
             .ReturnsAsync(popularProducts);
 
         var cacheServiceMock = new Mock<ICacheService>();
-        cacheServiceMock.Setup(x => x.GetAsync<List<PopularProductDto>>(It.IsAny<string>()))
+        cacheServiceMock.Setup(x => x.GetAsync<List<PopularProductDto>>(It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
             .ReturnsAsync((List<PopularProductDto>?)null);
 
         var handler = new GetMostPopularProductsForThePeriodHandler(
@@ -53,8 +54,8 @@ public class GetMostPopularProductsHandlerTests
 
         var command = new GetMostPopularProductsForThePeriodCommand
         {
-            FirstDayOfThePriod = DateTime.Today.AddDays(-7),
-            LastDayOfThePriod = DateTime.Today
+            FirstDayOfThePeriod = DateTime.Today.AddDays(-7),
+            LastDayOfThePeriod = DateTime.Today
         };
 
         // Act
@@ -69,7 +70,7 @@ public class GetMostPopularProductsHandlerTests
         cacheServiceMock.Verify(x => x.SetAsync(
             It.IsAny<string>(),
             It.IsAny<List<PopularProductDto>>(),
-            It.IsAny<TimeSpan?>()), Times.Once);
+            It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -82,8 +83,9 @@ public class GetMostPopularProductsHandlerTests
         };
 
         var cacheServiceMock = new Mock<ICacheService>();
-        cacheServiceMock.Setup(x => x.GetAsync<List<PopularProductDto>>(It.IsAny<string>()))
-            .ReturnsAsync(cachedData);
+        cacheServiceMock.Setup(x => x.GetAsync<List<PopularProductDto>>(It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<PopularProductDto>?)null);
 
         var handler = new GetMostPopularProductsForThePeriodHandler(
             Mock.Of<IProductRepository>(),
@@ -93,8 +95,8 @@ public class GetMostPopularProductsHandlerTests
 
         var command = new GetMostPopularProductsForThePeriodCommand
         {
-            FirstDayOfThePriod = DateTime.Today.AddDays(-7),
-            LastDayOfThePriod = DateTime.Today
+            FirstDayOfThePeriod = DateTime.Today.AddDays(-7),
+            LastDayOfThePeriod = DateTime.Today
         };
 
         // Act
@@ -106,7 +108,7 @@ public class GetMostPopularProductsHandlerTests
         cacheServiceMock.Verify(x => x.SetAsync(
             It.IsAny<string>(),
             It.IsAny<List<PopularProductDto>>(),
-            It.IsAny<TimeSpan?>()), Times.Never);
+            It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     //done 

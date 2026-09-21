@@ -60,8 +60,8 @@ public class AdminDashboardController : ControllerBase
     {
         var command = new GetMostPopularProductsForThePeriodCommand
         {          
-            LastDayOfThePriod = lastDayOfThePriod,
-            FirstDayOfThePriod = firstDayOfThePriod,
+            LastDayOfThePeriod = lastDayOfThePriod,
+            FirstDayOfThePeriod = firstDayOfThePriod,
             PageNumber = pageNumber,
             PageSize = pageSize
         };

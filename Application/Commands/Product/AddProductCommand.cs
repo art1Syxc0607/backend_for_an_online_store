@@ -1,10 +1,11 @@
-﻿using MediatR;
-using Application.DTOs.File;
+﻿using Application.DTOs.File;
+using Application.Interfaces.Caching;
+using MediatR;
 //using Application.DTOs.Product;
 
 namespace Application.Commands.Product;
 
-public class AddProductCommand : IRequest<int>
+public class AddProductCommand : IRequest<int>, ICacheInvalidatingCommand
 {
     public string Name { get; init; }
     public decimal Price { get; init; }
@@ -12,9 +13,14 @@ public class AddProductCommand : IRequest<int>
     public int StockQuantity { get; init; }
     public int? CategoryId { get; init; }
     public string Description { get; init; }
-    //public Stream? ImageStream { get; init; }     // ← фото как поток
-    //public string? ImageFileName { get; init; }
-    //public string? ImageContentType { get; init; }
 
     public List<FileUploadDto>? Files { get; init; }
+
+
+    // ✅ Инвалидируем весь кэш товаров
+    public IEnumerable<string> CachePrefixesToInvalidate => new[]
+    {
+        CacheKeys.ProductsPrefix,
+        CacheKeys.PopularProductsPrefix
+    };
 }

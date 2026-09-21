@@ -1,6 +1,9 @@
-﻿using Infrastructure.Services;
-using Microsoft.Extensions.Caching.Memory;
+﻿using Application.Commands.Admin.Dashboard;
 using FluentAssertions;
+using Infrastructure.Services;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 namespace ApplicationTests.Services;
@@ -13,7 +16,8 @@ public class MemoryCacheServiceTests
     public MemoryCacheServiceTests()
     {
         _memoryCache = new MemoryCache(new MemoryCacheOptions());
-        _cacheService = new MemoryCacheService(_memoryCache);
+        _cacheService = new MemoryCacheService(_memoryCache, 
+            Mock.Of<ILogger<MemoryCacheService>>());
     }
 
     [Fact]

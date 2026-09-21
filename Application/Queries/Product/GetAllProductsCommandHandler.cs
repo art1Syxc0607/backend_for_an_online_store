@@ -1,6 +1,7 @@
 ﻿using Application.DTOs.Product;
 using Application.Interfaces;
 using MediatR;
+using AutoMapper;
 using Domain;
 using System;
 using System.Collections.Generic;
@@ -14,13 +15,17 @@ namespace Application.Queries.Product;
 public class GetAllProductsCommandHandler: IRequestHandler<GetAllProductsCommand, List<ProductResponseDto>>
 {
     private readonly IProductRepository _productRepository;
+    private readonly IMapper _mapper;
     private readonly ICacheService _cacheService;
 
     private const string CacheKey = "products:all";
 
-    public GetAllProductsCommandHandler(IProductRepository productRepository, ICacheService cacheService)
+    public GetAllProductsCommandHandler(IProductRepository productRepository, 
+        IMapper mapper,
+        ICacheService cacheService)
     {
         _productRepository = productRepository;
+        _mapper = mapper;
         _cacheService = cacheService;
     }
         
@@ -40,28 +45,8 @@ public class GetAllProductsCommandHandler: IRequestHandler<GetAllProductsCommand
         if (!products.Any())
             return new List<ProductResponseDto>();
 
-        var result = products.Select(p => new ProductResponseDto
-        {
-            Id = p.Id,
-            Name = p.Name,
-            Description = p.Description,
-            Price = p.Price,
-            StockQuantity = p.StockQuantity,
-            ReservedQuantity = p.ReservedQuantity,
-
-            AverageRating = p.GetAverageRating(),
-            CountOfReviews = p.Reviews.Count,
-
-            AmountOfRecieved = p.AmountOfReceived,
-            AmountOfPaid = p.AmountOfPaid,
-            AmountOfCanceled = p.AmountOfCanceled,
-            CountOfOrdersContainThisProduct = p.OrderItems.Count(),
-            ImageUrls = p.ImageUrls.ToList(),
-            VideoUrls = p.VideoUrls.ToList(),
-            CategoryId = p.CategoryId,
-            CreatedAt = p.CreatedAt,
-            UpdatedAt = p.UpdatedAt,
-        }).OrderByDescending(dto => dto.CountOfOrdersContainThisProduct).ToList();
+        var result = _mapper.Map<List<ProductResponseDto>>(products)
+            .OrderByDescending(dto => dto.CountOfOrdersContainThisProduct).ToList();
 
         // Кэшируем на 10 минут
         await _cacheService.SetAsync(CacheKey, result, TimeSpan.FromMinutes(10));

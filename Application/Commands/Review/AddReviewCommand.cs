@@ -1,5 +1,6 @@
-﻿using MediatR;
-using Application.DTOs.File;
+﻿using Application.DTOs.File;
+using Application.Interfaces.Caching;
+using MediatR;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +15,16 @@ public class AddReviewCommand : IRequest<int>
     public int ProductId { get; init; }
     public string Text { get; init; }
     public int Rating { get; init; } // 1-5 stars
-    //public bool IsVerifiedPurchase { get; private set; }
 
     public List<FileUploadDto>? Files { get; init; }
+
+
+    // ✅ Инвалидируем отзывы товара + сам товар (рейтинг изменился)
+    public IEnumerable<string> CachePrefixesToInvalidate => new[]
+    {
+        CacheKeys.ReviewsForProduct(ProductId),
+        CacheKeys.Product(ProductId),
+        CacheKeys.ProductsPrefix,  // список товаров (рейтинг)
+        CacheKeys.PopularProductsPrefix
+    };
 }

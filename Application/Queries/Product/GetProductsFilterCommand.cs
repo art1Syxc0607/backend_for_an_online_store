@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.Product;
 using Application.Enums;
+using Application.Interfaces.Caching;
 using MediatR;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Application.Queries.Product;
 
-public class GetProductsFilterCommand : IRequest<List<ProductResponseDto>>
+public class GetProductsFilterCommand : IRequest<List<ProductResponseDto>>, ICacheableQuery
 {
     public string? SearchText { get; init; }
     public int? CategoryId { get; init; }
@@ -22,9 +23,28 @@ public class GetProductsFilterCommand : IRequest<List<ProductResponseDto>>
     public bool SortDesc { get; init; } = true;
     //public bool? OnlyOutOfUserCart { get; init; } = false;
 
-    public string GetCacheKey()
+    // ✅ Кэш-ключ
+    public string CacheKey
     {
-        return $"{CategoryId}_{SearchText}_{PriceLimitMin}_{PriceLimitMax}_" +
-            $"{OnlyAvailable}_{PageNumber}_{PageSize}_{SortBy}_{SortDesc}";
+        get
+        {
+            var parts = new List<string>
+            {
+                CacheKeys.ProductsPrefix + "list",
+                $"p{PageNumber}",
+                $"s{PageSize}"
+            };
+
+            if (CategoryId.HasValue) parts.Add($"cat{CategoryId}");
+            if (PriceLimitMin.HasValue) parts.Add($"min{PriceLimitMin}");
+            if (PriceLimitMax.HasValue) parts.Add($"max{PriceLimitMax}");
+            if (!string.IsNullOrWhiteSpace(SearchText)) parts.Add($"q{SearchText}");
+            parts.Add($"sort{SortBy}_{(SortDesc ? "desc" : "asc")}");
+
+            return string.Join(":", parts);
+        }
     }
+
+    // ✅ TTL — 5 минут
+    public TimeSpan? CacheDuration => TimeSpan.FromMinutes(5);
 }

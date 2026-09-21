@@ -107,8 +107,8 @@ public class ProductRepository : IProductRepository
     public async Task<List<PopularProductDto>> GetMostPopularProductsForThePeriod(
         GetMostPopularProductsForThePeriodCommand command, CancellationToken ct = default)
     {
-        var endDate = command.LastDayOfThePriod.Date;
-        var startDate = command.FirstDayOfThePriod.Date;
+        var endDate = command.LastDayOfThePeriod.Date;
+        var startDate = command.FirstDayOfThePeriod.Date;
         var pageNumber = command.PageNumber ?? 1;
         var pageSize = command.PageSize ?? 20;
 

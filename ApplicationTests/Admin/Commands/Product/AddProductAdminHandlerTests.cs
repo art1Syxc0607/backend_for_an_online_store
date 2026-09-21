@@ -1,6 +1,7 @@
 ﻿using Application.Commands.Product;
 using Application.DTOs.File;
 using Application.Interfaces;
+using Application.Interfaces.Caching;
 using Castle.Core.Logging;
 using Domain.Entities;
 using Domain.Exceptions;
@@ -56,7 +57,7 @@ public class AddProductAdminHandlerTests
         result.Should().BeGreaterThan(0);
         productRepoMock.Verify(x => x.AddProductAsync(It.IsAny<Domain.Entities.Product>(), It.IsAny<CancellationToken>()), Times.Once);
         unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        cacheServiceMock.Verify(x => x.RemoveByPrefix("products:"), Times.Once);
+        cacheServiceMock.Verify(x => x.RemoveByPrefix(CacheKeys.ProductsPrefix, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

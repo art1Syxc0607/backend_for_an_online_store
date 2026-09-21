@@ -1,4 +1,5 @@
 ﻿using Application.Commands.Cart;
+using Application.Interfaces.Caching;
 using MediatR;
 using System;
 using System.Collections.Generic;
@@ -17,5 +18,12 @@ public class AddToCartCommand : IRequest
     public int Quantity { get; set; }
     [Required]
     public int UserId { get; set; }
+
+
+    // ✅ Инвалидируем только корзину пользователя
+    public IEnumerable<string> CachePrefixesToInvalidate => new[]
+    {
+        CacheKeys.Cart(UserId)  // ← конкретный ключ
+    };
 
 }
