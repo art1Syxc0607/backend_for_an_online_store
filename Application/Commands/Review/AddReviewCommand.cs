@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Application.Commands.Review;
 
-public class AddReviewCommand : IRequest<int>
+public class AddReviewCommand : IRequest<int>, ICacheInvalidatingCommand
 {
     public int UserId { get; init; }
     public int ProductId { get; init; }

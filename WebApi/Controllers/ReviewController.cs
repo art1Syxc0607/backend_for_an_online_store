@@ -1,8 +1,9 @@
 ﻿using Application.Commands.Product;
 using Application.Commands.Review;
 using Application.Commands.User;
-using Application.DTOs.Review;
 using Application.DTOs.File;
+using Application.DTOs.Product;
+using Application.DTOs.Review;
 using Application.Queries.Review;
 using Domain.Entities;
 using MediatR;
@@ -10,7 +11,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using WebApi.DTOs.Review;
-using Application.DTOs.Product;
 
 namespace WebApi.Controllers;
 
@@ -38,14 +38,28 @@ public class ReviewController : Controller
     }
 
     [HttpGet("{productId}")]
-    public async Task<ActionResult<List<ReviewResponseDto>>> GetProductReviews(int productId)
+    public async Task<ActionResult<List<ReviewResponseDto>>> GetProductReviews(
+        int productId,
+        [FromQuery] GetProductReviewsDto dto,
+        CancellationToken ct)
     {
-        var command = new GetProductReviewsCommand
+        var query = new GetProductReviewsQuery
         {
-            ProductId = productId
+            ProductId = productId,
+            Rating = dto.Rating,
+            MinRating = dto.MinRating,
+            HasMedia = dto.HasMedia,
+            IsVerifiedPurchase = dto.IsVerifiedPurchase,
+            HasAdminResponse = dto.HasAdminResponse,
+            FromDate = dto.FromDate,
+            ToDate = dto.ToDate,
+            SortBy = dto.SortBy,
+            Descending = dto.Descending,
+            PageNumber = dto.PageNumber,
+            PageSize = dto.PageSize
         };
 
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(query);
 
         return result;
     }

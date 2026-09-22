@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Domain.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,7 +13,7 @@ public static class CacheKeys
     // Префиксы (для инвалидации)
     // ═══════════════════════════════════════════
 
-    public const string ProductsPrefix = "products:";
+    public const string ProductsPrefix = "products:"; // для удаления всех товаров
     public const string PopularProductsPrefix = "products:popular:";
     public const string CategoriesPrefix = "categories:";
     public const string CartPrefix = "cart:";

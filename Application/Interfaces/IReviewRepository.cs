@@ -1,5 +1,6 @@
 ﻿using Application.Commands.Admin.Review;
-using Application.Enums;
+using Application.Common;
+using Application.Queries.Review;
 using Domain.Entities;
 using Domain.Enums;
 using System;
@@ -15,7 +16,7 @@ public interface IReviewRepository
     Task AddReviewAsync(Review review, CancellationToken ct = default);
     Task<Review?> GetReviewByIdAsync(int id, CancellationToken ct = default);
     Task<List<Review>> GetUserReviews(int userId, CancellationToken ct = default);
-    Task<List<Review>> GetProductReviews(int productId, CancellationToken ct = default);
+    Task<PagedResult<Review>> GetProductReviewsAsync(GetProductReviewsQuery query, CancellationToken ct = default);
     Task<List<Review>> GetAllWithFiltersAsync(
            GetAllReviewsCommand command, CancellationToken ct);
 

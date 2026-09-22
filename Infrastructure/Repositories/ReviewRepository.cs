@@ -1,6 +1,8 @@
 ﻿using Application.Commands.Admin.Review;
+using Application.Common;
 using Application.Enums;
 using Application.Interfaces;
+using Application.Queries.Review;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Data;
@@ -12,6 +14,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace Infrastructure.Repositories;
 
@@ -41,12 +44,117 @@ public class ReviewRepository : IReviewRepository
             .FirstOrDefaultAsync(r => r.Id == id, ct);
     }
 
-    public async Task<List<Review>?> GetProductReviews(int productId, CancellationToken ct)
+    public async Task<PagedResult<Review>> GetProductReviewsAsync(GetProductReviewsQuery query, CancellationToken ct)
     {
-        return await _dpcontext.Reviews
-            .Include(r => r.User)  // ← Загружаем пользователя!
-            .Where(r => r.ProductId == productId)
+        // ═══════════════════════════════════════════
+        // 1. Базовый запрос
+        // ═══════════════════════════════════════════
+        var reviewsQuery = _dpcontext.Reviews
+            .AsNoTracking()
+            .Include(r => r.User)
+            .Include(r => r.Product)
+            .Where(r => r.ProductId == query.ProductId)
+            .Where(r => r.Status == ReviewStatus.Approved);  // ← только одобренные
+
+        // ═══════════════════════════════════════════
+        // 2. Фильтры
+        // ═══════════════════════════════════════════
+
+        // Точный рейтинг
+        if (query.Rating.HasValue)
+        {
+            reviewsQuery = reviewsQuery
+                .Where(r => r.Rating == query.Rating.Value);
+        }
+
+        // Минимальный рейтинг
+        if (query.MinRating.HasValue)
+        {
+            reviewsQuery = reviewsQuery
+                .Where(r => r.Rating >= query.MinRating.Value);
+        }
+
+        // Есть медиа (фото/видео)
+        if (query.HasMedia.HasValue)
+        {
+            if (query.HasMedia.Value)
+            {
+                reviewsQuery = reviewsQuery
+                    .Where(r => r.ImageUrls.Any() || r.VideoUrls.Any());
+            }
+            else
+            {
+                reviewsQuery = reviewsQuery
+                    .Where(r => !r.ImageUrls.Any() && !r.VideoUrls.Any());
+            }
+        }
+
+        // Подтверждённая покупка
+        if (query.IsVerifiedPurchase.HasValue)
+        {
+            reviewsQuery = reviewsQuery
+                .Where(r => r.IsVerifiedPurchase == query.IsVerifiedPurchase.Value);
+        }
+
+        // Есть ответ администратора
+        if (query.HasAdminResponse.HasValue)
+        {
+            if (query.HasAdminResponse.Value)
+            {
+                reviewsQuery = reviewsQuery
+                    .Where(r => !string.IsNullOrEmpty(r.AdminResponse));
+            }
+            else
+            {
+                reviewsQuery = reviewsQuery
+                    .Where(r => string.IsNullOrEmpty(r.AdminResponse));
+            }
+        }
+
+        // Диапазон дат
+        if (query.FromDate.HasValue)
+        {
+            reviewsQuery = reviewsQuery
+                .Where(r => r.CreatedAt >= query.FromDate.Value);
+        }
+
+        if (query.ToDate.HasValue)
+        {
+            reviewsQuery = reviewsQuery
+                .Where(r => r.CreatedAt <= query.ToDate.Value);
+        }
+
+        // ═══════════════════════════════════════════
+        // 3. Общее количество (ДО пагинации)
+        // ═══════════════════════════════════════════
+        var totalCount = await reviewsQuery.CountAsync(ct);
+
+        // ═══════════════════════════════════════════
+        // 4. Сортировка
+        // ═══════════════════════════════════════════
+        reviewsQuery = query.SortBy switch
+        {
+            ReviewSortBy.Rating => query.Descending
+                ? reviewsQuery.OrderByDescending(r => r.Rating)
+                               .ThenByDescending(r => r.CreatedAt)
+                : reviewsQuery.OrderBy(r => r.Rating)
+                               .ThenBy(r => r.CreatedAt),
+
+            ReviewSortBy.DateOfCreation or _ => query.Descending
+                ? reviewsQuery.OrderByDescending(r => r.CreatedAt)
+                : reviewsQuery.OrderBy(r => r.CreatedAt)
+        };
+
+        // ═══════════════════════════════════════════
+        // 5. Пагинация
+        // ═══════════════════════════════════════════
+        var items = await reviewsQuery
+            .Skip((query.PageNumber - 1) * query.PageSize)
+            .Take(query.PageSize)
             .ToListAsync(ct);
+
+        return PagedResult<Review>.Create(
+            items, totalCount, query.PageNumber, query.PageSize);
     }
 
     public async Task AddReviewAsync(Review review, CancellationToken ct)
