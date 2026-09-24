@@ -3,7 +3,7 @@ using MediatR;
 
 namespace Application.Commands.Review;
 
-public class GetUserReviewsCommand : IRequest<List<ReviewResponseDto>>
+public class GetUserReviewsQuery : IRequest<List<ReviewResponseDto>>
 {
     public int UserId { get; set; }
 }

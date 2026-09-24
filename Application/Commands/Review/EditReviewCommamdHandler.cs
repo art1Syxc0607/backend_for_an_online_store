@@ -1,38 +1,85 @@
-﻿using Application.Interfaces;
+﻿// Application/Commands/Review/EditReviewCommandHandler.cs
+using Application.Common.Caching;
+using Application.Interfaces;
+using Application.Interfaces.Caching;
 using Domain.Exceptions;
 using MediatR;
-using Microsoft.IdentityModel.Tokens.Experimental;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Commands.Review;
 
-public class EditReviewCommamdHandler : IRequestHandler<EditReviewCommamd>
+public class EditReviewCommandHandler
+    : IRequestHandler<EditReviewCommamd>
 {
     private readonly IReviewRepository _reviewRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<EditReviewCommandHandler> _logger;
 
-    public EditReviewCommamdHandler(IReviewRepository reviewRepository, IUnitOfWork unitOfWork)
+    public EditReviewCommandHandler(
+        IReviewRepository reviewRepository,
+        IUnitOfWork unitOfWork,
+        ILogger<EditReviewCommandHandler> logger)
     {
         _reviewRepository = reviewRepository;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
-    public async Task Handle(EditReviewCommamd commamd, CancellationToken ct)
+    public async Task Handle(
+        EditReviewCommamd command,
+        CancellationToken ct)
     {
+        // 1. Загружаем Review
+        var review = await _reviewRepository.GetReviewByIdAsync(
+            command.ReviewId, ct);
 
-        var review = await _reviewRepository.GetReviewByIdAsync(commamd.ReviewId, ct);
+        if (review == null)
+            throw new DomainException("Review not found");
 
-        if (review == null) throw new ArgumentNullException(nameof(review));
+        // 2. Проверяем владельца
+        if (review.UserId != command.UserId)
+            throw new UnauthorizedAccessException(
+                "You can only edit your own reviews");
 
-        if (review.UserId != commamd.UserId) throw new DomainException("The review don't belong to this USer");
+        // 3. Сохраняем ProductId ДО изменений
+        var productId = review.ProductId;
 
-        review.Update(commamd.NewText, commamd.NewRating);
+        // 4. Обновляем (только если есть изменения)
+        var hasChanges = false;
 
-        await _unitOfWork.SaveChangesAsync();
+        if (!string.IsNullOrWhiteSpace(command.NewText)
+            && command.NewText != review.Text)
+        {
+            review.Update(newText: command.NewText);
+            hasChanges = true;
+        }
 
+        if (command.NewRating.HasValue
+            && command.NewRating != review.Rating)
+        {
+            if (command.NewRating < 1 || command.NewRating > 5)
+                throw new DomainException("Rating must be 1-5");
+
+            review.Update(newRating: command.NewRating.Value);
+            hasChanges = true;
+        }
+
+        if (!hasChanges)
+        {
+            _logger.LogInformation(
+                "No changes for review {ReviewId}", review.Id);
+            return;
+        }
+
+        // 5. Сохраняем
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        // 6. ✅ Указываем префиксы для инвалидации
+        command.AddCachePrefix(CacheKeys.ReviewsForProduct(productId));
+        command.AddCachePrefix(CacheKeys.Product(productId));
+        command.AddCachePrefix(CacheKeys.ProductsPrefix);
+
+        _logger.LogInformation(
+            "Review {ReviewId} edited successfully", review.Id);
     }
 }

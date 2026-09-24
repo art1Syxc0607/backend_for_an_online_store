@@ -1,9 +1,10 @@
-﻿using System.Net;
-using System.Net.Mail;
-using Application.DTOs.Email;
+﻿using Application.DTOs.Email;
 using Application.Interfaces;
-using Microsoft.Extensions.Configuration;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MimeKit;
 
 namespace Infrastructure.Services;
 
@@ -12,13 +13,19 @@ public class EmailService : IEmailService
     private readonly SmtpSettings _smtpSettings;
     private readonly ILogger<EmailService> _logger;
 
-    public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
+    public EmailService(
+        IOptions<SmtpSettings> smtpSettings,
+        ILogger<EmailService> logger)
     {
-        _smtpSettings = configuration.GetSection("Smtp").Get<SmtpSettings>()!;
+        _smtpSettings = smtpSettings.Value;
         _logger = logger;
     }
 
-    public async Task SendEmailAsync(string to, string subject, string body, bool isHtml = true)
+    public async Task SendEmailAsync(
+        string to,
+        string subject,
+        string body,
+        bool isHtml = true)
     {
         await SendEmailAsync(new EmailDto
         {
@@ -33,34 +40,82 @@ public class EmailService : IEmailService
     {
         try
         {
-            using var client = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port)
+            // 1. Создаём сообщение
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(
+                _smtpSettings.FromName,
+                _smtpSettings.FromEmail));
+            message.To.Add(MailboxAddress.Parse(dto.To));
+            message.Subject = dto.Subject;
+
+            // 2. Тело письма
+            var bodyBuilder = new BodyBuilder();
+            if (dto.IsHtml)
+                bodyBuilder.HtmlBody = dto.Body;
+            else
+                bodyBuilder.TextBody = dto.Body;
+
+            message.Body = bodyBuilder.ToMessageBody();
+
+            // 3. Подключаемся к SMTP
+            using var client = new SmtpClient();
+
+            // ✅ Определяем тип шифрования по порту
+            var secureSocketOptions = _smtpSettings.Port switch
             {
-                EnableSsl = _smtpSettings.EnableSsl,
-                Credentials = new NetworkCredential(_smtpSettings.Username, _smtpSettings.Password),
-                Timeout = 10000 // 10 секунд
+                465 => SecureSocketOptions.SslOnConnect,    // SSL (устаревший)
+                587 => SecureSocketOptions.StartTls,        // STARTTLS (рекомендуется)
+                25 => SecureSocketOptions.StartTlsWhenAvailable,
+                _ => SecureSocketOptions.Auto
             };
 
-            using var message = new MailMessage
-            {
-                From = new MailAddress(_smtpSettings.FromEmail, _smtpSettings.FromName),
-                Subject = dto.Subject,
-                Body = dto.Body,
-                IsBodyHtml = dto.IsHtml
-            };
+            _logger.LogDebug(
+                "Connecting to SMTP {Host}:{Port} with {Security}",
+                _smtpSettings.Host,
+                _smtpSettings.Port,
+                secureSocketOptions);
 
-            message.To.Add(dto.To);
+            await client.ConnectAsync(
+                _smtpSettings.Host,
+                _smtpSettings.Port,
+                secureSocketOptions);
 
-            await client.SendMailAsync(message);
+            // 4. Аутентификация
+            await client.AuthenticateAsync(
+                _smtpSettings.Username,
+                _smtpSettings.Password);
+
+            // 5. Отправка
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+
             _logger.LogInformation("✅ Email sent to {To}", dto.To);
         }
-        catch (SmtpException smtpEx)
+        catch (AuthenticationException ex)
         {
-            _logger.LogError(smtpEx, "SMTP error sending email to {To}: {StatusCode}", dto.To, smtpEx.StatusCode);
-            throw new Exception($"SMTP error: {smtpEx.Message}", smtpEx);
+            _logger.LogError(ex,
+                "❌ SMTP authentication failed for {To}. " +
+                "Check Username/Password (App Password for Gmail)",
+                dto.To);
+            throw;
+        }
+        catch (SmtpCommandException ex)
+        {
+            _logger.LogError(ex,
+                "❌ SMTP command error for {To}: {StatusCode} - {Message}",
+                dto.To, ex.StatusCode, ex.Message);
+            throw;
+        }
+        catch (SmtpProtocolException ex)
+        {
+            _logger.LogError(ex,
+                "❌ SMTP protocol error for {To}: {Message}",
+                dto.To, ex.Message);
+            throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send email to {To}", dto.To);
+            _logger.LogError(ex, "❌ Failed to send email to {To}", dto.To);
             throw;
         }
     }

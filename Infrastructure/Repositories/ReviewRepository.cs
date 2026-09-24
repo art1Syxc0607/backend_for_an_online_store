@@ -80,12 +80,12 @@ public class ReviewRepository : IReviewRepository
             if (query.HasMedia.Value)
             {
                 reviewsQuery = reviewsQuery
-                    .Where(r => r.ImageUrls.Any() || r.VideoUrls.Any());
+                    .Where(r => r._imageUrls.Any() || r._videoUrls.Any());
             }
             else
             {
                 reviewsQuery = reviewsQuery
-                    .Where(r => !r.ImageUrls.Any() && !r.VideoUrls.Any());
+                    .Where(r => !r._imageUrls.Any() && !r._videoUrls.Any());
             }
         }
 
@@ -153,8 +153,11 @@ public class ReviewRepository : IReviewRepository
             .Take(query.PageSize)
             .ToListAsync(ct);
 
+
         return PagedResult<Review>.Create(
             items, totalCount, query.PageNumber, query.PageSize);
+
+
     }
 
     public async Task AddReviewAsync(Review review, CancellationToken ct)

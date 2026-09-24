@@ -1,6 +1,7 @@
 ﻿using Application.DTOs.Review;
 using Application.Interfaces;
 using Application.Common;
+using Application.Common.Extensions;
 using MediatR;
 using Domain.Exceptions;
 using Domain.Entities;
@@ -13,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Application.Queries.Review;
 
-public class GetProductReviewscommandHandler : IRequestHandler<GetProductReviewsQuery, List<ReviewResponseDto>>
+public class GetProductReviewscommandHandler : IRequestHandler<GetProductReviewsQuery, PagedResult<ReviewResponseDto>>
 {
     private readonly IReviewRepository _reviewRepository;
     private readonly IMapper _mapper;
@@ -28,15 +29,16 @@ public class GetProductReviewscommandHandler : IRequestHandler<GetProductReviews
         _productRepository = productRepository;
     }
 
-    public async Task<List<ReviewResponseDto>> Handle(GetProductReviewsQuery query, CancellationToken ct)
+    public async Task<PagedResult<ReviewResponseDto>> Handle(GetProductReviewsQuery query, CancellationToken ct)
     {
         if (!await _productRepository.ProductExist(query.ProductId)) throw new DomainException("No such product");
 
-        var productReviews = await _reviewRepository.GetProductReviewsAsync(query, ct);
+        // 1. Репозиторий возвращает PagedResult<Review>
+        var pagedReviews = await _reviewRepository
+            .GetProductReviewsAsync(query, ct);
 
-        var reviewsDto = _mapper.Map<List<ReviewResponseDto>>(productReviews);
-
-        return reviewsDto;
+        // 2. ✅ Одна строка — маппинг
+        return pagedReviews.Map<Domain.Entities.Review, ReviewResponseDto>(_mapper);
     }
 }
 

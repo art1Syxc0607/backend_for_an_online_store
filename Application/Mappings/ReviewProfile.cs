@@ -19,9 +19,9 @@ public class ReviewProfile : Profile
             .ForMember(dest => dest.Text, opt => opt.MapFrom(src => src.Text))
             .ForMember(dest => dest.Rating, opt => opt.MapFrom(src => src.Rating))
             .ForMember(dest => dest.ImagesUrls, opt => opt.MapFrom(src =>
-                src.ImageUrls))
+                src._imageUrls))
             .ForMember(dest => dest.VideosUrls, opt => opt.MapFrom(src =>
-                src.VideoUrls))
+                src._videoUrls))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
             .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))

@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Review;
+﻿using Application.Common;
+using Application.DTOs.Review;
 using Application.Interfaces.Caching;
 using Domain.Enums;
 using MediatR;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Application.Queries.Review;
 
-public class GetProductReviewsQuery : IRequest<List<ReviewResponseDto>>, ICacheableQuery
+public class GetProductReviewsQuery : IRequest<PagedResult<ReviewResponseDto>>, ICacheableQuery
 {
     // ═══════════════════════════════════════════
     // Обязательные

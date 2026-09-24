@@ -99,6 +99,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             Token = _jwtService.GenerateToken(user),
             ExpiresIn = DateTime.UtcNow.AddHours(1),
             UserId = user.Id,
+            IsEmailConfirmed = user.IsEmailConfirmed
         };
 
         _logger.LogInformation(

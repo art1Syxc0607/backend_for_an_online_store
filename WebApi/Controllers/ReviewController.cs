@@ -1,6 +1,7 @@
 ﻿using Application.Commands.Product;
 using Application.Commands.Review;
 using Application.Commands.User;
+using Application.Common;
 using Application.DTOs.File;
 using Application.DTOs.Product;
 using Application.DTOs.Review;
@@ -27,7 +28,7 @@ public class ReviewController : Controller
     [HttpGet()] 
     public async Task<ActionResult<List<ReviewResponseDto>>> GetAllUserReviews()
     {
-        var command = new GetUserReviewsCommand
+        var command = new GetUserReviewsQuery
         {
             UserId = GetCurrentUserId()
         };
@@ -38,7 +39,7 @@ public class ReviewController : Controller
     }
 
     [HttpGet("{productId}")]
-    public async Task<ActionResult<List<ReviewResponseDto>>> GetProductReviews(
+    public async Task<ActionResult<PagedResult<ReviewResponseDto>>> GetProductReviews(
         int productId,
         [FromQuery] GetProductReviewsDto dto,
         CancellationToken ct)

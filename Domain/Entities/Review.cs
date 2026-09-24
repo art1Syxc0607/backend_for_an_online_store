@@ -30,8 +30,8 @@ public class Review
     // навигацонные свойства
     public virtual User User { get; private set; }
     public virtual Product Product { get; private set; }
-    public IReadOnlyCollection<string> ImageUrls => _imageUrls.AsReadOnly();
-    public IReadOnlyCollection<string> VideoUrls => _videoUrls.AsReadOnly();
+    //public IReadOnlyCollection<string> ImageUrls => _imageUrls.AsReadOnly();
+    //public IReadOnlyCollection<string> VideoUrls => _videoUrls.AsReadOnly();
 
     private Review() { }
 

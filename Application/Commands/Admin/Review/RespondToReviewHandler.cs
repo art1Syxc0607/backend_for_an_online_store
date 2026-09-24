@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.Email;
 using Application.Interfaces;
+using Application.Interfaces.Caching;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Exceptions;
@@ -98,5 +99,14 @@ public class RespondToReviewHandler : IRequestHandler<RespondToReviewCommand>
             _logger.LogError(ex,
                 "Failed to queue review response email for {Email}", user.Email);
         }
+
+        // 9. ✅ Указываем префиксы для инвалидации
+        command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));
+        command.AddCachePrefix(CacheKeys.Product(review.ProductId));
+        command.AddCachePrefix(CacheKeys.ProductsPrefix);
+
+        _logger.LogInformation(
+            "Admin {AdminId} responded to review {ReviewId}",
+            command.AdminId, review.Id);
     }
 }

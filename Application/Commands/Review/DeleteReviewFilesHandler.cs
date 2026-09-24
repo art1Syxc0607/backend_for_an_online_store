@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.Product;
 using Application.Interfaces;
+using Application.Interfaces.Caching;
 using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
@@ -45,8 +46,8 @@ public class DeleteReviewFilesHandler : IRequestHandler<DeleteReviewFilesCommand
         foreach (var fileUrl in command.FileUrls)
         {
             // 2. Проверяем, есть ли такой URL у продукта
-            var isImage = review.ImageUrls.Contains(fileUrl);
-            var isVideo = review.VideoUrls.Contains(fileUrl);
+            var isImage = review._imageUrls.Contains(fileUrl);
+            var isVideo = review._videoUrls.Contains(fileUrl);
 
             if (!isImage && !isVideo)
             {
@@ -78,6 +79,12 @@ public class DeleteReviewFilesHandler : IRequestHandler<DeleteReviewFilesCommand
 
         // 5. Сохраняем изменения
         await _unitOfWork.SaveChangesAsync(ct);
+
+        // 5. ✅ Заполняем контекст инвалидации
+        // Handler ЗНАЕТ, какие префиксы нужны, но НЕ вызывает кэш напрямую
+        command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));
+        command.AddCachePrefix(CacheKeys.Product(review.ProductId));
+        command.AddCachePrefix(CacheKeys.ProductsPrefix);
 
         return response;
 

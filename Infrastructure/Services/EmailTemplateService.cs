@@ -1,5 +1,6 @@
 ﻿// Infrastructure/Services/EmailTemplateService.cs
 using Application.DTOs.Email;
+using Application.DTOs.Location;
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Enums;

@@ -1,4 +1,5 @@
 ﻿using Application.DTOs.Email;
+using Application.DTOs.Location;
 using Application.Interfaces;
 using Domain.Entities;
 using Infrastructure.Services;

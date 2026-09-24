@@ -1,9 +1,11 @@
 ﻿using Application.Commands.Product;
 using Application.DTOs.File;
 using Application.Interfaces;
+using Application.Interfaces.Caching;
 using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,13 +18,16 @@ public class UploadReviewFilesHandler : IRequestHandler<UploadReviewFilesCommand
 {
     private readonly IReviewRepository _reviewRepository;
     private readonly IFileStorageService _fileStorageService;
+    private readonly ILogger<UploadReviewFilesHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
     public UploadReviewFilesHandler(IReviewRepository reviewRepository, 
-        IFileStorageService fileStorageService, IUnitOfWork unitOfWork)
+        IFileStorageService fileStorageService, ILogger<UploadReviewFilesHandler> logger,
+        IUnitOfWork unitOfWork)
     {
         _reviewRepository = reviewRepository;
         _fileStorageService = fileStorageService;
+        _logger = logger;
         _unitOfWork = unitOfWork;
     }
 
@@ -40,27 +45,35 @@ public class UploadReviewFilesHandler : IRequestHandler<UploadReviewFilesCommand
         foreach (var file in command.Files)
         {
             // Сохраняем файл
-            var url = await _fileStorageService.UploadFileAsync(
-                file.Stream,
-                file.FileName,
-                file.ContentType,
-                $"reviews/{command.ReviewId}",
-                ct
-            );
-
-            // Определяем тип и сохраняем в соответствующую коллекцию
-            if (file.ContentType.StartsWith("image/"))
-                imageUrls.Add(url);
-            else if (file.ContentType.StartsWith("video/"))
-                videoUrls.Add(url);
-
-            result.Add(new FileUploadResponseDto
+            try
             {
-                OriginalFileName = file.FileName,
-                FileUrl = url,
-                ContentType = file.ContentType,
-                Size = file.Length
-            });
+                var url = await _fileStorageService.UploadFileAsync(
+                    file.Stream,
+                    file.FileName,
+                    file.ContentType,
+                    $"reviews/{review.Id}",
+                    ct);
+
+                result.Add(new FileUploadResponseDto
+                {
+                    OriginalFileName = file.FileName,
+                    FileUrl = url,
+                    ContentType = file.ContentType,
+                    Size = file.Length
+                });
+
+                if (file.ContentType.StartsWith("image/"))
+                    imageUrls.Add(url);
+                else if (file.ContentType.StartsWith("video/"))
+                    videoUrls.Add(url);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to upload file {FileName} for review {ReviewId}",
+                    file.FileName, review.Id);
+                // Продолжаем с другими файлами
+            }
         }
 
         // Обновляем review
@@ -68,6 +81,11 @@ public class UploadReviewFilesHandler : IRequestHandler<UploadReviewFilesCommand
         review.SetVideoUrls(videoUrls);
 
         await _unitOfWork.SaveChangesAsync(ct);
+
+        // ✅ Указываем префиксы для инвалидации
+        command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));
+        command.AddCachePrefix(CacheKeys.Product(review.ProductId));
+        command.AddCachePrefix(CacheKeys.ProductsPrefix);
 
         return result;
     }

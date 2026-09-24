@@ -4,10 +4,12 @@ using Infrastructure.Data;
 using Infrastructure.Options;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
+using Infrastructure.Services.IpInfo;
 using Infrastructure.Services.Payment;
 using Infrastructure.Services.Payment.Strategies;
 using Infrastructure.UnitOfWork;
 using IPinfo;
+using IPinfo.Apis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -97,6 +99,8 @@ public static class DependencyInjection
         // Регистрация
         services.AddScoped<IEmailService, EmailService>();
         services.ConfigureOptions<SmtpSettingsConfigureOptions>();
+
+
         // фоновые сервисы for email
         // 1. Очередь - Singleton
         services.AddSingleton<IEmailBackgroundTaskQueue, EmailBackgroundTaskQueue>();
@@ -122,20 +126,19 @@ public static class DependencyInjection
         services.AddHostedService<CleanupBackgroundService>();
 
 
-        // location API
         services.ConfigureOptions<IpInfoOptionsConfigureOptions>();
 
-        // ✅ Клиент создаётся через IOptions<IpInfoOptions>
-        services.AddSingleton<IPinfoClient>(sp =>
-        {
-            var options = sp.GetRequiredService<IOptions<IpInfoOptions>>().Value;
+        // ✅ HttpClientFactory с настройками
+        services.AddHttpClient<ILocationService, IpInfoLocationService>(
+            (sp, client) =>
+            {
+                var options = sp.GetRequiredService<IOptions<IpInfoOptions>>().Value;
 
-            return new IPinfoClient.Builder()
-                .AccessToken(options.ApiKey)  // ← уже из env variable!
-                .Build();
-        });
-
-        services.AddScoped<ILocationService, IpInfoLocationService>();
+                client.BaseAddress = new Uri(options.BaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                client.DefaultRequestHeaders.Add("User-Agent", "ArtWebStore/1.0");
+            });
 
         // for service deleting orders
         services.Configure<ExpiredOrdersOptions>(

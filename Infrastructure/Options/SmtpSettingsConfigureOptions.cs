@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
+namespace Infrastructure.Options;
+
 public class SmtpSettingsConfigureOptions : IConfigureOptions<SmtpSettings>
 {
     private readonly IConfiguration _configuration;

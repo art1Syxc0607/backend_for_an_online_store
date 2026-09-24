@@ -1,6 +1,9 @@
 ﻿using Application.Interfaces;
+using Application.Interfaces.Caching;
+using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Commands.Admin.Review;
 
@@ -8,11 +11,15 @@ namespace Application.Commands.Admin.Review;
 public class RemoveReviewResponseHandler : IRequestHandler<RemoveReviewResponseCommand>
 {
     private readonly IReviewRepository _reviewRepository;
+    private readonly ILogger<RemoveReviewResponseHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
-    public RemoveReviewResponseHandler(IReviewRepository reviewRepository, IUnitOfWork unitOfWork)
+    public RemoveReviewResponseHandler(IReviewRepository reviewRepository,
+        ILogger<RemoveReviewResponseHandler> logger,
+        IUnitOfWork unitOfWork)
     {
         _reviewRepository = reviewRepository;
+        _logger = logger;
         _unitOfWork = unitOfWork;
     }
 
@@ -27,5 +34,15 @@ public class RemoveReviewResponseHandler : IRequestHandler<RemoveReviewResponseC
 
         review.RemoveAdminResponse();
         await _unitOfWork.SaveChangesAsync(ct);
+
+        // 6. ✅ Указываем префиксы для инвалидации
+        command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));
+        command.AddCachePrefix(CacheKeys.Product(review.ProductId));
+        command.AddCachePrefix(CacheKeys.ProductsPrefix);
+
+        _logger.LogInformation(
+           "Admin {AdminId} removed response from review {ReviewId}",
+           command.AdminId, review.Id);
+
     }
 }
