@@ -14,11 +14,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
+using OpenAI;
+using System.ClientModel;
+using System.ComponentModel;
+using System.Net.Http;
+
 
 namespace Infrastructure;
 
@@ -49,10 +51,6 @@ public static class DependencyInjection
         // for current reauest
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentRequestService, CurrentRequestService>();
-
-        // ✅ Добавляем HttpClientFactory в DI
-        services.AddHttpClient<ILocationService, IpInfoLocationService>();
-
 
         
         services.AddScoped<ILocationService, IpInfoLocationService>();
@@ -129,6 +127,7 @@ public static class DependencyInjection
         services.ConfigureOptions<IpInfoOptionsConfigureOptions>();
 
         // ✅ HttpClientFactory с настройками
+        // Location
         services.AddHttpClient<ILocationService, IpInfoLocationService>(
             (sp, client) =>
             {
@@ -143,6 +142,32 @@ public static class DependencyInjection
         // for service deleting orders
         services.Configure<ExpiredOrdersOptions>(
             configuration.GetSection(ExpiredOrdersOptions.SectionName));
+
+
+        // AI
+        // 1. Регистрируем IChatClient (один раз, как Singleton)
+        var groqApiKey = Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? "gsk_...";
+        services.AddSingleton<IChatClient>(sp =>
+            new OpenAIClient(new ApiKeyCredential(groqApiKey))
+                .GetChatClient("openai/gpt-oss-120b")
+                .AsIChatClient()
+        );
+
+        // 2. Регистрируем ShopTools (как Scoped, если он зависит от DbContext)
+        services.AddScoped<ShopTools>();
+
+        // 3. Регистрируем AIAgent (как Singleton — это шаблон)
+        services.AddSingleton<AIAgent>(sp =>
+        {
+            var chatClient = sp.GetRequiredService<IChatClient>();
+
+            // Правильно: создавать инструменты внутри агента через фабрику, 
+            // либо использовать IServiceScopeFactory
+            return chatClient.AsAIAgent(
+                instructions: "...",
+                tools: [AIFunctionFactory.Create(shopTools.SearchProducts)]
+            );
+        });
 
         return services;
     }
