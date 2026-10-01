@@ -78,8 +78,9 @@ public class ProductRepository : IProductRepository
     }
 
 
-    public async Task<List<Product>> GetProductsFilter(int? CategoryId, string? SearchText, decimal? PriceLimitMax,
-        decimal? PriceLimitMin, bool? OnlyAvailable, int? pageNumber, int? pageSize, 
+    public async Task<List<Product>> GetProductsFilter(int? CategoryId = null, string? SearchText = null,
+        decimal? PriceLimitMax = null, decimal? PriceLimitMin = null, bool? OnlyAvailable = null,
+        int? pageNumber = null, int? pageSize = null,
         SortProductBy? sortBy = SortProductBy.Name, bool SortDesc = true, CancellationToken ct = default)
     {
         var search = _dpContext.Products

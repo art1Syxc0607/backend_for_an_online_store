@@ -25,8 +25,9 @@ public interface IProductRepository
     Task<bool> ProductsExist(List<int> Ids, CancellationToken ct = default);
 
 
-    Task<List<Product>> GetProductsFilter(int? CategoryId, string? SearchText, decimal? PriceLimitMax,
-        decimal? PriceLimitMin, bool? OnlyAvailable, int? pageNumber, int? pageSize, 
+    Task<List<Product>> GetProductsFilter(int? CategoryId = null, string? SearchText = null, 
+        decimal? PriceLimitMax = null, decimal? PriceLimitMin = null, bool? OnlyAvailable = null, 
+        int? pageNumber = null, int? pageSize = null, 
         SortProductBy? sortBy = SortProductBy.Name, bool SortDesc = true, CancellationToken ct = default);
 
     // admin

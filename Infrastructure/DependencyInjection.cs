@@ -18,6 +18,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using OpenAI;
 using System.ClientModel;
+using Infrastructure.Services.Agent;
 using System.ComponentModel;
 using System.Net.Http;
 
@@ -153,21 +154,33 @@ public static class DependencyInjection
                 .AsIChatClient()
         );
 
-        // 2. Регистрируем ShopTools (как Scoped, если он зависит от DbContext)
-        services.AddScoped<ShopTools>();
+        // ✅ ShopTools — Singleton (безопасно!)
+        services.AddSingleton<ShopTools>();
+
+        //services.AddSingleton<AgentSessionStore, MyAgentSessionStore>();
 
         // 3. Регистрируем AIAgent (как Singleton — это шаблон)
         services.AddSingleton<AIAgent>(sp =>
         {
             var chatClient = sp.GetRequiredService<IChatClient>();
+            var shopTools = sp.GetRequiredService<ShopTools>(); // ← Получаем экземпляр
 
             // Правильно: создавать инструменты внутри агента через фабрику, 
             // либо использовать IServiceScopeFactory
             return chatClient.AsAIAgent(
                 instructions: "...",
-                tools: [AIFunctionFactory.Create(shopTools.SearchProducts)]
+                tools: [
+                    AIFunctionFactory.Create(shopTools.GetAllProductsAsync),
+                    AIFunctionFactory.Create(shopTools.SearchProductsAsync),
+                    AIFunctionFactory.Create(shopTools.GetProductByIdAsync),
+                    AIFunctionFactory.Create(shopTools.GetCategoriesAsync)
+                ]
             );
         });
+
+        services.AddSingleton<MyAgentSessionStore>();
+        services.AddScoped<AgentService>();
+
 
         return services;
     }
