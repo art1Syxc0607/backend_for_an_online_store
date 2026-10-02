@@ -27,6 +27,14 @@ public class AgentConversationRepository : IAgentConversationRepository
             .FirstOrDefaultAsync(c => c.AgentConversationId == sessionId, ct);
     }
 
+    public async Task<List<AgentConversationEntity>> 
+        GetUserConversationsAsync(int userId, CancellationToken ct = default)
+    {
+        return await _context.AgentConversations.
+            Where(c => c.UserId == userId)
+            .ToListAsync();
+    }
+
     public async Task<List<AgentConversationEntity>> GetByUserIdAsync(
         int userId, CancellationToken ct = default)
     {
@@ -43,11 +51,11 @@ public class AgentConversationRepository : IAgentConversationRepository
         await _context.AgentConversations.AddAsync(conversation, ct);
     }
 
-    public async Task DeleteByUserIdAsync(
-        int userId, CancellationToken ct = default)
+    public async Task DeleteUserConversationByIdAsync(
+        int userId, string conversationId, CancellationToken ct = default)
     {
         await _context.AgentConversations
-            .Where(c => c.UserId == userId)
+            .Where(c => c.AgentConversationId == conversationId)
             .ExecuteDeleteAsync(ct);
     }
 }

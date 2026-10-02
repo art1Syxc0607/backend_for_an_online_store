@@ -26,7 +26,7 @@ public class AppDbContext : DbContext
 
     // agent
     public DbSet<AgentConversationEntity> AgentConversations { get; set; }
-
+    public DbSet<AgentMessage> AgentMessages { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 

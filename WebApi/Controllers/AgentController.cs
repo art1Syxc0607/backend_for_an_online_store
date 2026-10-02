@@ -37,9 +37,9 @@ public class AgentController : ControllerBase
         return Ok(conversations);
     }
 
-    // ═══════════════════════════════════════════
-    // История сообщений диалога
-    // ═══════════════════════════════════════════
+    /// <summary>
+    /// Получить историю сообщений диалога.
+    /// </summary>
     [HttpGet("conversations/{sessionId}")]
     public async Task<ActionResult<ConversationDetailDto>> GetConversation(
         string sessionId,
@@ -51,7 +51,6 @@ public class AgentController : ControllerBase
 
         return Ok(conversation);
     }
-
 
     /// <summary>
     /// Отправить сообщение AI-помощнику.
@@ -83,7 +82,9 @@ public class AgentController : ControllerBase
         CancellationToken ct)
     {
         var userId = GetCurrentUserId();
-        await _agentService.DeleteConversationAsync(userId, sessionId, ct);
+        await _agentService.DeleteUserConversationByIdAsync
+            (userId, sessionId, ct);
+
         return NoContent();
     }
     private int GetCurrentUserId()

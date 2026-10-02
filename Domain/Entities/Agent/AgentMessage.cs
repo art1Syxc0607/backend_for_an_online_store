@@ -2,7 +2,6 @@
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Exceptions;
-
 namespace Domain.Entities.Agent;
 
 /// <summary>

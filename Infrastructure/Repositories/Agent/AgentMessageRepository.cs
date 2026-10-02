@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces.Agent;
 using Domain.Entities.Agent;
 using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repositories.Agent;
 
@@ -19,7 +20,6 @@ public class AgentMessageRepository : IAgentMessageRepository
         CancellationToken ct = default)
     {
         return await _context.AgentMessages
-            .AsNoTracking()
             .Where(m => m.ConversationId == conversationId)
             .OrderBy(m => m.CreatedAt)
             .ToListAsync(ct);
