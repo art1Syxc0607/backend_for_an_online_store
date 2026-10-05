@@ -35,7 +35,7 @@ public class GetMostPopularProductsHandlerTests
         };
 
         var productRepoMock = new Mock<IProductRepository>();
-        productRepoMock.Setup(x => x.GetMostPopularProductsForThePeriod(
+        productRepoMock.Setup(x => x.GetMostPopularProductsForThePeriodAsync(
             It.IsAny<GetMostPopularProductsForThePeriodCommand>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(popularProducts);
@@ -47,8 +47,7 @@ public class GetMostPopularProductsHandlerTests
 
         var handler = new GetMostPopularProductsForThePeriodHandler(
             productRepoMock.Object,
-            Mock.Of<IOrderRepository>(), 
-            cacheServiceMock.Object,
+            Mock.Of<IOrderRepository>(),
             Mock.Of<ILogger<GetMostPopularProductsForThePeriodHandler>>()
         );
 

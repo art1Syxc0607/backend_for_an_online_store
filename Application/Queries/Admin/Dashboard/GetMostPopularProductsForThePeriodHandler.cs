@@ -15,20 +15,19 @@ using System.Threading.Tasks;
 namespace Application.Queries.Admin.Dashboard;
 
 public class GetMostPopularProductsForThePeriodHandler
-    : IRequestHandler<GetMostPopularProductsForThePeriodCommand, PagedResult<PopularProductDto>>
+    : IRequestHandler<GetMostPopularProductsForThePeriodCommand, 
+        PagedResult<PopularProductDto>>
 {
     private readonly IProductRepository _productRepository;
     private readonly IOrderRepository _orderRepository;
-    private readonly ICacheService _cacheService;
     private readonly ILogger<GetMostPopularProductsForThePeriodHandler> _logger;
 
     public GetMostPopularProductsForThePeriodHandler(IProductRepository productRepository,
-        IOrderRepository orderRepository, ICacheService cacheService,
+        IOrderRepository orderRepository,
         ILogger<GetMostPopularProductsForThePeriodHandler> logger)
     {
         _orderRepository = orderRepository;
         _productRepository = productRepository;
-        _cacheService = cacheService;
         _logger = logger;
     }
 
@@ -50,37 +49,17 @@ public class GetMostPopularProductsForThePeriodHandler
         var firstDay = command.FirstDayOfThePeriod.Date;  // только дата, без времени
         var lastDay = command.LastDayOfThePeriod.Date;
 
-        // 3. ✅ Формирование ключа с явным форматом
-        var cacheKey = $"products:popular:" +
-                       $"{firstDay:yyyyMMdd}_" +
-                       $"{lastDay:yyyyMMdd}_" +
-                       $"p{pageNumber}_" +
-                       $"s{pageSize}";
-
-        var cached = await _cacheService.GetAsync<List<PopularProductDto>>(cacheKey);
-        if (cached != null)
-        {
-
-            return PagedResult<PopularProductDto>.Create(
-                cached,
-                cached.Count,
-                pageNumber,
-                pageSize);
-        }
+        
 
 
-        var result = await _productRepository.GetMostPopularProductsForThePeriodAsync(command, ct);
-
-        var ttl = GetCacheTtl(command.LastDayOfThePeriod);
-        if (ttl > TimeSpan.Zero)
-        {
-            await _cacheService.SetAsync(cacheKey, result, ttl);
-        }
+        var result = await _productRepository.
+            GetMostPopularProductsForThePeriodAsync
+            (command, ct);
 
         // 4. ✅ Формируем PagedResult
         return PagedResult<PopularProductDto>.Create(
-            result,
-            result.Count,
+            result.Items,
+            result.TotalCount,
             pageNumber,
             pageSize);
     }

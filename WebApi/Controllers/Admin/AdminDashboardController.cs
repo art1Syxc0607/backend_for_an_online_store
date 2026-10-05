@@ -1,5 +1,5 @@
 ﻿using Application.Queries.Admin.Dashboard;
-using Application.Commands.Admin.Order;
+using Application.Commands.Admin;
 using Application.Commands.Order;
 using Application.DTOs.Admin.Order;
 using Application.DTOs.Order;
@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using Application.Common;
 
 namespace WebApi.Controllers.Admin;
 
@@ -54,7 +55,7 @@ public class AdminDashboardController : ControllerBase
     }
 
     [HttpGet("popularProducts")]
-    public async Task<List<PopularProductDto>> GetMostPopularProductsForThePeriod([FromQuery] DateTime firstDayOfThePriod,
+    public async Task<PagedResult<PopularProductDto>> GetMostPopularProductsForThePeriod([FromQuery] DateTime firstDayOfThePriod,
         [FromQuery] DateTime lastDayOfThePriod, [FromQuery] int? pageNumber = 1, 
         [FromQuery] int? pageSize = 20)
     {
