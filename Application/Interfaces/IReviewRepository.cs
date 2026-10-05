@@ -1,5 +1,5 @@
-﻿using Application.Commands.Admin.Review;
-using Application.Common;
+﻿using Application.Common;
+using Application.Queries.Admin.Review;
 using Application.Queries.Review;
 using Domain.Entities;
 using Domain.Enums;

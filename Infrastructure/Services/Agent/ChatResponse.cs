@@ -11,4 +11,7 @@ public class ChatResponse
     public string Reply { get; set; } = string.Empty;
     public string SessionId { get; set; } = string.Empty;
     public int MessageCount { get; set; }
+    public bool IsGuest { get; set; }
+    public DateTime? ExpiresAt { get; set; }
+    public int? DaysUntilExpiry { get; set; }
 }

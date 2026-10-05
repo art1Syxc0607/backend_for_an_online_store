@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace Application.Commands.Admin.Dashboard;
+namespace Application.Queries.Admin.Dashboard;
 
 public class GetRevenueForThePeriodHandler : IRequestHandler<GetRevenueForThePeriodCommand, 
     RevenueForThePeriodDto>

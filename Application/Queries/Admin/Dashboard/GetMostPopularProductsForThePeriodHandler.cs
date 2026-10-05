@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Order;
+﻿using Application.Common;
+using Application.DTOs.Order;
 using Application.DTOs.Product;
 using Application.Interfaces;
 using Domain.Entities;
@@ -11,10 +12,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Admin.Dashboard;
+namespace Application.Queries.Admin.Dashboard;
 
-public class GetMostPopularProductsForThePeriodHandler : IRequestHandler<GetMostPopularProductsForThePeriodCommand,
-    List<PopularProductDto>>
+public class GetMostPopularProductsForThePeriodHandler
+    : IRequestHandler<GetMostPopularProductsForThePeriodCommand, PagedResult<PopularProductDto>>
 {
     private readonly IProductRepository _productRepository;
     private readonly IOrderRepository _orderRepository;
@@ -32,7 +33,7 @@ public class GetMostPopularProductsForThePeriodHandler : IRequestHandler<GetMost
     }
 
 
-    public async Task<List<PopularProductDto>> Handle(GetMostPopularProductsForThePeriodCommand command,
+    public async Task<PagedResult<PopularProductDto>> Handle(GetMostPopularProductsForThePeriodCommand command,
         CancellationToken ct = default)
     {
         if (command.FirstDayOfThePeriod > command.LastDayOfThePeriod)
@@ -58,10 +59,17 @@ public class GetMostPopularProductsForThePeriodHandler : IRequestHandler<GetMost
 
         var cached = await _cacheService.GetAsync<List<PopularProductDto>>(cacheKey);
         if (cached != null)
-            return cached;
+        {
+
+            return PagedResult<PopularProductDto>.Create(
+                cached,
+                cached.Count,
+                pageNumber,
+                pageSize);
+        }
 
 
-        var result = await _productRepository.GetMostPopularProductsForThePeriod(command, ct);
+        var result = await _productRepository.GetMostPopularProductsForThePeriodAsync(command, ct);
 
         var ttl = GetCacheTtl(command.LastDayOfThePeriod);
         if (ttl > TimeSpan.Zero)
@@ -69,7 +77,12 @@ public class GetMostPopularProductsForThePeriodHandler : IRequestHandler<GetMost
             await _cacheService.SetAsync(cacheKey, result, ttl);
         }
 
-        return result;
+        // 4. ✅ Формируем PagedResult
+        return PagedResult<PopularProductDto>.Create(
+            result,
+            result.Count,
+            pageNumber,
+            pageSize);
     }
 
     private static TimeSpan GetCacheTtl(DateTime lastDay)

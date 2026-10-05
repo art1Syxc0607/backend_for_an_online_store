@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Admin.Order;
+namespace Application.Queries.Admin.Order;
 
 public class GetAllOrderOrFilteredHandler : IRequestHandler<GetAllOrderOrFilteredCommand, 
     List<OrderResponseDto>>

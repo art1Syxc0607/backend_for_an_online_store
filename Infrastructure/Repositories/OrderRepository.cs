@@ -1,9 +1,9 @@
-﻿using Application.Commands.Admin.Order;
-using Application.DTOs.Admin.Order;
+﻿using Application.DTOs.Admin.Order;
 using Application.DTOs.Order;
 using Application.DTOs.Product;
 using Application.Enums;
 using Application.Interfaces;
+using Application.Queries.Admin.Order;
 using Application.Queries.Order;
 using Domain.Entities;
 using Domain.Enums;

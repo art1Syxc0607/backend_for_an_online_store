@@ -3,7 +3,7 @@ using Application.Enums;
 using Domain.Enums;
 using MediatR;
 
-namespace Application.Commands.Admin.Review;
+namespace Application.Queries.Admin.Review;
 
 public class GetAllReviewsCommand : IRequest<List<ReviewResponseDto>>
 {

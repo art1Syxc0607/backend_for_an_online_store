@@ -1,7 +1,7 @@
-﻿using Application.Commands.Admin.Dashboard;
-using Application.DTOs.Product;
+﻿using Application.DTOs.Product;
 using Application.Enums;
 using Application.Interfaces;
+using Application.Queries.Admin.Dashboard;
 using Domain.Entities;
 using Infrastructure.Data;
 using Infrastructure.Extensions;
@@ -105,8 +105,10 @@ public class ProductRepository : IProductRepository
 
     //admin
 
-    public async Task<List<PopularProductDto>> GetMostPopularProductsForThePeriod(
-        GetMostPopularProductsForThePeriodCommand command, CancellationToken ct = default)
+    public async Task<(List<PopularProductDto> Items, int TotalCount)>
+        GetMostPopularProductsForThePeriodAsync(
+            GetMostPopularProductsForThePeriodCommand command,
+            CancellationToken ct = default)
     {
         var endDate = command.LastDayOfThePeriod.Date;
         var startDate = command.FirstDayOfThePeriod.Date;
@@ -139,6 +141,16 @@ public class ProductRepository : IProductRepository
         //    .OrderByDescending(p => p.PresenceInOrders)
         //    .Pagination(pageNumber, pageSize)
         //    .ToListAsync(ct);
+
+        // ═══════════════════════════════════════════
+        // 1. ✅ totalCount — ОТДЕЛЬНЫЙ запрос
+        // ═══════════════════════════════════════════
+        var totalCount = await _dpContext.OrderItems
+            .Where(oi => oi.CreatedAt.Date >= startDate
+                      && oi.CreatedAt.Date <= endDate)
+            .Select(oi => oi.ProductId)
+            .Distinct()
+            .CountAsync(ct);
 
 
         // 1. Получаем агрегированные данные
@@ -174,7 +186,7 @@ public class ProductRepository : IProductRepository
         //var statsDict = stats.ToDictionary(s => s.Id);
 
         // 2. Проекция: O(N) — один проход по stats
-        var result = stats.Select(stat =>
+        var items = stats.Select(stat =>
         {
             var product = productDict[stat.ProductId]; // ← O(1)
             return new PopularProductDto
@@ -206,7 +218,7 @@ public class ProductRepository : IProductRepository
         // стоит добавить индексы на 
         //на CreatedAt в OrderItems, на ProductId в OrderItems 
 
-        return result;
+        return (items, totalCount);
     }
 
     private int GetDateSpan(DateSpan span, DateTime referenceDate) // учитывает что за тип года, сколь

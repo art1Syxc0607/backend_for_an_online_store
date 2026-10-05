@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Admin.Dashboard;
+namespace Application.Queries.Admin.Dashboard;
 
 public class GetNumberOfNewOrdersForThePeriodHandler : IRequestHandler<GetNumberOfNewOrdersForThePeriodCommand,
     NumberOfNewOrdersForThePeriodResponseDto>

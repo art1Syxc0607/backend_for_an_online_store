@@ -1,24 +1,26 @@
 ﻿using Application.Interfaces;
+using Application.Interfaces.Agent;
 using Infrastructure.Cleanup;
 using Infrastructure.Data;
 using Infrastructure.Options;
 using Infrastructure.Repositories;
+using Infrastructure.Repositories.Agent;
 using Infrastructure.Services;
+using Infrastructure.Services.Agent;
 using Infrastructure.Services.IpInfo;
 using Infrastructure.Services.Payment;
 using Infrastructure.Services.Payment.Strategies;
 using Infrastructure.UnitOfWork;
 using IPinfo;
 using IPinfo.Apis;
+using Microsoft.Agents.AI;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.Agents.AI;
-using Microsoft.Extensions.AI;
 using OpenAI;
 using System.ClientModel;
-using Infrastructure.Services.Agent;
 using System.ComponentModel;
 using System.Net.Http;
 
@@ -145,11 +147,23 @@ public static class DependencyInjection
             configuration.GetSection(ExpiredOrdersOptions.SectionName));
 
 
-        // AI
+        // AI, Agent
         // 1. Регистрируем IChatClient (один раз, как Singleton)
         var groqApiKey = Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? "gsk_...";
+        // Проверяем наличие ключа и выбрасываем понятное исключение, если его нет
+        if (string.IsNullOrWhiteSpace(groqApiKey))
+        {
+            throw new InvalidOperationException(
+                "Переменная окружения GROQ_API_KEY не установлена. " +
+                "Задайте её командой: $env:GROQ_API_KEY='ваш_ключ'");
+        }
         services.AddSingleton<IChatClient>(sp =>
-            new OpenAIClient(new ApiKeyCredential(groqApiKey))
+            new OpenAIClient(
+                new ApiKeyCredential(groqApiKey),
+                new OpenAIClientOptions
+                {
+                    Endpoint = new Uri("https://api.groq.com/openai/v1") // ← Адрес API Groq
+                })
                 .GetChatClient("openai/gpt-oss-120b")
                 .AsIChatClient()
         );
@@ -168,7 +182,7 @@ public static class DependencyInjection
             // Правильно: создавать инструменты внутри агента через фабрику, 
             // либо использовать IServiceScopeFactory
             return chatClient.AsAIAgent(
-                instructions: "...",
+                instructions: "Ты — полезный ассистент в интернет магазине.",
                 tools: [
                     AIFunctionFactory.Create(shopTools.GetAllProductsAsync),
                     AIFunctionFactory.Create(shopTools.SearchProductsAsync),
@@ -178,8 +192,17 @@ public static class DependencyInjection
             );
         });
 
-        services.AddSingleton<MyAgentSessionStore>();
         services.AddScoped<AgentService>();
+
+        services.AddScoped<IAgentMessageRepository, AgentMessageRepository>();
+        services.AddScoped<IAgentConversationRepository, AgentConversationRepository>();
+        services.AddScoped<AgentService>();
+
+        // ✅ Cleanup сервис
+        services.AddHostedService<ExpiredAgentConversationsCleanupService>();
+        services.Configure<AgentOptions>(
+            configuration.GetSection(AgentOptions.SectionName));
+
 
 
         return services;

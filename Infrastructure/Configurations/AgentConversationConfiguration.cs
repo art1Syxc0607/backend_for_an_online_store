@@ -37,5 +37,10 @@ public class AgentConversationConfiguration
         // ✅ Индексы
         builder.HasIndex(c => c.AgentConversationId).IsUnique();
         builder.HasIndex(c => new { c.UserId, c.UpdatedAt });
+
+        // ✅ Добавляем индекс на LastMessageAt для cleanup
+        builder.HasIndex(c => new { c.UserId, c.LastMessageAt })
+            .HasFilter("\"UserId\" IS NULL")  // ← только для гостей
+            .HasDatabaseName("IX_AgentConversations_Guest_LastMessageAt");
     }
 }

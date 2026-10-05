@@ -1,6 +1,6 @@
-﻿using Application.Commands.Admin.Dashboard;
-using Application.DTOs.Product;
+﻿using Application.DTOs.Product;
 using Application.Enums;
+using Application.Queries.Admin.Dashboard;
 using Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -38,7 +38,9 @@ public interface IProductRepository
         string? search = null,
         CancellationToken ct = default);
 
-    Task<List<PopularProductDto>> GetMostPopularProductsForThePeriod(
-        GetMostPopularProductsForThePeriodCommand command, CancellationToken ct = default);
+    Task<(List<PopularProductDto> Items, int TotalCount)>
+        GetMostPopularProductsForThePeriodAsync(
+            GetMostPopularProductsForThePeriodCommand command,
+            CancellationToken ct = default);
 }
 

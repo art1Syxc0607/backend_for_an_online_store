@@ -1,4 +1,4 @@
-﻿using Application.Commands.Admin.Order;
+﻿using Application.Queries.Admin.Order;
 using Application.Commands.Order;
 using Application.DTOs.Order;
 using Application.Enums;

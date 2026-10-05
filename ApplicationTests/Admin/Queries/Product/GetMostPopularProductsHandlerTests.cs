@@ -1,7 +1,7 @@
-﻿using Application.Commands.Admin.Dashboard;
-using Application.DTOs.Product;
+﻿using Application.DTOs.Product;
 using Application.Enums;
 using Application.Interfaces;
+using Application.Queries.Admin.Dashboard;
 using Application.Queries.Admin.Product;
 using Domain.Entities;
 using Domain.Enums;

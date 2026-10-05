@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+
 
 namespace Infrastructure.Services.Agent;
 
@@ -22,5 +19,12 @@ public class ChatRequest
     /// Заполняется контроллером из JWT.
     /// </summary>
     //[JsonIgnore]
-    public int UserId { get; init; }
+    //public int UserId { get; init; }
+
+    // Заполняется контроллером
+    [JsonIgnore]
+    public int? UserId { get; set; }
+
+    [JsonIgnore]
+    public string? GuestId { get; set; }
 };

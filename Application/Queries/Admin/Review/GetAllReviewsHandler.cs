@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Admin.Review;
+namespace Application.Queries.Admin.Review;
 
 public class GetAllReviewsHandler : IRequestHandler<GetAllReviewsCommand, List<ReviewResponseDto>>
 {

@@ -1,7 +1,7 @@
-﻿using Application.Commands.Admin.Review;
-using Application.Common;
+﻿using Application.Common;
 using Application.Enums;
 using Application.Interfaces;
+using Application.Queries.Admin.Review;
 using Application.Queries.Review;
 using Domain.Entities;
 using Domain.Enums;

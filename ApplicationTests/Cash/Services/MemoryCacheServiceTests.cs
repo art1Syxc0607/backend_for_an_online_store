@@ -1,4 +1,4 @@
-﻿using Application.Commands.Admin.Dashboard;
+﻿using Application.Queries.Admin.Dashboard;
 using FluentAssertions;
 using Infrastructure.Services;
 using Microsoft.Extensions.Caching.Memory;

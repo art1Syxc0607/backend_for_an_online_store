@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Product;
+﻿using Application.Common;
+using Application.DTOs.Product;
 using Application.Enums;
 using Application.Interfaces.Caching;
 using MediatR;
@@ -8,9 +9,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Admin.Dashboard;
+namespace Application.Queries.Admin.Dashboard;
 
-public class GetMostPopularProductsForThePeriodCommand : IRequest<List<PopularProductDto>>, ICacheableQuery
+public class GetMostPopularProductsForThePeriodCommand
+    : IRequest<PagedResult<PopularProductDto>>, ICacheableQuery
 {
     public DateTime LastDayOfThePeriod { get; set; }
     public DateTime FirstDayOfThePeriod { get; set; }

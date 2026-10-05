@@ -1,11 +1,12 @@
-﻿// Infrastructure/Services/Agent/AgentService.cs
-using Application.DTOs.Agent;
+﻿using Application.DTOs.Agent;
 using Application.Interfaces;
 using Application.Interfaces.Agent;
 using Domain.Entities.Agent;
 using Domain.Exceptions;
+using Infrastructure.Options;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 namespace Infrastructure.Services.Agent;
@@ -13,41 +14,53 @@ namespace Infrastructure.Services.Agent;
 public class AgentService
 {
     private readonly AIAgent _agent;
-    private readonly IAgentMessageRepository _messageRepository;
     private readonly IAgentConversationRepository _conversationRepository;
+    private readonly IAgentMessageRepository _messageRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly AgentOptions _options;
     private readonly ILogger<AgentService> _logger;
+    private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Web;
 
     public AgentService(
         AIAgent agent,
         IAgentConversationRepository conversationRepository,
+        IAgentMessageRepository messageRepository,
         IUnitOfWork unitOfWork,
+        IOptions<AgentOptions> options,
         ILogger<AgentService> logger)
     {
         _agent = agent;
         _conversationRepository = conversationRepository;
+        _messageRepository = messageRepository;
         _unitOfWork = unitOfWork;
+        _options = options.Value;
         _logger = logger;
     }
 
     public async Task<ChatResponse> ChatAsync(
-        ChatRequest request,
-        CancellationToken ct)
+        ChatRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Message))
             throw new DomainException("Message is required");
 
-        // 1. Находим или создаём диалог
+        // ✅ Проверка: user или guest
+        if (request.UserId == null && string.IsNullOrWhiteSpace(request.GuestId))
+            throw new DomainException("Either UserId or GuestId is required");
+
+        // 1. Находим или создаём
         AgentConversationEntity conversation;
 
         if (string.IsNullOrWhiteSpace(request.SessionId))
         {
-            conversation = new AgentConversationEntity(
-                request.UserId,
-                Guid.NewGuid().ToString());
+            conversation = request.UserId.HasValue
+                ? new AgentConversationEntity(
+                    request.UserId.Value,
+                    Guid.NewGuid().ToString())
+                : new AgentConversationEntity(
+                    request.GuestId!,
+                    Guid.NewGuid().ToString());  // ← без retentionDays
 
             conversation.SetTitle(request.Message);
-
             await _conversationRepository.AddAsync(conversation, ct);
             await _unitOfWork.SaveChangesAsync(ct);
         }
@@ -58,12 +71,26 @@ public class AgentService
                 ?? throw new DomainException(
                     $"Session {request.SessionId} not found");
 
-            if (conversation.UserId != request.UserId)
+            // Проверка владельца
+            var isOwner = request.UserId.HasValue
+                ? conversation.IsOwnedBy(request.UserId.Value)
+                : conversation.IsOwnedByGuest(request.GuestId!);
+
+            if (!isOwner)
                 throw new UnauthorizedAccessException(
                     "You don't own this conversation");
+
+            // ✅ Проверка "неактивности" вместо ExpiresAt
+            if (conversation.IsExpired(_options.GuestConversationRetentionDays))
+            {
+                throw new DomainException(
+                    $"This conversation has expired " +
+                    $"(no activity for {_options.GuestConversationRetentionDays} days). " +
+                    "Please start a new one.");
+            }
         }
 
-        // 2. ✅ Сохраняем сообщение пользователя
+        // 2. Сохраняем сообщение пользователя
         var userMessage = AgentMessage.User(conversation.Id, request.Message);
         await _messageRepository.AddAsync(userMessage, ct);
 
@@ -77,47 +104,72 @@ public class AgentService
         else
         {
             var jsonElement = JsonSerializer.Deserialize<JsonElement>(
-                conversation.JsonState, JsonSerializerOptions.Web);
+                conversation.JsonState, JsonOptions);
 
             agentSession = await _agent.DeserializeSessionAsync(
                 jsonElement,
-                jsonSerializerOptions: JsonSerializerOptions.Web,
+                jsonSerializerOptions: JsonOptions,
                 cancellationToken: ct);
         }
 
         // 4. Запускаем агента
         var response = await _agent.RunAsync(request.Message, agentSession);
 
-        // 5. ✅ Сохраняем ответ ассистента
+        // 5. Сохраняем ответ ассистента
         var assistantMessage = AgentMessage.Assistant(
             conversation.Id, response.Text);
         await _messageRepository.AddAsync(assistantMessage, ct);
 
-        // 6. Обновляем состояние
-        var serializedSession = await _agent.SerializeSessionAsync(
-            agentSession,
-            jsonSerializerOptions: JsonSerializerOptions.Web,
-            cancellationToken: ct);
-
+        // 6. Обновляем состояние (внутри UpdateState обновится LastMessageAt)
+        var serializedSession = await _agent.SerializeSessionAsync(agentSession, JsonOptions, ct);
         conversation.UpdateState(serializedSession.GetRawText());
+        conversation.IncrementMessageCount(2);
+
         await _unitOfWork.SaveChangesAsync(ct);
 
         return new ChatResponse
         {
             Reply = response.Text,
             SessionId = conversation.AgentConversationId,
-            MessageCount = conversation.MessageCount
+            MessageCount = conversation.MessageCount,
+            IsGuest = conversation.IsGuest,
+            ExpiresAt = conversation.GetExpiresAt(_options.GuestConversationRetentionDays),
+            DaysUntilExpiry = conversation.IsGuest
+                ? (int?)Math.Max(0,
+                    (_options.GuestConversationRetentionDays
+                     - (DateTime.UtcNow - (conversation.LastMessageAt ?? conversation.CreatedAt)).TotalDays))
+                : null
         };
     }
-    public async Task<List<ConversationDto>> GetConversationsAsync(int userId, CancellationToken ct)
+
+    public async Task<List<ConversationDto>> GetConversationsAsync(
+        int userId, CancellationToken ct)
     {
-        var conversations = await _conversationRepository.GetUserConversationsAsync(userId, ct);
+        var conversations = await _conversationRepository
+            .GetUserConversationsAsync(userId, ct);
 
         return conversations.Select(c => new ConversationDto
         {
             SessionId = c.AgentConversationId,
-            MessageCount = c.MessageCount,
             Title = c.Title,
+            MessageCount = c.MessageCount,
+            CreatedAt = c.CreatedAt,
+            UpdatedAt = c.UpdatedAt,
+            LastMessageAt = c.LastMessageAt
+        }).ToList();
+    }
+
+    public async Task<List<ConversationDto>> GetGuestConversationsAsync(
+        string guestId, CancellationToken ct)
+    {
+        var conversations = await _conversationRepository
+            .GetGuestConversationsAsync(guestId, ct);
+
+        return conversations.Select(c => new ConversationDto
+        {
+            SessionId = c.AgentConversationId,
+            Title = c.Title,
+            MessageCount = c.MessageCount,
             CreatedAt = c.CreatedAt,
             UpdatedAt = c.UpdatedAt,
             LastMessageAt = c.LastMessageAt
@@ -125,26 +177,25 @@ public class AgentService
     }
 
     public async Task<ConversationDetailDto> GetConversationAsync(
-        int userId,
-        string sessionId,
+        int? userId, string? guestId, string sessionId,
         CancellationToken ct = default)
     {
-        // 1. Находим диалог
         var conversation = await _conversationRepository
             .GetByConversationIdAsync(sessionId, ct)
-            ?? throw new DomainException(
-                $"Session {sessionId} not found");
+            ?? throw new DomainException($"Session {sessionId} not found");
 
-        // 2. Проверяем владельца
-        if (conversation.UserId != userId)
+        // ✅ Проверка владельца
+        var isOwner = userId.HasValue
+            ? conversation.IsOwnedBy(userId.Value)
+            : guestId != null && conversation.IsOwnedByGuest(guestId);
+
+        if (!isOwner)
             throw new UnauthorizedAccessException(
                 "You don't own this conversation");
 
-        // 3. ✅ Загружаем сообщения
         var messages = await _messageRepository
             .GetByConversationIdAsync(conversation.Id, ct);
 
-        // 4. Формируем DTO
         return new ConversationDetailDto
         {
             SessionId = conversation.AgentConversationId,
@@ -162,33 +213,128 @@ public class AgentService
         };
     }
 
-    public async Task DeleteUserConversationByIdAsync(int userId, string conversationId, CancellationToken ct)
+    public async Task ChangeTitleOfConversationByIdAsync(
+        int? userId,
+        string? guestId,
+        string conversationId,
+        string newTitle,
+        CancellationToken ct = default)
     {
-        var conversation = await _conversationRepository.GetByConversationIdAsync
-            (conversationId, ct);
+        // ✅ 1. Валидация входных данных
+        if (string.IsNullOrWhiteSpace(conversationId))
+            throw new DomainException("SessionId is required");
 
-        if (conversation == null)
+        if (string.IsNullOrWhiteSpace(newTitle))
+            throw new DomainException("NewTitle can't be empty or null");
+
+        if (newTitle.Length > 200)
+            throw new DomainException("NewTitle is too long (max 200)");
+
+        // ✅ 2. Загружаем диалог
+        var conversation = await _conversationRepository
+            .GetByConversationIdAsync(conversationId, ct)
+            ?? throw new DomainException($"Session {conversationId} not found");
+
+        // ✅ 3. Проверка владельца
+        var isOwner = userId.HasValue
+            ? conversation.IsOwnedBy(userId.Value)
+            : !string.IsNullOrWhiteSpace(guestId)
+              && conversation.IsOwnedByGuest(guestId);
+
+        if (!isOwner)
         {
-            _logger.LogWarning("Conversation with Id {id} not found",
-                conversationId);
-            throw new DomainException
-                ($"Conversation with Id {conversationId} not found");
-        }
-        if(conversation.UserId != userId)
-        {
-            _logger.LogWarning("You don't own this " +
-                "conversation, Id {conversationId}",
-                conversationId);
+            _logger.LogWarning(
+                "Unauthorized title change attempt for session {SessionId} by {Owner}",
+                conversationId,
+                userId.HasValue ? $"user {userId}" : $"guest {guestId}");
+
             throw new UnauthorizedAccessException(
-                $"You don't own this conversation, Id {conversationId}");
+                "You don't own this conversation");
         }
 
+        // ✅ 4. Проверка истечения (для гостей)
+        if (conversation.IsExpired(_options.GuestConversationRetentionDays))
+            throw new DomainException(
+                "This conversation has expired");
 
-        await _conversationRepository.DeleteUserConversationByIdAsync(userId, conversationId, ct);
+        // ✅ 5. Меняем заголовок
+        conversation.SetTitle(newTitle);
+
+        // ✅ 6. Сохраняем
         await _unitOfWork.SaveChangesAsync(ct);
 
+        // ✅ 7. Логируем
         _logger.LogInformation(
-            "Agent conversations with Id {convId} " +
-            "cleared for user {UserId}", conversationId, userId);
+            "Conversation {SessionId} title changed to '{Title}' by {Owner}",
+            conversationId,
+            newTitle,
+            userId.HasValue ? $"user {userId}" : $"guest {guestId}");
+    }
+
+    // ═══════════════════════════════════════════
+    // User
+    // ═══════════════════════════════════════════
+
+    public async Task<bool> DeleteUserConversationAsync(
+        int userId,
+        string conversationId,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(conversationId))
+            throw new DomainException("ConversationId is required");
+
+        // ✅ Чёткая логика: только user
+        var deleted = await _conversationRepository
+            .DeleteByUserAndConversationIdAsync(
+                userId, conversationId, ct);
+
+        if (!deleted)
+        {
+            _logger.LogWarning(
+                "Conversation {ConversationId} not found or not owned by user {UserId}",
+                conversationId, userId);
+            return false;
+        }
+
+        _logger.LogInformation(
+            "Conversation {ConversationId} deleted by user {UserId}",
+            conversationId, userId);
+
+        return true;
+    }
+
+    // ═══════════════════════════════════════════
+    // Guest
+    // ═══════════════════════════════════════════
+
+    public async Task<bool> DeleteGuestConversationAsync(
+        string guestId,
+        string conversationId,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(conversationId))
+            throw new DomainException("ConversationId is required");
+
+        if (string.IsNullOrWhiteSpace(guestId))
+            throw new DomainException("GuestId is required");
+
+        // ✅ Чёткая логика: только guest
+        var deleted = await _conversationRepository
+            .DeleteByGuestAndConversationIdAsync(
+                guestId, conversationId, ct);
+
+        if (!deleted)
+        {
+            _logger.LogWarning(
+                "Conversation {ConversationId} not found or not owned by guest {GuestId}",
+                conversationId, guestId);
+            return false;
+        }
+
+        _logger.LogInformation(
+            "Conversation {ConversationId} deleted by guest {GuestId}",
+            conversationId, guestId);
+
+        return true;
     }
 }

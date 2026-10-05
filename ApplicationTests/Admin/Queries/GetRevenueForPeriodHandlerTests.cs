@@ -1,6 +1,6 @@
-﻿using Application.Commands.Admin.Dashboard;
-using Application.Enums;
+﻿using Application.Enums;
 using Application.Interfaces;
+using Application.Queries.Admin.Dashboard;
 using Application.Queries.Admin.Product;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;

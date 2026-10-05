@@ -1,4 +1,4 @@
-﻿using Application.Commands.Admin.Dashboard;
+﻿using Application.Queries.Admin.Dashboard;
 using Application.Commands.Admin.Order;
 using Application.Commands.Order;
 using Application.DTOs.Admin.Order;
