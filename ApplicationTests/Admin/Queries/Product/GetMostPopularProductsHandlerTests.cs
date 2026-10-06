@@ -38,7 +38,7 @@ public class GetMostPopularProductsHandlerTests
         productRepoMock.Setup(x => x.GetMostPopularProductsForThePeriodAsync(
             It.IsAny<GetMostPopularProductsForThePeriodCommand>(),
             It.IsAny<CancellationToken>()))
-            .ReturnsAsync(popularProducts);
+            .ReturnsAsync((popularProducts, 2));
 
         var cacheServiceMock = new Mock<ICacheService>();
         cacheServiceMock.Setup(x => x.GetAsync<List<PopularProductDto>>(It.IsAny<string>(),
@@ -61,11 +61,11 @@ public class GetMostPopularProductsHandlerTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().HaveCount(2);
-        result[0].Name.Should().Be("iPhone");
-        result[0].TotalPurchases.Should().Be(5);
-        result[1].Name.Should().Be("AirPods");
-        result[1].TotalPurchases.Should().Be(3);
+        result.Items.Should().HaveCount(2);
+        result.Items[0].Name.Should().Be("iPhone");
+        result.Items[0].TotalPurchases.Should().Be(5);
+        result.Items[1].Name.Should().Be("AirPods");
+        result.Items[1].TotalPurchases.Should().Be(3);
         cacheServiceMock.Verify(x => x.SetAsync(
             It.IsAny<string>(),
             It.IsAny<List<PopularProductDto>>(),
@@ -89,7 +89,7 @@ public class GetMostPopularProductsHandlerTests
         var handler = new GetMostPopularProductsForThePeriodHandler(
             Mock.Of<IProductRepository>(),
             Mock.Of<IOrderRepository>(),
-            cacheServiceMock.Object, Mock.Of<ILogger<GetMostPopularProductsForThePeriodHandler>>()
+            Mock.Of<ILogger<GetMostPopularProductsForThePeriodHandler>>()
         );
 
         var command = new GetMostPopularProductsForThePeriodCommand
@@ -102,8 +102,8 @@ public class GetMostPopularProductsHandlerTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().HaveCount(1);
-        result[0].Name.Should().Be("iPhone");
+        result.Items.Should().HaveCount(1);
+        result.Items[0].Name.Should().Be("iPhone");
         cacheServiceMock.Verify(x => x.SetAsync(
             It.IsAny<string>(),
             It.IsAny<List<PopularProductDto>>(),

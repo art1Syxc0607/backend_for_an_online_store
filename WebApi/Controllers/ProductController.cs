@@ -66,7 +66,7 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<ProductResponseDto>>> GetAllProductsAsync()
+    public async Task<ActionResult<PagedResult<ProductResponseDto>>> GetAllProductsAsync()
     {
         var command = new GetAllProductsCommand();
 
@@ -76,7 +76,7 @@ public class ProductController : ControllerBase
 
     // ========== Фильтрация и Поиск, Сортировка, Плагинация ==========
     [HttpGet("filter")]
-    public async Task<ActionResult<List<ProductResponseDto>>> GetProductsFilter([FromQuery] ProductFilterDto dto)
+    public async Task<ActionResult<PagedResult<ProductResponseDto>>> GetProductsFilter([FromQuery] ProductFilterDto dto)
     {
         var command = new GetProductsFilterCommand
         {

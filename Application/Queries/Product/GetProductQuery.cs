@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Product;
+﻿using Application.Common;
+using Application.DTOs.Product;
 using Application.Interfaces.Caching;
 using MediatR;
 using System;

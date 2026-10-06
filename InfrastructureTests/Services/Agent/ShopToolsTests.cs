@@ -58,11 +58,11 @@ public class ShopToolsTests
         };
 
         _productRepoMock
-            .Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(products);
+            .Setup(r => r.GetAllProductsAsync(1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((products, 10));
 
         // Act
-        var result = await _shopTools.GetAllProductsAsync(CancellationToken.None);
+        var result = await _shopTools.GetAllProductsAsync(1, 20, CancellationToken.None);
 
         // Assert
         result.Should().Contain("iPhone 15");
@@ -76,11 +76,11 @@ public class ShopToolsTests
     {
         // Arrange
         _productRepoMock
-            .Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Domain.Entities.Product>());
+            .Setup(r => r.GetAllProductsAsync(1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new List<Domain.Entities.Product>(), 20));
 
         // Act
-        var result = await _shopTools.GetAllProductsAsync(CancellationToken.None);
+        var result = await _shopTools.GetAllProductsAsync(1, 20, CancellationToken.None);
 
         // Assert
         result.Should().Be("Каталог товаров пуст.");
@@ -91,11 +91,11 @@ public class ShopToolsTests
     {
         // Arrange
         _productRepoMock
-            .Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetAllProductsAsync(1, 20, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("DB error"));
 
         // Act
-        var result = await _shopTools.GetAllProductsAsync(CancellationToken.None);
+        var result = await _shopTools.GetAllProductsAsync(1, 20, CancellationToken.None);
 
         // Assert
         result.Should().Contain("Не удалось получить");
@@ -123,7 +123,7 @@ public class ShopToolsTests
                 It.IsAny<SortProductBy?>(), // sortBy
                 It.IsAny<bool>(),           // SortDesc
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(products);
+            .ReturnsAsync((products, 100));
 
         // Act
         var result = await _shopTools.SearchProductsAsync("iPhone");

@@ -2,6 +2,7 @@
 using Application.Enums;
 using Application.Interfaces;
 using Application.Queries.Admin.Dashboard;
+using Application.Queries.Product;
 using Domain.Entities;
 using Infrastructure.Data;
 using Infrastructure.Extensions;
@@ -9,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Linq.Expressions;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace Infrastructure.Repositories;
 
@@ -30,12 +32,30 @@ public class ProductRepository : IProductRepository
         return result;
     }
 
-    public async Task<List<Product>?> GetAllProductsAsync(CancellationToken ct = default)
+    public async Task<(List<Product> Items, int TotalCount)> GetAllProductsAsync(
+    int pageNumber,
+    int pageSize,
+    CancellationToken ct = default)
     {
-        return await _dpContext.Products
-            .Include(p => p.OrderItems)
-            .Include(p => p.Reviews)
+        // 1. ✅ totalCount — отдельный запрос
+        var totalCount = await _dpContext.Products
+            .AsNoTracking()
+            .CountAsync(ct);
+
+        if (totalCount == 0)
+        {
+            return (new List<Product>(), 0);
+        }
+
+        // 2. ✅ Пагинация
+        var items = await _dpContext.Products
+            .AsNoTracking()
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
+
+        return (items, totalCount);
     }
 
     public async Task<int> AddProductAsync(Product product, CancellationToken ct = default)
@@ -78,19 +98,22 @@ public class ProductRepository : IProductRepository
     }
 
 
-    public async Task<List<Product>> GetProductsFilter(int? CategoryId = null, string? SearchText = null,
-        decimal? PriceLimitMax = null, decimal? PriceLimitMin = null, bool? OnlyAvailable = null,
-        int? pageNumber = null, int? pageSize = null,
-        SortProductBy? sortBy = SortProductBy.Name, bool SortDesc = true, CancellationToken ct = default)
+    public async Task<(List<Product> Items, int TotalCount)> GetProductsFilter(int? CategoryId = null, string? SearchText = null,
+    decimal? PriceLimitMax = null, decimal? PriceLimitMin = null, bool? OnlyAvailable = null,
+    int? pageNumber = null, int? pageSize = null,
+    SortProductBy? sortBy = SortProductBy.Name, bool SortDesc = true, CancellationToken ct = default)
     {
         var search = _dpContext.Products
             .Include(p => p.OrderItems)
             .Include(p => p.Reviews)
             .WhereIf(CategoryId != null, p => p.CategoryId == CategoryId)
-            .WhereIf(SearchText != null, p => p.Name.Contains(SearchText) || p.Description.Contains(SearchText))
+            .WhereIf(SearchText != null, p => p.Name.Contains(SearchText)
+            || p.Description.Contains(SearchText))
             .WhereIf(PriceLimitMin != null, p => p.Price >= PriceLimitMin)
             .WhereIf(PriceLimitMax != null, p => p.Price <= PriceLimitMax)
             .WhereIf(OnlyAvailable != null, p => p.StockQuantity - p.ReservedQuantity > 0); // or !=
+
+        var totalCount = search.Count();
 
         var sortedQuery = search.ApplySorting(sortBy, SortDesc);
 
@@ -98,9 +121,36 @@ public class ProductRepository : IProductRepository
         var paginatedproducts = pageNumber != null && pageSize != null ? sortedQuery
             .Pagination(pageNumber.Value, pageSize.Value) : sortedQuery;
 
+        var items = await paginatedproducts.ToListAsync();
 
+        return (items, totalCount);
+    }
 
-        return await paginatedproducts.ToListAsync();
+    public async Task<(List<Product> Items, int TotalCount)> GetProductsFilter
+        (GetProductsFilterCommand command,
+        CancellationToken ct = default)
+    {
+        var search = _dpContext.Products
+            .Include(p => p.OrderItems)
+            .Include(p => p.Reviews)
+            .WhereIf(command.CategoryId != null, p => p.CategoryId == command.CategoryId)
+            .WhereIf(command.SearchText != null, p => p.Name.Contains(command.SearchText) 
+            || p.Description.Contains(command.SearchText))
+            .WhereIf(command.PriceLimitMin != null, p => p.Price >= command.PriceLimitMin)
+            .WhereIf(command.PriceLimitMax != null, p => p.Price <= command.PriceLimitMax)
+            .WhereIf(command.OnlyAvailable != null, p => p.StockQuantity - p.ReservedQuantity > 0); // or !=
+
+        var totalCount = search.Count();
+
+        var sortedQuery = search.ApplySorting(command.SortBy, command.SortDesc);
+
+        // Pagination
+        var paginatedproducts = command.PageNumber != null && command.PageSize != null ? sortedQuery
+            .Pagination(command.PageNumber.Value, command.PageSize.Value) : sortedQuery;
+
+        var items = await paginatedproducts.ToListAsync();
+
+        return (items, totalCount);
     }
 
     //admin

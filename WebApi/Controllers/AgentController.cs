@@ -29,6 +29,7 @@ public class AgentController : ControllerBase
     // Chat (для всех — user и guest)
     // ═══════════════════════════════════════════
     [HttpPost("chat")]
+    [AllowAnonymous]
     public async Task<ActionResult<ChatResponse>> Chat(
         [FromBody] ChatDto dto,
         CancellationToken ct)

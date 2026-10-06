@@ -9,48 +9,43 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Domain.Exceptions;
+using Application.Common;
 
 namespace Application.Queries.Product;
 
-public class GetAllProductsCommandHandler: IRequestHandler<GetAllProductsCommand, List<ProductResponseDto>>
+public class GetAllProductsHandler
+    : IRequestHandler<GetAllProductsCommand, PagedResult<ProductResponseDto>>
 {
-    private readonly IProductRepository _productRepository;
+    private readonly IProductRepository _repository;
     private readonly IMapper _mapper;
-    private readonly ICacheService _cacheService;
 
-    private const string CacheKey = "products:all";
-
-    public GetAllProductsCommandHandler(IProductRepository productRepository, 
-        IMapper mapper,
-        ICacheService cacheService)
+    public GetAllProductsHandler(
+        IProductRepository repository,
+        IMapper mapper)
     {
-        _productRepository = productRepository;
+        _repository = repository;
         _mapper = mapper;
-        _cacheService = cacheService;
     }
-        
 
-
-    public async Task<List<ProductResponseDto>> Handle(GetAllProductsCommand request, CancellationToken ct)
+    public async Task<PagedResult<ProductResponseDto>> Handle(
+        GetAllProductsCommand command,
+        CancellationToken ct)
     {
-        var cached = await _cacheService.GetAsync<List<ProductResponseDto>>(CacheKey);
-        if (cached != null)
-            return cached;
+        // ✅ Нормализация
+        var pageNumber = Math.Max(1, command.PageNumber);
+        var pageSize = Math.Clamp(command.PageSize, 1, 50);
 
+        // ✅ Репозиторий возвращает (items, totalCount)
+        var (items, totalCount) = await _repository.GetAllProductsAsync(
+            pageNumber, pageSize, ct);
 
-        var products = await _productRepository.GetAllProductsAsync(ct);
+        // ✅ Маппинг
+        var dtos = _mapper.Map<List<ProductResponseDto>>(items);
 
-        if (products == null) throw new DomainException("No products");
-
-        if (!products.Any())
-            return new List<ProductResponseDto>();
-
-        var result = _mapper.Map<List<ProductResponseDto>>(products)
-            .OrderByDescending(dto => dto.CountOfOrdersContainThisProduct).ToList();
-
-        // Кэшируем на 10 минут
-        await _cacheService.SetAsync(CacheKey, result, TimeSpan.FromMinutes(10));
-
-        return result;
+        return PagedResult<ProductResponseDto>.Create(
+            dtos,
+            totalCount,
+            pageNumber,
+            pageSize);
     }
 }

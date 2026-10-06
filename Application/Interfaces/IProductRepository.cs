@@ -1,6 +1,7 @@
 ﻿using Application.DTOs.Product;
 using Application.Enums;
 using Application.Queries.Admin.Dashboard;
+using Application.Queries.Product;
 using Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,11 @@ public interface IProductRepository
 {
     Task<Product?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<List<Product>?> GetByIdsAsync(List<int> Ids, CancellationToken ct = default);
-    Task<List<Product>?> GetAllProductsAsync(CancellationToken ct = default);
+
+    Task<(List<Product> Items, int TotalCount)> GetAllProductsAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken ct = default);
 
     Task<int> AddProductAsync(Product product, CancellationToken ct = default);
     Task UpdateProductAsync(Product product, CancellationToken ct = default);
@@ -25,10 +30,14 @@ public interface IProductRepository
     Task<bool> ProductsExist(List<int> Ids, CancellationToken ct = default);
 
 
-    Task<List<Product>> GetProductsFilter(int? CategoryId = null, string? SearchText = null, 
-        decimal? PriceLimitMax = null, decimal? PriceLimitMin = null, bool? OnlyAvailable = null, 
-        int? pageNumber = null, int? pageSize = null, 
+    Task<(List<Product> Items, int TotalCount)> GetProductsFilter(int? CategoryId = null, string? SearchText = null,
+        decimal? PriceLimitMax = null, decimal? PriceLimitMin = null, bool? OnlyAvailable = null,
+        int? pageNumber = null, int? pageSize = null,
         SortProductBy? sortBy = SortProductBy.Name, bool SortDesc = true, CancellationToken ct = default);
+
+
+    Task<(List<Product> Items, int TotalCount)> GetProductsFilter(GetProductsFilterCommand command,
+        CancellationToken ct = default);
 
     // admin
     Task<List<Product>> GetLowStockProductsAsync(

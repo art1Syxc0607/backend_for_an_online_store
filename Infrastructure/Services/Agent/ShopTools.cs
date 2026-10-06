@@ -30,27 +30,28 @@ public class ShopTools
     // ═══════════════════════════════════════════
 
     [Description("Возвращает список всех товаров в каталоге магазина с ценами и наличием.")]
-    public async Task<string> GetAllProductsAsync(CancellationToken ct = default)
+    public async Task<string> GetAllProductsAsync(int pageNumber, int pageSize, 
+        CancellationToken ct = default)
     {
         try
         {
             using var scope = _scopeFactory.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<IProductRepository>();
 
-            var products = await repo.GetAllProductsAsync(ct);
+            var pageResult = await repo.GetAllProductsAsync(pageNumber, pageSize, ct);
 
             _logger.LogInformation(
                 "ShopTools: GetAllProductsAsync returned {Count} products",
-                products.Count);
+                pageResult.Items.Count);
 
-            if (!products.Any())
+            if (!pageResult.Items.Any())
                 return "Каталог товаров пуст.";
 
             var sb = new StringBuilder();
-            sb.AppendLine($"Найдено товаров: {products.Count}");
+            sb.AppendLine($"Найдено товаров: {pageResult.Items.Count}");
             sb.AppendLine();
 
-            foreach (var p in products)
+            foreach (var p in pageResult.Items)
             {
                 sb.AppendLine($"- ID: {p.Id}");
                 sb.AppendLine($"  Название: {p.Name}");
@@ -93,16 +94,16 @@ public class ShopTools
 
             _logger.LogInformation(
                 "ShopTools: SearchProductsAsync('{Query}') returned {Count} products",
-                searchText, products.Count);
+                searchText, products.Items.Count);
 
-            if (!products.Any())
+            if (!products.Items.Any())
                 return $"Товары по запросу '{searchText}' не найдены.";
 
             var sb = new StringBuilder();
-            sb.AppendLine($"Найдено товаров по запросу '{searchText}': {products.Count}");
+            sb.AppendLine($"Найдено товаров по запросу '{searchText}': {products.Items.Count}");
             sb.AppendLine();
 
-            foreach (var p in products)
+            foreach (var p in products.Items)
             {
                 sb.AppendLine($"- {p.Name} — {p.Price:C} (в наличии: {p.AvailableQuantity})");
             }

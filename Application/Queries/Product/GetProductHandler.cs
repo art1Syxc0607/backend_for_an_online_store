@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Product;
+﻿using Application.Common;
+using Application.DTOs.Product;
 using Application.Interfaces;
 using AutoMapper;
 using Domain.Exceptions;
@@ -15,24 +16,16 @@ namespace Application.Queries.Product;
 public class GetProductHandler : IRequestHandler<GetProductQuery, ProductResponseDto>
 {
     private readonly IProductRepository _productRepository;
-    private readonly ICacheService _cacheService;
     private readonly IMapper _mapper;
 
-    public GetProductHandler(IProductRepository productRepository, ICacheService cacheService, 
-        IMapper mapper)
+    public GetProductHandler(IProductRepository productRepository, IMapper mapper)
     {
         _productRepository = productRepository;
-        _cacheService = cacheService;
         _mapper = mapper;
     }
 
     public async Task<ProductResponseDto> Handle(GetProductQuery request, CancellationToken ct)
     {
-        var cacheKey = $"product:{request.Id}";
-
-        var cached = await _cacheService.GetAsync<ProductResponseDto>(cacheKey);
-        if (cached != null)
-            return cached;
 
         var product = await _productRepository.GetByIdAsync(request.Id, ct);
         if (product == null)
@@ -57,7 +50,6 @@ public class GetProductHandler : IRequestHandler<GetProductQuery, ProductRespons
             UpdatedAt = product.UpdatedAt,
         };
 
-        await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
 
         return result;
     }
