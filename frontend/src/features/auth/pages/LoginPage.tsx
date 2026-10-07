@@ -6,13 +6,12 @@ export default function LoginPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        // TODO: �������� ������
         console.log('Login:', { email, password })
     }
 
     return (
         <div className="max-w-md mx-auto mt-20 bg-white rounded-lg shadow p-8">
-            <h1 className="text-2xl font-bold mb-6">����</h1>
+            <h1 className="text-2xl font-bold mb-6">Вход</h1>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium mb-1">Email</label>
@@ -25,7 +24,7 @@ export default function LoginPage() {
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium mb-1">������</label>
+                    <label className="block text-sm font-medium mb-1">Пароль</label>
                     <input
                         type="password"
                         value={password}
@@ -38,7 +37,7 @@ export default function LoginPage() {
                     type="submit"
                     className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                 >
-                    �����
+                    Войти
                 </button>
             </form>
         </div>

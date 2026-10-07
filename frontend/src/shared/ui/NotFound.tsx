@@ -2,7 +2,7 @@ export default function NotFound() {
     return (
         <div className="text-center py-20">
             <h1 className="text-4xl font-bold text-gray-800">404</h1>
-            <p className="text-gray-600 mt-2">�������� �� �������</p>
+            <p className="text-gray-600 mt-2">Страница не найдена</p>
         </div>
     )
 }

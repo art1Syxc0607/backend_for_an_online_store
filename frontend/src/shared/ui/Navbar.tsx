@@ -9,13 +9,13 @@ export default function Navbar() {
                 </Link>
                 <div className="flex gap-4">
                     <Link to="/" className="text-gray-600 hover:text-gray-900">
-                        ������
+                        Товары
                     </Link>
                     <Link to="/chat" className="text-gray-600 hover:text-gray-900">
-                        AI ��������
+                        AI Помощник
                     </Link>
                     <Link to="/login" className="text-gray-600 hover:text-gray-900">
-                        �����
+                        Войти
                     </Link>
                 </div>
             </div>
