@@ -1,6 +1,7 @@
 using Application.Commands.Email;
 using Application.Commands.User;
 using Application.DTOs.User;
+using Application.Queries.User;
 using Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -22,6 +23,20 @@ public class UserController : ControllerBase
 
     public UserController(IMediator mediator)
         => _mediator = mediator;
+
+    [Authorize]
+    [HttpGet("profile")]
+    public async Task<ActionResult<UserProfileDto>> GetProfile(
+    CancellationToken ct = default)
+    {
+        var query = new GetProfileQuery
+        {
+            UserId = GetCurrentUserId()
+        };
+
+        var result = await _mediator.Send(query, ct);
+        return Ok(result);
+    }
 
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterDto dto)

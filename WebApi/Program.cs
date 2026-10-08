@@ -1,7 +1,8 @@
-using Application;
+п»їusing Application;
 using Application.Interfaces;
 using Infrastructure;
 using Infrastructure.Data;
+using Infrastructure.Data.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -15,11 +16,11 @@ using WebAPI.Middleware;
 
 //namespace WebApi;
 
-//Batteries.Init(); // ДОБАВИТЬ!
+//Batteries.Init(); // Р”РћР‘РђР’РРўР¬!
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Добавляем аутентификацию с указанием схемы
+// Р”РѕР±Р°РІР»СЏРµРј Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёСЋ СЃ СѓРєР°Р·Р°РЅРёРµРј СЃС…РµРјС‹
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // "Bearer"
     .AddJwtBearer(options =>
     {
@@ -34,11 +35,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // "B
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
             ),
             ValidateIssuerSigningKey = true,
-            //ClockSkew = TimeSpan.Zero // опционально
+            //ClockSkew = TimeSpan.Zero // РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ
         };
     });
 
-// Добавляем авторизацию
+// Р”РѕР±Р°РІР»СЏРµРј Р°РІС‚РѕСЂРёР·Р°С†РёСЋ
 builder.Services.AddAuthorization();
 
 
@@ -49,10 +50,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>   // https://localhost:7197/swagger/index.html
 {
-    // Настройка Swagger для JWT
+    // РќР°СЃС‚СЂРѕР№РєР° Swagger РґР»СЏ JWT
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header. Пример: \"Bearer {token}\"",
+        Description = "JWT Authorization header. РџСЂРёРјРµСЂ: \"Bearer {token}\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
@@ -75,16 +76,16 @@ builder.Services.AddSwaggerGen(c =>   // https://localhost:7197/swagger/index.ht
     });
 });
 builder.Services.AddControllers();
-builder.Services.AddHttpContextAccessor(); // Как получить HttpContext в сервисе/команде?
+builder.Services.AddHttpContextAccessor(); // РљР°Рє РїРѕР»СѓС‡РёС‚СЊ HttpContext РІ СЃРµСЂРІРёСЃРµ/РєРѕРјР°РЅРґРµ?
 builder.Services.Extension(builder.Configuration); // DbContext + Repositories
 builder.Services.AddApplication();      // MediatR + FluentValidation
 
 builder.Host.UseSerilog((context, config) =>
 {
-    // 1. Читаем конфигурацию из appsettings.json
+    // 1. Р§РёС‚Р°РµРј РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ РёР· appsettings.json
     config.ReadFrom.Configuration(context.Configuration);
 
-    // 3. Добавляем File с асинхронностью для ВСЕХ логов
+    // 3. Р”РѕР±Р°РІР»СЏРµРј File СЃ Р°СЃРёРЅС…СЂРѕРЅРЅРѕСЃС‚СЊСЋ РґР»СЏ Р’РЎР•РҐ Р»РѕРіРѕРІ
     config.WriteTo.Async(a => a.File(
         path: "logs/all/log-.txt",
         rollingInterval: RollingInterval.Day,
@@ -92,7 +93,7 @@ builder.Host.UseSerilog((context, config) =>
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
     ));
 
-    // 4. Добавляем File с асинхронностью только для Error
+    // 4. Р”РѕР±Р°РІР»СЏРµРј File СЃ Р°СЃРёРЅС…СЂРѕРЅРЅРѕСЃС‚СЊСЋ С‚РѕР»СЊРєРѕ РґР»СЏ Error
     config.WriteTo.Async(a => a.File(
         path: "logs/errors/error-.txt",
         rollingInterval: RollingInterval.Day,
@@ -101,19 +102,19 @@ builder.Host.UseSerilog((context, config) =>
     ));
 });
 
-// реализация In-Memory Cache
+// СЂРµР°Р»РёР·Р°С†РёСЏ In-Memory Cache
 builder.Services.AddMemoryCache();
 
 
 var app = builder.Build();
 
-// Добавляем middleware до всех остальных
+// Р”РѕР±Р°РІР»СЏРµРј middleware РґРѕ РІСЃРµС… РѕСЃС‚Р°Р»СЊРЅС‹С…
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseStaticFiles();
 
-// 2. МАГИЯ: ОДНА СТРОЧКА для логирования времени ВСЕХ запросов
-app.UseSerilogRequestLogging(); // Важно: поставить ДО эндпоинтов!
+// 2. РњРђР“РРЇ: РћР”РќРђ РЎРўР РћР§РљРђ РґР»СЏ Р»РѕРіРёСЂРѕРІР°РЅРёСЏ РІСЂРµРјРµРЅРё Р’РЎР•РҐ Р·Р°РїСЂРѕСЃРѕРІ
+app.UseSerilogRequestLogging(); // Р’Р°Р¶РЅРѕ: РїРѕСЃС‚Р°РІРёС‚СЊ Р”Рћ СЌРЅРґРїРѕРёРЅС‚РѕРІ!
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -124,9 +125,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Добавляем middleware
-app.UseAuthentication(); // СНАЧАЛА аутентификация
-app.UseAuthorization();  // ПОТОМ авторизация
+// Р”РѕР±Р°РІР»СЏРµРј middleware
+app.UseAuthentication(); // РЎРќРђР§РђР›Рђ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёСЏ
+app.UseAuthorization();  // РџРћРўРћРњ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ
 
 app.MapControllers();
 
@@ -135,19 +136,30 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<AppDbContext>();
     var passwordHasher = services.GetRequiredService<IPasswordHasher>();
+    var logger = services.GetRequiredService<ILogger<Program>>();
 
     try
     {
+        // вњ… 1. Р‘Р°Р·РѕРІС‹Р№ seed (admin, СЂРѕР»Рё, РєР°С‚РµРіРѕСЂРёРё)
         await SeedData.InitializeAsync(context, passwordHasher);
-        Console.WriteLine("Данные инициализированы успешно!");
+        logger.LogInformation("вњ… Base data initialized");
+
+        // вњ… 2. РўРѕРІР°СЂС‹ вЂ” 1000 С€С‚СѓРє
+        await ProductSeeder.SeedProductsAsync(
+            context,
+            logger,
+            productCount: 1000);
+
+        logger.LogInformation("вњ… All seeding completed");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Ошибка инициализации: {ex.Message}");
+        logger.LogError(ex, "вќЊ Seeding failed");
+        throw;  // в†ђ РІ dev Р»СѓС‡С€Рµ СѓРїР°СЃС‚СЊ, С‡РµРј СЂР°Р±РѕС‚Р°С‚СЊ СЃ РЅРµРїРѕР»РЅРѕР№ Р‘Р”
     }
 }
 
 app.Run();
 
-// Нужно для интеграционных тестов
+// РќСѓР¶РЅРѕ РґР»СЏ РёРЅС‚РµРіСЂР°С†РёРѕРЅРЅС‹С… С‚РµСЃС‚РѕРІ
 public partial class Program { }

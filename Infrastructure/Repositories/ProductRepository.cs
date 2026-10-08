@@ -1,9 +1,12 @@
-﻿using Application.DTOs.Product;
+﻿using Application.Common;
+using Application.DTOs.Product;
 using Application.Enums;
 using Application.Interfaces;
 using Application.Queries.Admin.Dashboard;
 using Application.Queries.Product;
+using Application.Commands.Product;
 using Domain.Entities;
+using Domain.Enums;
 using Infrastructure.Data;
 using Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -98,7 +101,8 @@ public class ProductRepository : IProductRepository
     }
 
 
-    public async Task<(List<Product> Items, int TotalCount)> GetProductsFilter(int? CategoryId = null, string? SearchText = null,
+    public async Task<(List<Product> Items, int TotalCount)> GetProductsFilter(int? CategoryId = null, 
+        string? SearchText = null,
     decimal? PriceLimitMax = null, decimal? PriceLimitMin = null, bool? OnlyAvailable = null,
     int? pageNumber = null, int? pageSize = null,
     SortProductBy? sortBy = SortProductBy.Name, bool SortDesc = true, CancellationToken ct = default)
@@ -107,8 +111,9 @@ public class ProductRepository : IProductRepository
             .Include(p => p.OrderItems)
             .Include(p => p.Reviews)
             .WhereIf(CategoryId != null, p => p.CategoryId == CategoryId)
-            .WhereIf(SearchText != null, p => p.Name.Contains(SearchText)
-            || p.Description.Contains(SearchText))
+            .WhereIf(!string.IsNullOrWhiteSpace(SearchText), p =>
+                p.Name.ToLower().Contains(SearchText!.ToLower()) ||
+                (p.Description != null && p.Description.ToLower().Contains(SearchText.ToLower())))
             .WhereIf(PriceLimitMin != null, p => p.Price >= PriceLimitMin)
             .WhereIf(PriceLimitMax != null, p => p.Price <= PriceLimitMax)
             .WhereIf(OnlyAvailable != null, p => p.StockQuantity - p.ReservedQuantity > 0); // or !=
@@ -269,6 +274,162 @@ public class ProductRepository : IProductRepository
         //на CreatedAt в OrderItems, на ProductId в OrderItems 
 
         return (items, totalCount);
+    }
+
+    public async Task<PagedResult<PopularProductDto>> 
+        GetMostPopularProductsForThePeriodForUserAsync(
+        GetMostPopularProductsForThePeriodForUserCommand command,
+        CancellationToken ct = default)
+    {
+        var firstDay = command.FirstDayOfThePeriod.Date;
+        var lastDay = command.LastDayOfThePeriod.Date;
+        var pageNumber = Math.Max(1, command.PageNumber ?? 1);
+        var pageSize = Math.Clamp(command.PageSize ?? 20, 1, 50);
+
+        // ═══════════════════════════════════════════
+        // 1. ✅ Популярные товары ЗА ПЕРИОД
+        // ═══════════════════════════════════════════
+        var popularStats = await _dpContext.OrderItems
+            .Where(oi => oi.CreatedAt.Date >= firstDay
+                      && oi.CreatedAt.Date <= lastDay)
+            .GroupBy(oi => oi.ProductId)
+            .Select(g => new
+            {
+                ProductId = g.Key,
+                TotalPurchases = g.Sum(oi => oi.Quantity),
+                PresenceInOrders = g.Count(),
+                AmountOfPendingForThePeriod = g.Count(oi =>
+                    oi.Order.Status == OrderStatus.Pending),
+                AmountOfPaidForThePeriod = g.Count(oi =>
+                    oi.Order.Status == OrderStatus.Paid),
+                AmountOfShippedForThePeriod = g.Count(oi =>
+                    oi.Order.Status == OrderStatus.Shipped),
+                AmountOfDeliveredForThePeriod = g.Count(oi =>
+                    oi.Order.Status == OrderStatus.Delivered),
+                AmountOfReceivedForThePeriod = g.Count(oi =>
+                    oi.Order.Status == OrderStatus.Received),
+                AmountOfCancelledForThePeriod = g.Count(oi =>
+                    oi.Order.Status == OrderStatus.Cancelled)
+            })
+            .OrderByDescending(x => x.PresenceInOrders)
+            .ThenByDescending(x => x.TotalPurchases)
+            .ToListAsync(ct);
+
+        var totalCount = popularStats.Count;
+
+        // ═══════════════════════════════════════════
+        // 2. ✅ Пагинация популярных
+        // ═══════════════════════════════════════════
+        var pagedStats = popularStats
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        // ═══════════════════════════════════════════
+        // 3. ✅ Если популярных < pageSize — добиваем
+        // ═══════════════════════════════════════════
+        var remainingCount = pageSize - pagedStats.Count;
+
+        List<PopularProductDto> fallbackProducts = new();
+
+        if (remainingCount > 0 && pageNumber == 1)
+        {
+            // ✅ ID уже выбранных популярных
+            var popularIds = pagedStats.Select(s => s.ProductId).ToList();
+
+            // ✅ Товары БЕЗ продаж за период, но с наибольшим общим AmountOfPaid
+            var fallbackData = await _dpContext.Products
+                .AsNoTracking()
+                .Where(p => !popularIds.Contains(p.Id))
+                .OrderByDescending(p => p.AmountOfPaid)   // ← общие покупки за всё время
+                .ThenByDescending(p => p.AmountOfReceived) // ← полученные
+                .ThenByDescending(p => p.CreatedAt)
+                .Take(remainingCount)
+                .ToListAsync(ct);
+
+            fallbackProducts = fallbackData.Select(p => new PopularProductDto
+            {
+                ProductId = p.Id,
+                Name = p.Name,
+                Description = p.Description,
+                Price = p.Price,
+                StockQuantity = p.StockQuantity,
+                ReservedQuantity = p.ReservedQuantity,
+                ImageUrls = p.ImageUrls.ToList(),
+                VideoUrls = p.VideoUrls.ToList(),
+                CategoryId = p.CategoryId,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt,
+
+                // ✅ За период — 0, потому что не продавался
+                TotalPurchases = 0,
+                PresenceInOrders = 0,
+                AmountOfPendingForThePeriod = 0,
+                AmountOfPaidForThePeriod = 0,
+                AmountOfShippedForThePeriod = 0,
+                AmountOfDeliveredForThePeriod = 0,
+                AmountOfReceivedForThePeriod = 0,
+                AmountOfCancelledForThePeriod = 0
+            }).ToList();
+
+            // ✅ Добиваем totalCount
+            totalCount += fallbackProducts.Count;
+        }
+
+        // ═══════════════════════════════════════════
+        // 4. ✅ Загружаем популярные товары
+        // ═══════════════════════════════════════════
+        var popularIdsList = pagedStats.Select(s => s.ProductId).ToList();
+
+        var products = await _dpContext.Products
+            .AsNoTracking()
+            .Where(p => popularIdsList.Contains(p.Id))
+            .ToListAsync(ct);
+
+        var productDict = products.ToDictionary(p => p.Id);
+
+        var popularProducts = pagedStats.Select(stat =>
+        {
+            var product = productDict[stat.ProductId];
+
+            return new PopularProductDto
+            {
+                ProductId = stat.ProductId,
+                Name = product.Name,
+                Description = product.Description,
+                Price = product.Price,
+                StockQuantity = product.StockQuantity,
+                ReservedQuantity = product.ReservedQuantity,
+                ImageUrls = product.ImageUrls.ToList(),
+                VideoUrls = product.VideoUrls.ToList(),
+                CategoryId = product.CategoryId,
+                CreatedAt = product.CreatedAt,
+                UpdatedAt = product.UpdatedAt,
+
+                // ✅ Статистика за период
+                TotalPurchases = stat.TotalPurchases,
+                PresenceInOrders = stat.PresenceInOrders,
+                AmountOfPendingForThePeriod = stat.AmountOfPendingForThePeriod,
+                AmountOfPaidForThePeriod = stat.AmountOfPaidForThePeriod,
+                AmountOfShippedForThePeriod = stat.AmountOfShippedForThePeriod,
+                AmountOfDeliveredForThePeriod = stat.AmountOfDeliveredForThePeriod,
+                AmountOfReceivedForThePeriod = stat.AmountOfReceivedForThePeriod,
+                AmountOfCancelledForThePeriod = stat.AmountOfCancelledForThePeriod
+            };
+        }).ToList();
+
+        // ═══════════════════════════════════════════
+        // 5. ✅ Объединяем: популярные + fallback
+        // ═══════════════════════════════════════════
+        var result = popularProducts
+            .Concat(fallbackProducts)
+            .ToList();
+
+        return PagedResult<PopularProductDto>.Create(
+            result,
+            totalCount,
+            pageNumber,
+            pageSize);
     }
 
     private int GetDateSpan(DateSpan span, DateTime referenceDate) // учитывает что за тип года, сколь

@@ -19,15 +19,15 @@ using WebApi.Interfaces;
 namespace WebApi.Controllers;
 
 
-[Route("api/product")]
+[Route("api/products")]  // ← с "s"
 [ApiController]
 [AllowAnonymous]
-public class ProductController : ControllerBase
+public class ProductsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IFileStorageService _fileStorageService;
 
-    public ProductController(IMediator mediator, IFileStorageService fileStorageService)
+    public ProductsController(IMediator mediator, IFileStorageService fileStorageService)
     {
         _mediator = mediator;
         _fileStorageService = fileStorageService;
@@ -35,6 +35,8 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet("popularProducts")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PagedResult<PopularProductDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResult<PopularProductDto>>> GetMostPopularProductsForThePeriod(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -42,7 +44,7 @@ public class ProductController : ControllerBase
     {
         var now = DateTime.UtcNow;
 
-        var command = new GetMostPopularProductsForThePeriodCommand
+        var command = new GetMostPopularProductsForThePeriodForUserCommand
         {
             LastDayOfThePeriod = now,
             FirstDayOfThePeriod = now.AddDays(-14),
