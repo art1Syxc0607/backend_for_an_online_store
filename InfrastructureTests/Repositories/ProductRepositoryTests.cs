@@ -1,9 +1,12 @@
 ﻿// InfrastructureTests/Repositories/ProductRepositoryTests.cs
+using Castle.Core.Logging;
 using Domain.Entities;
 using FluentAssertions;
 using Infrastructure.Repositories;
 using InfrastructureTests.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 
 namespace InfrastructureTests.Repositories;
@@ -16,7 +19,10 @@ public class ProductRepositoryTests : IClassFixture<TestDatabaseFixture>
     public ProductRepositoryTests(TestDatabaseFixture fixture)
     {
         _fixture = fixture;
-        _repository = new ProductRepository(_fixture.Context);
+        _repository = new ProductRepository(
+             _fixture.Context,
+             NullLogger<ProductRepository>.Instance // ← Настоящий "пустой" логгер
+         );
     }
 
     [Fact]

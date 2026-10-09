@@ -31,6 +31,14 @@ public class PopularProductDto
     public DateTime EndDate { get; init; }
     public DateTime StartDate { get; init; }
 
+    // ✅ Статистика
+    public double AverageRating { get; set; }
+    public int ReviewCount { get; set; }
+    public int AmountOfPaid { get; set; } 
+    public int AmountOfReceived { get; set; }
+    public int AmountOfCanceled { get; set; }
+
+
     // Внешние ключи
     public int? CategoryId { get; init; }
 }

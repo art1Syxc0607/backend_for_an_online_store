@@ -9,8 +9,8 @@ export interface ReviewDto {
     productName: string
     text: string
     rating: number
-    imageUrls: string[]
-    videoUrls: string[]
+    imageUrls?: string[]   // ✅ опционально
+    videoUrls?: string[]   // ✅ опционально
     adminResponse?: string
     adminResponseAt?: string
     isVerifiedPurchase: boolean

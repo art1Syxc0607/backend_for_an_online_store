@@ -43,10 +43,31 @@ export default function ReviewList({ productId }: Props) {
                         <p className="mt-2 text-gray-700">{review.text}</p>
 
                         {/* Медиа отзыва */}
-                        {review.imageUrls.length > 0 && (
-                            <div className="flex gap-2 mt-2">
+                        {/* ✅ Защита от undefined */}
+                        {review.imageUrls && review.imageUrls.length > 0 && (
+                            <div className="flex gap-2 mt-2 flex-wrap">
                                 {review.imageUrls.map((url, i) => (
-                                    <img key={i} src={url} className="w-20 h-20 object-cover rounded" />
+                                    <img
+                                        key={i}
+                                        src={url}
+                                        alt={`Фото ${i + 1}`}
+                                        className="w-20 h-20 object-cover rounded cursor-pointer hover:opacity-80"
+                                        onClick={() => window.open(url, '_blank')}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* ✅ Видео */}
+                        {review.videoUrls && review.videoUrls.length > 0 && (
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                                {review.videoUrls.map((url, i) => (
+                                    <video
+                                        key={i}
+                                        src={url}
+                                        controls
+                                        className="w-32 h-20 object-cover rounded"
+                                    />
                                 ))}
                             </div>
                         )}
