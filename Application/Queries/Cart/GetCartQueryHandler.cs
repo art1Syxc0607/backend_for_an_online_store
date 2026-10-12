@@ -29,7 +29,6 @@ public class GetCartQueryHandler : IRequestHandler<GetCartQuery, CartResponseDto
             Id = cart.Id,
             UserId = cart.UserId,
             UpdatedAt = cart.UpdatedAt,
-            TotalPrice = cart.Items.Sum(i => i.Product.Price * i.Quantity),
             Items = cart.Items.Select(ci => new CartItemDto
             {
                 Id = ci.Id,

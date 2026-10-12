@@ -67,7 +67,8 @@ public class ReviewController : Controller
 
     [Authorize]
     [HttpPost]
-    public async Task<ActionResult<int>> LeaveComment([FromQuery] WebApi.DTOs.Review.AddReviewDto dto)
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<int>> LeaveComment([FromForm] AddReviewDto dto)
     {
         // Проверка файлов
         if (dto.Files != null)

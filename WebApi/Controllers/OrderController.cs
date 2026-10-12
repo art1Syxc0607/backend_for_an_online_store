@@ -1,5 +1,6 @@
 ﻿using Domain.Entities;
 using Application.DTOs.Order;
+using Application.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ using System.Security.Claims;
 using MediatR;
 using Application.Commands.Order;
 using WebApi.DTOs.Order;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 //using WebApi.DTOs.Order;
 
 namespace WebApi.Controllers;
@@ -24,7 +26,8 @@ public class OrderController : ControllerBase
         => _mediator = mediator;
 
     [HttpGet("history")]
-    public async Task<ActionResult<List<OrderResponseDto>>> GetOrderHistory([FromQuery] GetUserOrderHistoryDto dto)
+    public async Task<ActionResult<Application.Common.PagedResult<OrderResponseDto>>> 
+        GetOrderHistory([FromQuery] GetUserOrderHistoryDto dto)
     {
         var command = new GetOrderHistoryQuery
         {

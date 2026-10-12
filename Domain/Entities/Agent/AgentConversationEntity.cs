@@ -135,7 +135,6 @@ public class AgentConversationEntity
             throw new DomainException("JsonState cannot be empty");
 
         JsonState = jsonState;
-        MessageCount++;
         LastMessageAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }

@@ -12,6 +12,12 @@ public record class CartResponseDto
     public int Id { get; init; }
     public int UserId { get; init; }
     public DateTime UpdatedAt { get; init; }
-    public decimal TotalPrice { get; init; }
+    //public decimal TotalPrice { get; init; }
+
+    // ✅ Общая сумма
+    public decimal TotalPrice => Items.Sum(i => i.ProductPrice * i.Quantity);
+
+    // ✅ Общее количество
+    public int TotalItems => Items.Sum(i => i.Quantity);
     public List<CartItemDto> Items { get; init; } = new();
 }

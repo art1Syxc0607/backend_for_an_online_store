@@ -3,7 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { getProductById } from '../api/productApi'
 import StarRating from '@/shared/ui/StarRating'
+import AddReviewForm from '@/features/reviews/components/AddReviewForm'
 import ReviewList from '@/features/reviews/components/ReviewList'
+import AddToCartButton from '@/features/cart/components/AddToCartButton'
+import AddToCurrentOrderButton from '@/features/current-order/components/AddToCurrentOrderButton'
 
 export default function ProductDetailsPage() {
     const { id } = useParams<{ id: string }>()
@@ -117,12 +120,24 @@ export default function ProductDetailsPage() {
 
                     {/* Кнопки */}
                     <div className="flex gap-2 mb-6">
-                        <button
-                            className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
-                            disabled={product.availableQuantity === 0}
-                        >
-                            🛒 Добавить в корзину
-                        </button>
+                        <AddToCartButton
+                            productId={productId}
+                            productName={product.name}
+                            maxQuantity={product.availableQuantity}
+                            size="lg"
+                            className="flex-1"
+                        />
+
+                        {/* ✅ Кнопка в текущий заказ */}
+                        <AddToCurrentOrderButton
+                            productId={productId}
+                            productName={product.name}
+                            productImage={product.imageUrls?.[0]}
+                            productPrice={product.price}
+                            maxQuantity={product.availableQuantity}
+                            size="lg"
+                            className="flex-1"
+                        />
                     </div>
 
                     {/* Описание */}
@@ -145,6 +160,11 @@ export default function ProductDetailsPage() {
             {/* Отзывы */}
             <div className="mt-12">
                 <h2 className="text-2xl font-bold mb-4">Отзывы ({product.reviewCount})</h2>
+
+                {/* ✅ Форма добавления отзыва */}
+                <AddReviewForm productId={productId} />
+
+                {/* ✅ Список отзывов с фильтрами */}
                 <ReviewList productId={productId} />
             </div>
         </div>

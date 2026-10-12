@@ -25,10 +25,43 @@ public class OrderProfile : Profile
 
         // Маппинг OrderItem → OrderItemDto
         CreateMap<OrderItem, OrderItemDto>()
-            .ForMember(dest => dest.ProductId, opt => opt.MapFrom(src => src.ProductId))
-            .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
-            .ForMember(dest => dest.PriceAtPurchase, opt => opt.MapFrom(src => src.PriceAtPurchase))
-            .ForMember(dest => dest.ProductNameAtPurchase, opt => opt.MapFrom(src => src.ProductNameAtPurchase));
+     // ✅ Snapshot
+     .ForMember(dest => dest.ProductId, opt => opt.MapFrom(src => src.ProductId))
+     .ForMember(dest => dest.ProductNameAtPurchase,
+         opt => opt.MapFrom(src => src.ProductNameAtPurchase))
+     .ForMember(dest => dest.PriceAtPurchase,
+         opt => opt.MapFrom(src => src.PriceAtPurchase))
+     .ForMember(dest => dest.PurchasePriceAtPurchase,
+         opt => opt.MapFrom(src => src.PurchasePriceAtPurchase))
+     .ForMember(dest => dest.Quantity,
+         opt => opt.MapFrom(src => src.Quantity))
+
+     // ✅ Из Product (может быть null)
+     .ForMember(dest => dest.ProductImage,
+         opt => opt.MapFrom(src =>
+             src.Product != null && src.Product.ImageUrls != null
+                 ? src.Product.ImageUrls.FirstOrDefault()
+                 : null))
+
+     .ForMember(dest => dest.ProductImages,
+         opt => opt.MapFrom(src =>
+             src.Product != null && src.Product.ImageUrls != null
+                 ? src.Product.ImageUrls.ToList()
+                 : new List<string>()))
+
+     .ForMember(dest => dest.ProductDescription,
+         opt => opt.MapFrom(src =>
+             src.Product != null ? src.Product.Description : null))
+
+     .ForMember(dest => dest.ProductSku,
+         opt => opt.MapFrom(src =>
+             src.Product != null ? src.Product.Sku : null))
+
+     .ForMember(dest => dest.CategoryName,
+         opt => opt.MapFrom(src =>
+             src.Product != null && src.Product.Category != null
+                 ? src.Product.Category.Name
+                 : null));
 
         // 2.
         // ========== OrderItem → OrderItemDto (туда) ==========

@@ -14,4 +14,5 @@ public enum SortOrderBy
     Status = 0,
     DateOfCreation = 1,
     UserId = 2,
+    Price = 3,
 }

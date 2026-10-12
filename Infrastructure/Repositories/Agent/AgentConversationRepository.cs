@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces.Agent;
 using Domain.Entities.Agent;
 using Infrastructure.Data;
+using Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repositories.Agent;
@@ -23,32 +24,36 @@ public class AgentConversationRepository : IAgentConversationRepository
     }
 
     public async Task<List<AgentConversationEntity>> 
-        GetUserConversationsAsync(int userId, CancellationToken ct = default)
+        GetUserConversationsAsync(int userId, bool desc = true, CancellationToken ct = default)
     {
-        return await _context.AgentConversations.
-            Where(c => c.UserId == userId)
-            .ToListAsync();
+        var guestMessages = _context.AgentConversations.
+            Where(c => c.UserId == userId);
+        //.ToListAsync();
+
+        return await guestMessages.ApplySortingthis(desc).ToListAsync();
     }
 
-    public async Task<List<AgentConversationEntity>> GetGuestConversationsAsync(
-    string guestId, CancellationToken ct = default)
+    public async Task<List<AgentConversationEntity>> GetGuestConversationsByGuestIdAsync(
+    string guestId, bool desc = true, CancellationToken ct = default)
     {
-        return await _context.AgentConversations
+        var guestMessages = _context.AgentConversations
             .AsNoTracking()
-            .Where(c => c.GuestId == guestId && c.UserId == null)
-            .OrderByDescending(c => c.UpdatedAt)
-            .ToListAsync(ct);
+            .Where(c => c.GuestId == guestId && c.UserId == null);
+            //.OrderByDescending(c => c.UpdatedAt)
+            //.ToListAsync(ct);GetByConversationIdAsync
+
+        return await guestMessages.ApplySortingthis(desc).ToListAsync();
     }
 
-    public async Task<List<AgentConversationEntity>> GetByUserIdAsync(
-        int userId, CancellationToken ct = default)
-    {
-        return await _context.AgentConversations
-            .AsNoTracking()
-            .Where(c => c.UserId == userId)
-            .OrderByDescending(c => c.UpdatedAt)
-            .ToListAsync(ct);
-    }
+    //public async Task<List<AgentConversationEntity>> GetUserConversationsByUserIdAsync(
+    //    int userId, bool desc = true, CancellationToken ct = default)
+    //{
+    //    return await _context.AgentConversations
+    //        .AsNoTracking()
+    //        .Where(c => c.UserId == userId)
+    //        .OrderByDescending(c => c.UpdatedAt)
+    //        .ToListAsync(ct);
+    //}
 
     public async Task AddAsync(
         AgentConversationEntity conversation, CancellationToken ct = default)

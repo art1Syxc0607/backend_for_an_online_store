@@ -191,8 +191,12 @@ public class ProductRepository : IProductRepository
             GetMostPopularProductsForThePeriodCommand command,
             CancellationToken ct = default)
     {
-        var endDate = command.LastDayOfThePeriod.Date;
-        var startDate = command.FirstDayOfThePeriod.Date;
+        var endDate = DateTime.SpecifyKind(
+            command.LastDayOfThePeriod.Date,
+            DateTimeKind.Utc);
+        var startDate = DateTime.SpecifyKind(
+            command.FirstDayOfThePeriod.Date,
+            DateTimeKind.Utc);
         var pageNumber = command.PageNumber ?? 1;
         var pageSize = command.PageSize ?? 20;
 

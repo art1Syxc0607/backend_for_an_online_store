@@ -26,6 +26,17 @@ export interface ProductFilterRequest {
     sortDesc?: boolean
 }
 
+export async function getProducts(
+    pageNumber = 1,
+    pageSize = 20
+): Promise<PagedResult<ProductDto>> {
+    const { data } = await apiClient.get<PagedResult<ProductDto>>(
+        '/products',
+        { params: { pageNumber, pageSize } }
+    )
+    return data
+}
+
 export async function getFilteredProducts(
     filter: ProductFilterRequest
 ): Promise<PagedResult<ProductDto>> {

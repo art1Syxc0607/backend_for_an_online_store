@@ -1,5 +1,6 @@
 ﻿using Application.Enums;
 using Domain.Entities;
+using Domain.Entities.Agent;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -66,16 +67,21 @@ public static class QueryableExtensions
         return (sortBy ?? SortOrderBy.DateOfCreation) switch
         {
             SortOrderBy.Status => sortDesc
-                ? query.OrderByDescending(p => p.Status)
-                : query.OrderBy(p => p.Status),
+                ? query.OrderByDescending(o => o.Status)
+                : query.OrderBy(o => o.Status),
 
             SortOrderBy.UserId => sortDesc
-                ? query.OrderByDescending(p => p.UserId)
-                : query.OrderBy(p => p.UserId),
+                ? query.OrderByDescending(o => o.UserId)
+                : query.OrderBy(o => o.UserId),
 
             SortOrderBy.DateOfCreation => sortDesc
-                ? query.OrderByDescending(p => p.CreatedAt)
-                : query.OrderBy(p => p.CreatedAt),
+                ? query.OrderByDescending(o => o.CreatedAt)
+                : query.OrderBy(o => o.CreatedAt),
+
+            SortOrderBy.Price => sortDesc
+                ? query.OrderByDescending(o => o.TotalAmount)
+                : query.OrderBy(o => o.TotalAmount),
+
 
             _ => query.OrderByDescending(p => p.CreatedAt) // // Если ни одно не совпало (default)
         };
@@ -105,6 +111,14 @@ public static class QueryableExtensions
                 : query.OrderBy(r => r.CreatedAt)
         };
 
+    }
+
+    public static IQueryable<AgentConversationEntity> ApplySortingthis(
+    this IQueryable<AgentConversationEntity> query,
+    bool descending = true)
+    {
+        return descending ? query.OrderByDescending(ac => ac.CreatedAt)
+            : query.OrderBy(ac => ac.CreatedAt);
     }
 
 

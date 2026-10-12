@@ -7,11 +7,12 @@ public interface IAgentConversationRepository
     Task<AgentConversationEntity?> GetByConversationIdAsync(
         string sessionId, CancellationToken ct = default);
 
-    Task<List<AgentConversationEntity>> GetUserConversationsAsync(int userId, CancellationToken ct = default);
-    Task<List<AgentConversationEntity>> GetGuestConversationsAsync(
-        string guestId, CancellationToken ct = default);
-    Task<List<AgentConversationEntity>> GetByUserIdAsync(
-        int userId, CancellationToken ct = default);
+    Task<List<AgentConversationEntity>> 
+        GetUserConversationsAsync(int userId, bool desc = true, CancellationToken ct = default);
+    Task<List<AgentConversationEntity>> GetGuestConversationsByGuestIdAsync(
+        string guestId, bool desc = true, CancellationToken ct = default);
+    //Task<List<AgentConversationEntity>> GetUserConversationsByUserIdAsync(
+    //    int userId, CancellationToken ct = default);
 
     Task AddAsync(AgentConversationEntity conversation, CancellationToken ct = default);
 

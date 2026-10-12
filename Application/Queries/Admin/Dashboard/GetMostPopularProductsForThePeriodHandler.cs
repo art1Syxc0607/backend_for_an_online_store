@@ -64,19 +64,4 @@ public class GetMostPopularProductsForThePeriodHandler
             pageSize);
     }
 
-    private static TimeSpan GetCacheTtl(DateTime lastDay)
-    {
-        var now = DateTime.UtcNow;
-
-        // ✅ Если период уже закончился (прошлое) — кешируем дольше
-        if (lastDay.Date < now.Date)
-            return TimeSpan.FromHours(24);
-
-        // ✅ Если период включает сегодня — кешируем меньше
-        if (lastDay.Date == now.Date)
-            return TimeSpan.FromMinutes(15);
-
-        // ✅ Будущий период — не кешируем
-        return TimeSpan.Zero;
-    }
 }

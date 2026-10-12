@@ -16,7 +16,7 @@ public interface IOrderRepository
 {
     Task<Order?> GetOrder(int id, CancellationToken ct = default);
 
-    Task<List<Order>> GetAllAsync(GetOrderHistoryQuery query,
+    Task<(List<Order>, int)> GetAllAsync(GetOrderHistoryQuery query,
         CancellationToken ct = default);
     //Task CreateOrder(User user, 
     //    List<OrderItemDto> items, string shippingAddress,

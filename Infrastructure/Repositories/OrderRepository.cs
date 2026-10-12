@@ -41,41 +41,54 @@ public class OrderRepository : IOrderRepository
     }
 
     // UserOrderHistory
-    public async Task<List<Order>> GetAllAsync(GetOrderHistoryQuery query, 
+    public async Task<(List<Order>, int)> GetAllAsync(GetOrderHistoryQuery query, 
         CancellationToken ct = default)
     {
-        //var result = await _dpContext.Orders
-        //    .Include(o => o.Items)
-        //    .Where(
-        //    o => o.UserId == userId).ToListAsync(ct);
-
-        //return result;
 
         var queryToEf = _dpContext.Orders
-        .Include(o => o.Items)
-        .Include(o => o.User)
-        .WhereIf(query.Status.HasValue, o => o.Status == query.Status)
-        .Where(o => o.UserId == query.UserId);
+            .AsNoTracking()
+            .Include(o => o.Items)
+                .ThenInclude(oi => oi.Product)         // ✅ Product
+                    .ThenInclude(p => p.Category)       // ✅ Category (для CategoryName)
+            .Include(o => o.User)
+            .Where(o => o.UserId == query.UserId);
 
-        if (query.LastDayOfThePeriod.HasValue && query.FirstDayOfThePeriod.HasValue)
+        // ✅ Фильтр по статусу
+        if (query.Status.HasValue)
         {
-            var lastDayOfThePeriod = query.LastDayOfThePeriod.Value.Date;
-            var firstDayOfThePeriod = query.FirstDayOfThePeriod.Value.Date;
-
-            queryToEf = queryToEf.Where(o =>
-                o.CreatedAt.Date >= firstDayOfThePeriod &&
-                o.CreatedAt.Date <= lastDayOfThePeriod
-            );
+            queryToEf = queryToEf.Where(o => o.Status == query.Status.Value);
         }
 
-        var sortedQuery = queryToEf.ApplyOrderSorting(query.OrderSortBy, query.SortDesc ?? true);
+        // ✅ Фильтр по периоду
+        if (query.FirstDayOfThePeriod.HasValue && query.LastDayOfThePeriod.HasValue)
+        {
+            var firstDay = query.FirstDayOfThePeriod.Value.Date;
+            var lastDay = query.LastDayOfThePeriod.Value.Date;
 
+            queryToEf = queryToEf.Where(o =>
+                o.CreatedAt.Date >= firstDay &&
+                o.CreatedAt.Date <= lastDay);
+        }
 
-        var paginatedOrders = query.PageNumber.HasValue && query.PageSize.HasValue
-                ? sortedQuery.Pagination(query.PageNumber.Value, query.PageSize.Value)
-                : sortedQuery;
+        // ✅ Сортировка
+        var sortedQuery = queryToEf.ApplyOrderSorting(
+            query.OrderSortBy,
+            query.SortDesc ?? true);
 
-        return await paginatedOrders.ToListAsync(ct);
+        // ✅ CountAsync — асинхронно!
+        var totalCount = await sortedQuery.CountAsync(ct);
+
+        // ✅ Пагинация
+        var pageNumber = Math.Max(1, query.PageNumber ?? 1);
+        var pageSize = Math.Clamp(query.PageSize ?? 10, 1, 50);
+
+        var paginatedOrders = sortedQuery
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize);
+
+        var items = await paginatedOrders.ToListAsync(ct);
+
+        return (items, totalCount);
     }
     public async Task CreateOrder(Order order,
         CancellationToken ct = default)
@@ -198,8 +211,12 @@ public class OrderRepository : IOrderRepository
     public async Task<NumberOfNewOrdersForThePeriodResponseDto> GetNumberOfNewOrdersAsync(DateTime lastDayOfThePriod,
            DateTime firstDayOfThePriod, CancellationToken ct = default)
     {
-        var endDate = lastDayOfThePriod.Date;
-        var startDate = firstDayOfThePriod.Date;
+        var endDate = DateTime.SpecifyKind(
+            lastDayOfThePriod.Date,
+            DateTimeKind.Utc);
+        var startDate = DateTime.SpecifyKind(
+            firstDayOfThePriod.Date,
+            DateTimeKind.Utc);
 
         // ✅ Один запрос, все агрегации на стороне БД
         var result = await _dpContext.Orders
@@ -241,8 +258,12 @@ public class OrderRepository : IOrderRepository
     public async Task<RevenueForThePeriodDto> GetRevenueForThePeriodAsync(DateTime lastDayOfThePriod, DateTime firstDayOfThePriod,
         CancellationToken ct = default)
     {
-        var endDate = lastDayOfThePriod.Date.AddDays(1);
-        var startDate = firstDayOfThePriod.Date;
+        var endDate = DateTime.SpecifyKind(
+            lastDayOfThePriod.Date.AddDays(1),
+            DateTimeKind.Utc);
+        var startDate = DateTime.SpecifyKind(
+            firstDayOfThePriod.Date,
+            DateTimeKind.Utc);
 
         // ✅ Один запрос для получения и дохода, и себестоимости
         var result = await _dpContext.Orders

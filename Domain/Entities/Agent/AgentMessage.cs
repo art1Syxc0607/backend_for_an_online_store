@@ -40,5 +40,5 @@ public class AgentMessage
         => new(conversationId, AgentMessageRole.User, text);
 
     public static AgentMessage Assistant(int conversationId, string text)
-        => new(conversationId, AgentMessageRole.User, text);
+        => new(conversationId, AgentMessageRole.Assistant, text);
 }

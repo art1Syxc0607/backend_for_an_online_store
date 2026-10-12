@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Order;
+﻿using Application.Common;
+using Application.DTOs.Order;
 using Application.Enums;
 using Application.Interfaces;
 using Domain.Enums;
@@ -8,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Application.Queries.Order;
 
-public class GetOrderHistoryQuery : IRequest<List<OrderResponseDto>>
+public class GetOrderHistoryQuery : IRequest<PagedResult<OrderResponseDto>>
 {
     public int UserId { get; init; }
 

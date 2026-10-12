@@ -145,8 +145,9 @@ public class AgentService
     public async Task<List<ConversationDto>> GetConversationsAsync(
         int userId, CancellationToken ct)
     {
+        var desc = true;
         var conversations = await _conversationRepository
-            .GetUserConversationsAsync(userId, ct);
+            .GetUserConversationsAsync(userId, desc, ct);
 
         return conversations.Select(c => new ConversationDto
         {
@@ -162,8 +163,9 @@ public class AgentService
     public async Task<List<ConversationDto>> GetGuestConversationsAsync(
         string guestId, CancellationToken ct)
     {
+        var desc = true;
         var conversations = await _conversationRepository
-            .GetGuestConversationsAsync(guestId, ct);
+            .GetGuestConversationsByGuestIdAsync(guestId, desc, ct);
 
         return conversations.Select(c => new ConversationDto
         {
