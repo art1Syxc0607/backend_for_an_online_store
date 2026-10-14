@@ -1,4 +1,4 @@
-import { apiClient } from '@/shared/api/client'
+﻿import { apiClient } from '@/shared/api/client'
 
 export interface AddCategoryRequest {
     name: string
@@ -10,6 +10,8 @@ export interface UpdateCategoryRequest {
     name?: string
     description?: string
 }
+
+
 
 export async function addCategory(request: AddCategoryRequest): Promise<number> {
     const { data } = await apiClient.post<number>('/admin/category', {
