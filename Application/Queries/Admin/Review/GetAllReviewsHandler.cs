@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Review;
+﻿using Application.Common;
+using Application.DTOs.Review;
 using Application.Enums;
 using Application.Interfaces;
 using AutoMapper;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Application.Queries.Admin.Review;
 
-public class GetAllReviewsHandler : IRequestHandler<GetAllReviewsCommand, List<ReviewResponseDto>>
+public class GetAllReviewsHandler : IRequestHandler<GetAllReviewsCommand, PagedResult<ReviewResponseDto>>
 {
     private readonly IReviewRepository _reviewRepository;
     private readonly IMapper _mapper;
@@ -27,7 +28,7 @@ public class GetAllReviewsHandler : IRequestHandler<GetAllReviewsCommand, List<R
         _logger = logger;
     }
 
-    public async Task<List<ReviewResponseDto>> Handle(
+    public async Task<PagedResult<ReviewResponseDto>> Handle(
         GetAllReviewsCommand command,
         CancellationToken ct)
     {
@@ -41,11 +42,12 @@ public class GetAllReviewsHandler : IRequestHandler<GetAllReviewsCommand, List<R
 
         // 2. Формируем DTO
         // AutoMapper автоматически применит все настройки
-        var reviewDtos = _mapper.Map<List<ReviewResponseDto>>(reviews);
+        var reviewDtos = _mapper.Map<List<ReviewResponseDto>>(reviews.Items);
 
         _logger.LogInformation("Mapping into dto completed successfully. Count: {Count}"
             , reviewDtos.Count);
 
-        return reviewDtos;
+        return PagedResult<ReviewResponseDto>.Create(items: reviewDtos, totalCount: reviews.TotalCount,
+            pageNumber: command.PageNumber, pageSize: command.PageSize);
     }
 }

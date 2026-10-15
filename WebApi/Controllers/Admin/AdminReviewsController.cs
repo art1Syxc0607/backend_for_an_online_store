@@ -1,6 +1,7 @@
 ﻿using Application.Commands.Admin.Review;
 using Application.Commands.Review;
 using Application.DTOs.Review;
+using Application.Common;
 using Application.Queries.Admin.Review;
 using Domain.Entities;
 using MediatR;
@@ -36,7 +37,7 @@ public class AdminReviewsController : ControllerBase
     //}
 
     [HttpGet()]
-    public async Task<ActionResult<List<ReviewResponseDto>>> GetAllReviews([FromQuery] 
+    public async Task<ActionResult<PagedResult<ReviewResponseDto>>> GetAllReviews([FromQuery]
     GetAllReviewsDto dto)
     {
         var command = new GetAllReviewsCommand

@@ -45,13 +45,13 @@ public class CachingBehavior<TRequest, TResponse>
         var cached = await _cache.GetAsync<TResponse>(cacheKey, ct);
         if (cached != null)
         {
-            _logger.LogDebug(
+            _logger.LogInformation(
                 "🎯 Cache HIT: {RequestName} ({CacheKey})",
                 requestName, cacheKey);
             return cached;
         }
 
-        _logger.LogDebug(
+        _logger.LogInformation(
             "❌ Cache MISS: {RequestName} ({CacheKey})",
             requestName, cacheKey);
 
@@ -60,7 +60,7 @@ public class CachingBehavior<TRequest, TResponse>
         var response = await next();
         sw.Stop();
 
-        _logger.LogDebug(
+        _logger.LogInformation(
             "⏱️ Handler {RequestName} executed in {ElapsedMs}ms",
             requestName, sw.ElapsedMilliseconds);
 
@@ -69,7 +69,7 @@ public class CachingBehavior<TRequest, TResponse>
         {
             await _cache.SetAsync(cacheKey, response, duration, ct);
 
-            _logger.LogDebug(
+            _logger.LogInformation(
                 "💾 Cache SET: {RequestName} ({CacheKey}), TTL {TTL}",
                 requestName, cacheKey, duration);
         }

@@ -13,6 +13,9 @@ import AdminDashboardPage from '@/features/admin/pages/AdminDashboardPage'
 import AdminProductsPage from '@/features/admin/pages/AdminProductsPage'
 import AdminOrdersPage from '@/features/admin/pages/AdminOrdersPage'
 import AdminCategoriesPage from '@/features/admin/pages/AdminCategoriesPage'
+import AdminReviewsPage from '@/features/admin/pages/AdminReviewsPage'
+import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
+
 
 export const router = createBrowserRouter([
     {
@@ -37,8 +40,8 @@ export const router = createBrowserRouter([
             { path: 'products', element: <AdminProductsPage /> },
             { path: 'orders', element: <AdminOrdersPage /> },
             { path: 'categories', element: <AdminCategoriesPage /> },
-            // { path: 'reviews', element: <AdminReviewsPage /> },
-            // { path: 'users', element: <AdminUsersPage /> },
+            { path: 'reviews', element: <AdminReviewsPage /> },
+            { path: 'users', element: <AdminUsersPage /> },
         ],
     },
 ])

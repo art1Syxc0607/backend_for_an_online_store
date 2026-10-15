@@ -17,7 +17,7 @@ public interface IReviewRepository
     Task<Review?> GetReviewByIdAsync(int id, CancellationToken ct = default);
     Task<List<Review>> GetUserReviews(int userId, CancellationToken ct = default);
     Task<PagedResult<Review>> GetProductReviewsAsync(GetProductReviewsQuery query, CancellationToken ct = default);
-    Task<List<Review>> GetAllWithFiltersAsync(
+    Task<(List<Review> Items, int TotalCount)> GetAllWithFiltersAsync(
            GetAllReviewsCommand command, CancellationToken ct);
 
 

@@ -42,8 +42,9 @@ public class AdminCategoriesController : ControllerBase
     {
         var command = new UpdateCategoryCommand
         {
-            CategoryDescription = dto.Description,
-            CategoryName = dto.Name
+            CategoryId = dto.id,
+            CategoryDescription = dto.description,
+            CategoryName = dto.name
         };
 
         await _mediator.Send(command);

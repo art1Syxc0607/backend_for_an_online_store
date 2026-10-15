@@ -1,11 +1,12 @@
-﻿using Application.DTOs.Review;
+﻿using Application.Common;
+using Application.DTOs.Review;
 using Application.Enums;
 using Domain.Enums;
 using MediatR;
 
 namespace Application.Queries.Admin.Review;
 
-public class GetAllReviewsCommand : IRequest<List<ReviewResponseDto>>
+public class GetAllReviewsCommand : IRequest<PagedResult<ReviewResponseDto>>
 {
     public bool? IsResponded { get; set; }
     public int? ProductId { get; set; }

@@ -165,7 +165,7 @@ public class ReviewRepository : IReviewRepository
         await _dpcontext.Reviews.AddAsync(review, ct);
     }
 
-    public async Task<List<Review>> GetAllWithFiltersAsync(
+    public async Task<(List<Review> Items, int TotalCount)> GetAllWithFiltersAsync(
        GetAllReviewsCommand command, CancellationToken ct)
     {       
         var query = _dpcontext.Reviews
@@ -184,11 +184,14 @@ public class ReviewRepository : IReviewRepository
 
         var desc = command.Descending ?? true;
         var sortedQuery = query.ApplySorting(command.SortReviewBy, desc);
-
+        var totalCount = await sortedQuery.CountAsync();
 
         var pagination = sortedQuery.Pagination(command.PageNumber, command.PageSize);
 
-        return await pagination.ToListAsync(ct);
+        var items = await pagination.ToListAsync(ct);
+
+
+        return (items, totalCount);
     }
 
 

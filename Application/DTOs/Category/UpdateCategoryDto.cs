@@ -6,4 +6,4 @@ using System.Threading.Tasks;
 
 namespace Application.DTOs.Category;
 
-public record UpdateCategoryDto(int id, string? Name, string? Description);
+public record UpdateCategoryDto(int id, string? name, string? description);
