@@ -44,6 +44,17 @@ public class AdminOrdersController : ControllerBase
         return await _mediator.Send(command);
     }
 
+    [HttpGet("{id}")]
+    public async Task<ActionResult<OrderResponseDto>> GetOrderById(int id)
+    {
+        var result = await _mediator.Send(new GetAdminOrderByIdQuery { OrderId = id });
+
+        if (result == null)
+            return NotFound();
+
+        return Ok(result);
+    }
+
     [HttpPost("ship/{orderId}")]
     public async Task<IActionResult> ShipOrder(int orderId)
     {

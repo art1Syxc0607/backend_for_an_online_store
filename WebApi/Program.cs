@@ -4,6 +4,8 @@ using Infrastructure;
 using Infrastructure.Data;
 using Infrastructure.Data.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -108,6 +110,20 @@ builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
+// ✅ Доверяем заголовкам обратного прокси (nginx/Caddy): корректная схема (https),
+// хост и IP клиента. В Docker прокси — это отдельный контейнер с приватным IP,
+// поэтому очищаем списки доверенных сетей и прокси.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto
+        | ForwardedHeaders.XForwardedHost
+};
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+
+app.UseForwardedHeaders(forwardedHeadersOptions);
+
 // Добавляем middleware до всех остальных
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
@@ -140,6 +156,14 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
+        // ✅ 0. Миграции БД (по флагу Database:MigrateOnStartup)
+        if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+        {
+            logger.LogInformation("🛠 Applying database migrations...");
+            await context.Database.MigrateAsync();
+            logger.LogInformation("✅ Migrations applied");
+        }
+
         // ✅ 1. Базовый seed (admin, роли, категории)
         await SeedData.InitializeAsync(context, passwordHasher);
         logger.LogInformation("✅ Base data initialized");

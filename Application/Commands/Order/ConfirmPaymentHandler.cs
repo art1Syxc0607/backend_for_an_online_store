@@ -18,15 +18,13 @@ public class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentCommand, Paym
     private readonly IPaymentRepository _paymentRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly IUserRepository _userRepository;
-    private readonly ICacheService _cacheService;
     private readonly ILogger<ConfirmPaymentHandler> _logger;
     private readonly IEmailTemplateService _emailTemplateService;
     private readonly IEmailBackgroundService _emailBackgroundService;
     private readonly IUnitOfWork _unitOfWork;
 
     public ConfirmPaymentHandler(IPaymentRepository paymentRepository, IPaymentService paymentService,
-        IOrderRepository orderRepository, ICacheService cacheService,
-        IUserRepository userRepository,
+        IOrderRepository orderRepository, IUserRepository userRepository,
         ILogger<ConfirmPaymentHandler> logger, IEmailTemplateService emailTemplateService,
         IEmailBackgroundService emailBackgroundService,
         IUnitOfWork unitOfWork)
@@ -35,7 +33,6 @@ public class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentCommand, Paym
         _paymentService = paymentService;
         _paymentRepository = paymentRepository;
         _userRepository = userRepository;
-        _cacheService = cacheService;
         _logger = logger;
         _emailTemplateService = emailTemplateService;
         _emailBackgroundService = emailBackgroundService;
@@ -99,9 +96,6 @@ public class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentCommand, Paym
         order.MarkAsPaid();
 
         await _unitOfWork.SaveChangesAsync(ct);
-
-        // ✅ Очищаем кэш товаров
-        await _cacheService.RemoveByPrefix("products:");
 
         try
         {

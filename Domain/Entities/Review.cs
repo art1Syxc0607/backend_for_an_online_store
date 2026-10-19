@@ -175,6 +175,18 @@ public class Review
     }
 
     // ========== МАССОВАЯ ЗАГРУЗКА ==========
+
+    // ✅ Проверка лимита файлов ДО записи на диск (чтобы не оставлять orphan-файлы)
+    public void EnsureCanAddFiles(int newCount)
+    {
+        if (newCount < 0)
+            throw new DomainException("File count cannot be negative");
+
+        var totalFiles = _imageUrls.Count + _videoUrls.Count + newCount;
+        if (totalFiles > MaxFiles)
+            throw new DomainException($"Maximum {MaxFiles} files allowed (current: {_imageUrls.Count + _videoUrls.Count}, adding: {newCount})");
+    }
+
     public void SetImageUrls(List<string> urls)
     {
         if (urls == null || !urls.Any())

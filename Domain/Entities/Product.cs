@@ -87,11 +87,28 @@ public class Product
             Description = description;
         } 
         
-        if(stockQuantity  != null) SetStock(stockQuantity.Value);
-
         if (sku != null) Sku = sku;
         if(purchasePrice.HasValue) SetPurchasePrice(purchasePrice.Value);
-        if (reservedQuantity != null) SetReservedQuantity(reservedQuantity.Value);
+
+        // ✅ Остаток и резерв обновляем согласованно и проверяем ИТОГОВУЮ пару,
+        // иначе нельзя одновременно уменьшить и остаток, и резерв (SetStock смотрел бы
+        // на старое значение резерва и запрещал корректную правку).
+        if (stockQuantity != null || reservedQuantity != null)
+        {
+            var newStock = stockQuantity ?? StockQuantity;
+            var newReserved = reservedQuantity ?? ReservedQuantity;
+
+            if (newStock < 0)
+                throw new DomainException("Stock cannot be negative");
+            if (newReserved < 0)
+                throw new DomainException("ReservedQuantity cannot be negative");
+            if (newStock < newReserved)
+                throw new DomainException(
+                    $"Stock quantity ({newStock}) cannot be less than reserved quantity ({newReserved})");
+
+            StockQuantity = newStock;
+            ReservedQuantity = newReserved;
+        }
 
         UpdatedAt = DateTime.UtcNow;
     }
@@ -281,6 +298,17 @@ public class Product
     }
 
     // ========== МАССОВАЯ ЗАГРУЗКА ==========
+    // ✅ Проверка лимита файлов ДО записи на диск (чтобы не оставлять orphan-файлы)
+    public void EnsureCanAddFiles(int newCount)
+    {
+        if (newCount < 0)
+            throw new DomainException("File count cannot be negative");
+
+        var totalFiles = _imageUrls.Count + _videoUrls.Count + newCount;
+        if (totalFiles > MaxFiles)
+            throw new DomainException($"Maximum {MaxFiles} files allowed (current: {_imageUrls.Count + _videoUrls.Count}, adding: {newCount})");
+    }
+
     public void SetImageUrls(List<string> urls)
     {
         if (urls == null)

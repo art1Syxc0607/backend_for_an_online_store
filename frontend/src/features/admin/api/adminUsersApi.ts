@@ -44,6 +44,46 @@ export async function getAllUsers(
     return data
 }
 
+// ✅ Детальная информация о пользователе (для админки)
+export interface AdminUserOrderBriefDto {
+    orderId: number
+    totalAmount: number
+    status: string
+    createdAt: string
+}
+
+export interface AdminUserReviewBriefDto {
+    reviewId: number
+    productId: number
+    productName: string
+    rating: number
+    text: string
+    createdAt: string
+}
+
+export interface AdminUserDetailDto {
+    id: number
+    email: string
+    userName: string
+    role: string
+    isEmailConfirmed: boolean
+    emailConfirmedAt?: string
+    isActive: boolean
+    blockReason?: string
+    blockedAt?: string
+    createdAt: string
+    ordersCount: number
+    totalSpent: number
+    reviewsCount: number
+    orders: AdminUserOrderBriefDto[]
+    reviews: AdminUserReviewBriefDto[]
+}
+
+export async function getAdminUserById(userId: number): Promise<AdminUserDetailDto> {
+    const { data } = await apiClient.get<AdminUserDetailDto>(`/admin/users/${userId}`)
+    return data
+}
+
 export async function promoteToAdmin(userId: number): Promise<void> {
     await apiClient.post(`/admin/users/${userId}/promote`)
 }

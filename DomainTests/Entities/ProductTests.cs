@@ -575,6 +575,35 @@ public class ProductTests
             .WithMessage("*Image URLs cannot be null or empty*");
     }
 
+    [Fact]
+    public void EnsureCanAddFiles_WhenWithinLimit_ShouldNotThrow()
+    {
+        // Arrange
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
+        product.SetImageUrls(new List<string> { "image1.jpg", "image2.jpg" });
+
+        // Act
+        Action act = () => product.EnsureCanAddFiles(6); // 2 + 6 = 8
+
+        // Assert
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void EnsureCanAddFiles_WhenExceedsLimit_ShouldThrowDomainException()
+    {
+        // Arrange
+        var product = new Product("iPhone", 999.99m, DefaultPurchasePrice, 10, DefaultDescription);
+        product.SetImageUrls(new List<string> { "image1.jpg", "image2.jpg" });
+
+        // Act
+        Action act = () => product.EnsureCanAddFiles(7); // 2 + 7 = 9 > 8
+
+        // Assert
+        act.Should().Throw<DomainException>()
+            .WithMessage("*Maximum 8 files allowed*");
+    }
+
     // ============================================================
     // 2. УСТАНОВКА НЕСКОЛЬКИХ ВИДЕО URL (BULK SET)
     // ============================================================

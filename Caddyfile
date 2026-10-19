@@ -1,0 +1,7 @@
+# Замените домен в .env (переменная DOMAIN).
+# Caddy автоматически выпустит и будет обновлять TLS-сертификат Let's Encrypt.
+# Для локального теста DOMAIN=localhost — Caddy сгенерирует self-signed сертификат.
+{$DOMAIN:localhost} {
+    encode gzip
+    reverse_proxy web:80
+}

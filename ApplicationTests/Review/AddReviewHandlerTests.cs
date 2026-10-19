@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Domain.Entities;
 using Domain.Exceptions;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -50,7 +51,8 @@ public class AddReviewHandlerTests
             userRepoMock.Object,
             productRepoMock.Object,
             reviewRepoMock.Object,
-            Mock.Of<IFileStorageService>()
+            Mock.Of<IFileStorageService>(),
+            NullLogger<AddReviewCommandHandler>.Instance
         );
 
         var command = new AddReviewCommand
@@ -100,7 +102,8 @@ public class AddReviewHandlerTests
             userRepoMock.Object,
             productRepoMock.Object,
             Mock.Of<IReviewRepository>(),
-            Mock.Of<IFileStorageService>()
+            Mock.Of<IFileStorageService>(),
+            NullLogger<AddReviewCommandHandler>.Instance
         );
 
         var command = new AddReviewCommand

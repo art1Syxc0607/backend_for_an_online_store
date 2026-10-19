@@ -1,8 +1,10 @@
 ﻿using Application.Commands.Product;
+using Application.Common;
 using Application.Queries.Admin.Product;
 using Application.DTOs.Admin.Product;
 using Application.DTOs.Product;
 using Application.DTOs.File;
+using Application.Enums;
 using Application.Interfaces;
 using Domain.Entities;
 using MediatR;
@@ -12,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using WebApi.DTOs.Product;
 
@@ -176,6 +179,39 @@ public class AdminProductsController : ControllerBase
         };
 
         var result = await _mediator.Send(command);
+        return Ok(result);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<AdminProductDto>> GetProductById(int id)
+    {
+        var query = new GetAdminProductByIdQuery { Id = id };
+        var result = await _mediator.Send(query);
+
+        if (result == null)
+            return NotFound();
+
+        return Ok(result);
+    }
+
+    [HttpGet("filtered")]
+    public async Task<ActionResult<PagedResult<AdminProductDto>>> GetFilteredProducts(
+        [FromQuery] AdminProductFilterDto dto)
+    {
+        var query = new GetAdminProductsQuery
+        {
+            SearchText = dto.SearchText,
+            CategoryId = dto.CategoryId,
+            PriceLimitMax = dto.PriceLimitMax,
+            PriceLimitMin = dto.PriceLimitMin,
+            OnlyAvailable = dto.OnlyAvailable,
+            PageNumber = dto.PageNumber,
+            PageSize = dto.PageSize,
+            SortBy = dto.SortBy,
+            SortDesc = dto.SortDesc,
+        };
+
+        var result = await _mediator.Send(query);
         return Ok(result);
     }
 

@@ -56,6 +56,17 @@ public class AdminUsersController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{userId}")]
+    public async Task<ActionResult<AdminUserDetailDto>> GetUserById(int userId)
+    {
+        var result = await _mediator.Send(new GetAdminUserByIdQuery { UserId = userId });
+
+        if (result == null)
+            return NotFound();
+
+        return Ok(result);
+    }
+
     [HttpPost("{userId}/promote")]
     public async Task<IActionResult> PromoteToAdmin(int userId)
     {

@@ -1,5 +1,19 @@
 ﻿import { apiClient } from '@/shared/api/client'
 
+export interface CategoryDto {
+    id: number
+    name: string
+    description?: string
+    productsCount?: number
+    createdAt?: string
+}
+
+// ✅ Список категорий (используется в выпадающем списке при редактировании товара)
+export async function getAdminCategories(): Promise<CategoryDto[]> {
+    const { data } = await apiClient.get<CategoryDto[]>('/categories')
+    return data
+}
+
 export interface AddCategoryRequest {
     name: string
     description?: string

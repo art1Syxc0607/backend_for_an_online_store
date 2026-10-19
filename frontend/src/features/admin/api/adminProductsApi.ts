@@ -1,6 +1,58 @@
 ﻿import { apiClient } from '@/shared/api/client'
 import type { PagedResult } from '@/shared/api/types'
 
+// ✅ Админский DTO товара (с полными данными)
+export interface AdminProductDto {
+    id: number
+    name: string
+    description?: string
+    price: number
+    purchasePrice: number
+    stockQuantity: number
+    reservedQuantity: number
+    availableQuantity: number
+    averageRating: number
+    countOfReviews: number
+    amountOfRecieved: number
+    amountOfPaid: number
+    amountOfCanceled: number
+    countOfOrdersContainThisProduct: number
+    imageUrls?: string[]
+    videoUrls?: string[]
+    createdAt: string
+    updatedAt: string
+    categoryId?: number
+    categoryName?: string
+}
+
+// ✅ Фильтры для админ-таблицы товаров
+export interface AdminProductFilterRequest {
+    searchText?: string
+    categoryId?: number
+    priceLimitMin?: number
+    priceLimitMax?: number
+    onlyAvailable?: boolean
+    pageNumber?: number
+    pageSize?: number
+    sortBy?: string
+    sortDesc?: boolean
+}
+
+export async function getAdminProducts(
+    filter: AdminProductFilterRequest
+): Promise<PagedResult<AdminProductDto>> {
+    const { data } = await apiClient.get<PagedResult<AdminProductDto>>(
+        '/admin/product/filtered',
+        { params: filter }
+    )
+    return data
+}
+
+export async function getAdminProductById(id: number): Promise<AdminProductDto> {
+    const { data } = await apiClient.get<AdminProductDto>(`/admin/product/${id}`)
+    return data
+}
+
 export interface AddProductRequest {
     name: string
     price: number

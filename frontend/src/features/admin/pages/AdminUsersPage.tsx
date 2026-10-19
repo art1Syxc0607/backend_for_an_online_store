@@ -116,14 +116,14 @@ export default function AdminUsersPage() {
                 <div className="flex gap-2 justify-end">
                     {u.role === UserRole.User ? (
                         <button
-                            onClick={() => setPromotingId(u.id)}
+                            onClick={(e) => { e.stopPropagation(); setPromotingId(u.id) }}
                             className="px-3 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600"
                         >
                             👑 Назначить
                         </button>
                     ) : (
                         <button
-                            onClick={() => setDemotingId(u.id)}
+                            onClick={(e) => { e.stopPropagation(); setDemotingId(u.id) }}
                             className="px-3 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600"
                         >
                             ⬇️ Снять
@@ -206,6 +206,7 @@ export default function AdminUsersPage() {
                 isLoading={usersQuery.isLoading}
                 keyExtractor={(u) => u.id}
                 emptyMessage="Пользователей нет"
+                onRowClick={(u) => window.open(`/admin/users/${u.id}`, '_blank', 'noopener,noreferrer')}
             />
 
             {/* Promote */}

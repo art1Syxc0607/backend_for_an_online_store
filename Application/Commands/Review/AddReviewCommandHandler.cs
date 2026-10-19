@@ -1,8 +1,14 @@
 ﻿using Application.Commands.Order;
 using Application.Interfaces;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Domain.Exceptions;
 using Domain.Entities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 
 
@@ -16,11 +22,13 @@ public class AddReviewCommandHandler : IRequestHandler<AddReviewCommand, int>
     private readonly IFileStorageService _fileStorageService;
     private readonly IReviewRepository _reviewRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<AddReviewCommandHandler> _logger;
 
     public AddReviewCommandHandler(
         IOrderRepository orderRepository,
         IUnitOfWork unitOfWork, IUserRepository userRepository, IProductRepository productRepository,
-        IReviewRepository reviewRepository, IFileStorageService fileStorageService)
+        IReviewRepository reviewRepository, IFileStorageService fileStorageService,
+        ILogger<AddReviewCommandHandler> logger)
     {
         _orderRepository = orderRepository;
         _userRepository = userRepository;
@@ -28,6 +36,7 @@ public class AddReviewCommandHandler : IRequestHandler<AddReviewCommand, int>
         _unitOfWork = unitOfWork;
         _reviewRepository = reviewRepository;
         _fileStorageService = fileStorageService;
+        _logger = logger;
     }
 
     public async Task<int> Handle(AddReviewCommand command, CancellationToken ct)
@@ -55,44 +64,74 @@ public class AddReviewCommandHandler : IRequestHandler<AddReviewCommand, int>
         // 4. Создаём отзыв
         var review = new Domain.Entities.Review(user, product, command.Text, command.Rating, true);
 
-        // 5. ✅ СНАЧАЛА загружаем файлы
-        if (command.Files != null)
+        var uploadedUrls = new List<string>();
+
+        try
         {
-            var imageUrls = new List<string>();
-            var videoUrls = new List<string>();
-
-            foreach (var file in command.Files)
+            // 5. ✅ СНАЧАЛА загружаем файлы
+            if (command.Files != null)
             {
-                var url = await _fileStorageService.UploadFileAsync(
-                    file.Stream,
-                    file.FileName,
-                    file.ContentType,
-                    $"products/{product.Id}",
-                    ct
-                );
+                // ✅ Валидация ДО записи на диск — чтобы не оставить orphan-файлы
+                review.EnsureCanAddFiles(command.Files.Count);
 
-                if (file.ContentType.StartsWith("image/"))
-                    imageUrls.Add(url);
-                else if (file.ContentType.StartsWith("video/"))
-                    videoUrls.Add(url);
+                var imageUrls = new List<string>();
+                var videoUrls = new List<string>();
+
+                foreach (var file in command.Files)
+                {
+                    var url = await _fileStorageService.UploadFileAsync(
+                        file.Stream,
+                        file.FileName,
+                        file.ContentType,
+                        $"products/{product.Id}",
+                        ct
+                    );
+                    uploadedUrls.Add(url);
+
+                    if (file.ContentType.StartsWith("image/"))
+                        imageUrls.Add(url);
+                    else if (file.ContentType.StartsWith("video/"))
+                        videoUrls.Add(url);
+                }
+
+                if (imageUrls.Any())
+                    review.SetImageUrls(imageUrls);
+                if (videoUrls.Any())
+                    review.SetVideoUrls(videoUrls);
             }
 
-            if (imageUrls.Any())
-                review.SetImageUrls(imageUrls);
-            if (videoUrls.Any())
-                review.SetVideoUrls(videoUrls);
+            // 6. Сохраняем отзыв (с файлами)
+            await _reviewRepository.AddReviewAsync(review, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            // не нужно явно добовлять product.AddReview?
+            //Короткий ответ: ДА, НЕ НУЖНО!
+            //Если связь настроена правильно(через навигационные свойства), EF Core сам свяжет Review
+            //с Product и User.Явно добавлять product.Reviews.Add(review) не обязательно.
+
+            return review.Id;
         }
+        catch
+        {
+            // ✅ Компенсация: БД откатит SaveChanges, а файлы удаляем вручную
+            await TryDeleteUploadedFilesAsync(uploadedUrls, ct);
+            throw;
+        }
+    }
 
-        // 6. Сохраняем отзыв (с файлами)
-        await _reviewRepository.AddReviewAsync(review, ct);
-        await _unitOfWork.SaveChangesAsync();
+    private async Task TryDeleteUploadedFilesAsync(List<string> urls, CancellationToken ct)
+    {
+        if (urls.Count == 0)
+            return;
 
-        // не нужно явно добовлять product.AddReview?
-        //Короткий ответ: ДА, НЕ НУЖНО!
-        //Если связь настроена правильно(через навигационные свойства), EF Core сам свяжет Review 
-        //с Product и User.Явно добавлять product.Reviews.Add(review) не обязательно.
-
-        return review.Id;
-
+        try
+        {
+            await _fileStorageService.DeleteMultipleFilesAsync(urls, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to roll back {Count} uploaded review file(s)", urls.Count);
+        }
     }
 }

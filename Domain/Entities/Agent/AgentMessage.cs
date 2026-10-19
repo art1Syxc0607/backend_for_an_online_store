@@ -31,8 +31,30 @@ public class AgentMessage
     {
         ConversationId = conversationId;
         Role = role;
-        Text = text;
+        SetText(text);
         CreatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Создаёт сообщение с привязкой через навигацию.
+    /// Позволяет сохранить диалог и сообщения ОДНИМ SaveChanges
+    /// (EF сам проставит ConversationId после вставки диалога).
+    /// </summary>
+    public AgentMessage(AgentConversationEntity conversation, AgentMessageRole role, string text)
+    {
+        Conversation = conversation ?? throw new DomainException("Conversation cannot be null.");
+        ConversationId = conversation.Id;
+        Role = role;
+        SetText(text);
+        CreatedAt = DateTime.UtcNow;
+    }
+
+    private void SetText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            throw new DomainException("Text cannot be empty.");
+
+        Text = text;
     }
 
     // ✅ Фабричные методы
@@ -41,4 +63,10 @@ public class AgentMessage
 
     public static AgentMessage Assistant(int conversationId, string text)
         => new(conversationId, AgentMessageRole.Assistant, text);
+
+    public static AgentMessage User(AgentConversationEntity conversation, string text)
+        => new(conversation, AgentMessageRole.User, text);
+
+    public static AgentMessage Assistant(AgentConversationEntity conversation, string text)
+        => new(conversation, AgentMessageRole.Assistant, text);
 }

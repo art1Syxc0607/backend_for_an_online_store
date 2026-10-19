@@ -27,6 +27,16 @@ public class UserRepository : IUserRepository
         return user;
     }
 
+    // Admin, User — полная информация о пользователе
+    public async Task<User?> GetByIdWithDetailsAsync(int id, CancellationToken ct = default)
+    {
+        return await _context.Users
+            .Include(u => u.Orders)
+            .Include(u => u.Reviews)
+                .ThenInclude(r => r.Product)
+            .FirstOrDefaultAsync(u => u.Id == id, ct);
+    }
+
     public async Task<User?> GetByUserNameAsync(string userName, CancellationToken ct = default)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == userName);

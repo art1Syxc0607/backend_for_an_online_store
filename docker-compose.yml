@@ -1,0 +1,83 @@
+services:
+  # ---------- PostgreSQL ----------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-WebStoreProjectDb}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-WebStoreProjectDb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------- ASP.NET Core API ----------
+  api:
+    build:
+      context: .
+      dockerfile: WebApi/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+
+      # Пароль БД: код дописывает ";Password=..." к строке подключения,
+      # поэтому в самом ConnectionString пароля быть НЕ должно.
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-WebStoreProjectDb};Username=${POSTGRES_USER:-postgres}"
+
+      # Применять EF-миграции при старте
+      Database__MigrateOnStartup: "true"
+
+      # Секреты/интеграции
+      Jwt__Key: ${JWT_KEY:?JWT_KEY is required}
+      Jwt__Issuer: ${JWT_ISSUER:-MyAuthServer}
+      Jwt__Audience: ${JWT_AUDIENCE:-MyAuthClient}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      IpInfo__ApiKey: ${IPINFO_API_KEY:-}
+      # App__BaseUrl: ${APP_BASE_URL:-}
+    volumes:
+      - uploads:/app/wwwroot
+      - logs:/app/logs
+
+  # ---------- Frontend (nginx) ----------
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    expose:
+      - "80"
+
+  # ---------- TLS reverse proxy ----------
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  uploads:
+  logs:
+  caddy_data:
+  caddy_config:

@@ -11,10 +11,13 @@ import OrdersHistoryPage from '@/features/orders/pages/OrdersHistoryPage'
 import AdminLayout from '@/features/admin/components/AdminLayout'
 import AdminDashboardPage from '@/features/admin/pages/AdminDashboardPage'
 import AdminProductsPage from '@/features/admin/pages/AdminProductsPage'
+import AdminProductDetailPage from '@/features/admin/pages/AdminProductDetailPage'
 import AdminOrdersPage from '@/features/admin/pages/AdminOrdersPage'
+import AdminOrderDetailPage from '@/features/admin/pages/AdminOrderDetailPage'
 import AdminCategoriesPage from '@/features/admin/pages/AdminCategoriesPage'
 import AdminReviewsPage from '@/features/admin/pages/AdminReviewsPage'
 import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
+import AdminUserDetailPage from '@/features/admin/pages/AdminUserDetailPage'
 
 
 export const router = createBrowserRouter([
@@ -38,10 +41,13 @@ export const router = createBrowserRouter([
         children: [
             { index: true, element: <AdminDashboardPage /> },
             { path: 'products', element: <AdminProductsPage /> },
+            { path: 'products/:id', element: <AdminProductDetailPage /> },
             { path: 'orders', element: <AdminOrdersPage /> },
+            { path: 'orders/:id', element: <AdminOrderDetailPage /> },
             { path: 'categories', element: <AdminCategoriesPage /> },
             { path: 'reviews', element: <AdminReviewsPage /> },
             { path: 'users', element: <AdminUsersPage /> },
+            { path: 'users/:id', element: <AdminUserDetailPage /> },
         ],
     },
 ])

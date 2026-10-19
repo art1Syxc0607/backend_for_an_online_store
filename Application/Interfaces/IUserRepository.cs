@@ -10,6 +10,9 @@ public interface IUserRepository
     Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
     Task<User?> GetByUserNameAsync(string userName, CancellationToken ct = default);
 
+    // ✅ Пользователь со всеми связанными данными (заказы, отзывы) — для админки
+    Task<User?> GetByIdWithDetailsAsync(int id, CancellationToken ct = default);
+
     Task<User?> GetByIdAsyncWithCart(int id, CancellationToken ct = default);
     Task<List<User>> GetAllAsync(CancellationToken ct = default);
     Task AddAsync(User user, CancellationToken ct = default);

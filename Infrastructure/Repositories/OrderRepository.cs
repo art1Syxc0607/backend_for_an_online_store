@@ -35,6 +35,7 @@ public class OrderRepository : IOrderRepository
         var result = await _dpContext.Orders
             .Include(o => o.Items)
                 .ThenInclude(i => i.Product)  // ← ДОБАВИТЬ! Загружаем продукты
+                    .ThenInclude(p => p.Category) // ← категория для CategoryName
             .FirstOrDefaultAsync(o => o.Id == id);
 
         return result;
@@ -220,7 +221,7 @@ public class OrderRepository : IOrderRepository
 
         // ✅ Один запрос, все агрегации на стороне БД
         var result = await _dpContext.Orders
-            .Where(o => o.CreatedAt >= startDate && o.CreatedAt < endDate)
+            .Where(o => o.CreatedAt.Date >= startDate && o.CreatedAt.Date <= endDate)
             .GroupBy(o => 1) // Фиктивная группировка
             .Select(g => new
             {

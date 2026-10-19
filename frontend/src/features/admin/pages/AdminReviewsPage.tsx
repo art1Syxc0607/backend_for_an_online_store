@@ -69,12 +69,30 @@ export default function AdminReviewsPage() {
         {
             key: 'product',
             title: 'Товар',
-            render: (r) => <span className="text-sm">ID: {r.productId}</span>,
+            render: (r) => (
+                <a
+                    href={`/admin/products/${r.productId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-500 hover:underline"
+                >
+                    {r.productName || `ID: ${r.productId}`} ↗
+                </a>
+            ),
         },
         {
             key: 'user',
             title: 'Пользователь',
-            render: (r) => <span className="text-sm">ID: {r.userId}</span>,
+            render: (r) => (
+                <a
+                    href={`/admin/users/${r.userId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-500 hover:underline"
+                >
+                    {r.userName || `ID: ${r.userId}`} ↗
+                </a>
+            ),
         },
         {
             key: 'rating',

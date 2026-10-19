@@ -178,6 +178,27 @@ public class LocalFileStorageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteFileAsync_WithAbsoluteUrl_ShouldDeleteFile()
+    {
+        // Arrange: загружаем файл (получаем относительный URL, т.к. HttpContext = null)
+        var file = TestFileHelper.CreateImageFile("test.jpg");
+        var relativeUrl = await _fileStorageService.UploadFileAsync(
+            file.OpenReadStream(), file.FileName, file.ContentType, "products/1");
+
+        var filePath = Path.Combine(_testRootPath, relativeUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        File.Exists(filePath).Should().BeTrue();
+
+        // В проде GetFileUrlAsync возвращает абсолютный URL с двойным слэшем
+        var absoluteUrl = $"https://localhost:7197/{relativeUrl}";
+
+        // Act
+        await _fileStorageService.DeleteFileAsync(absoluteUrl);
+
+        // Assert
+        File.Exists(filePath).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task DeleteFileAsync_WhenFileDoesNotExist_ShouldNotThrow()
     {
         var nonExistentUrl = "/images/products/999/nonexistent.jpg";

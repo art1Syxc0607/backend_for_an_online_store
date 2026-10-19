@@ -14,6 +14,7 @@ interface Props<T> {
     isLoading?: boolean
     emptyMessage?: string
     keyExtractor: (item: T) => string | number
+    onRowClick?: (item: T) => void
 }
 
 export default function AdminTable<T>({
@@ -22,6 +23,7 @@ export default function AdminTable<T>({
     isLoading,
     emptyMessage = 'No data',
     keyExtractor,
+    onRowClick,
 }: Props<T>) {
     if (isLoading) {
         return (
@@ -61,7 +63,11 @@ export default function AdminTable<T>({
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                         {data.map((item) => (
-                            <tr key={keyExtractor(item)} className="hover:bg-gray-50">
+                            <tr
+                                key={keyExtractor(item)}
+                                onClick={onRowClick ? () => onRowClick(item) : undefined}
+                                className={`hover:bg-gray-50 ${onRowClick ? 'cursor-pointer' : ''}`}
+                            >
                                 {columns.map((col) => (
                                     <td
                                         key={col.key}

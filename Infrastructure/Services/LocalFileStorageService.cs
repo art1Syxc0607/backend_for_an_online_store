@@ -86,8 +86,24 @@ public class LocalFileStorageService : IFileStorageService
         if (string.IsNullOrEmpty(fileUrl))
             return Task.CompletedTask;
 
-        // Извлекаем путь из URL: /images/products/1/abc.jpg → images/products/1/abc.jpg
-        var relativePath = fileUrl.TrimStart('/');
+        // ✅ Извлекаем относительный путь.
+        // URL может быть абсолютным (https://host/images/products/1/abc.jpg),
+        // относительным (/images/products/1/abc.jpg) или одиночным именем.
+        string relativePath;
+        if (Uri.TryCreate(fileUrl, UriKind.Absolute, out var uri))
+        {
+            relativePath = uri.AbsolutePath;
+        }
+        else
+        {
+            relativePath = fileUrl;
+        }
+
+        // /images/products/1/abc.jpg → images/products/1/abc.jpg
+        relativePath = relativePath.TrimStart('/');
+        if (string.IsNullOrEmpty(relativePath))
+            return Task.CompletedTask;
+
         var fullPath = Path.Combine(_environment.WebRootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
 
         if (File.Exists(fullPath))

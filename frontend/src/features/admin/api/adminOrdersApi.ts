@@ -21,6 +21,12 @@ export async function getAllOrders(
     return data
 }
 
+// ✅ Админский заказ по ID (без проверки владельца)
+export async function getAdminOrderById(orderId: number): Promise<OrderResponseDto> {
+    const { data } = await apiClient.get<OrderResponseDto>(`/admin/order/${orderId}`)
+    return data
+}
+
 export async function shipOrder(orderId: number): Promise<void> {
     await apiClient.post(`/admin/order/ship/${orderId}`)
 }

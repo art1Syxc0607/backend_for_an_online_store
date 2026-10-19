@@ -1,0 +1,42 @@
+# ===== Build output =====
+**/bin/
+**/obj/
+**/out/
+
+# ===== IDE / VS =====
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ===== Git =====
+.git/
+.gitignore
+
+# ===== Logs =====
+**/logs/
+
+# ===== Node / frontend =====
+frontend/node_modules/
+frontend/dist/
+
+# ===== Uploaded files (persist via Docker volume) =====
+WebApi/wwwroot/
+
+# ===== Legacy SQLite artifacts =====
+WebApi/web_store.db
+WebApi/web_store.sql
+WebApi/data.sql
+
+# ===== Tests (not needed in the image) =====
+WebAPITests/
+DomainTests/
+ApplicationTests/
+InfrastructureTests/
+OrderTests.txt
+
+# ===== Local secrets =====
+.env
+.env.local

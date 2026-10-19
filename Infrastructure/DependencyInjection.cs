@@ -122,6 +122,7 @@ public static class DependencyInjection
         // ✅ Background Cleanup tasks
         services.AddScoped<ICleanupTask, PasswordResetCodesCleanupTask>();
         services.AddScoped<ICleanupTask, ExpiredOrdersCleanupTask>();
+        services.AddScoped<ICleanupTask, ExpiredAgentConversationsCleanupTask>();
 
         // ✅ Планировщик
         services.AddHostedService<CleanupBackgroundService>();
@@ -196,10 +197,7 @@ public static class DependencyInjection
 
         services.AddScoped<IAgentMessageRepository, AgentMessageRepository>();
         services.AddScoped<IAgentConversationRepository, AgentConversationRepository>();
-        services.AddScoped<AgentService>();
 
-        // ✅ Cleanup сервис
-        services.AddHostedService<ExpiredAgentConversationsCleanupService>();
         services.Configure<AgentOptions>(
             configuration.GetSection(AgentOptions.SectionName));
 

@@ -61,8 +61,9 @@ public class AgentService
                     Guid.NewGuid().ToString());  // ← без retentionDays
 
             conversation.SetTitle(request.Message);
+            // ✅ НЕ сохраняем здесь: диалог + оба сообщения сохраним ОДНИМ SaveChanges ниже,
+            // чтобы ход был атомарным (всё или ничего).
             await _conversationRepository.AddAsync(conversation, ct);
-            await _unitOfWork.SaveChangesAsync(ct);
         }
         else
         {
@@ -91,7 +92,7 @@ public class AgentService
         }
 
         // 2. Сохраняем сообщение пользователя
-        var userMessage = AgentMessage.User(conversation.Id, request.Message);
+        var userMessage = AgentMessage.User(conversation, request.Message);
         await _messageRepository.AddAsync(userMessage, ct);
 
         // 3. Восстанавливаем AgentSession
@@ -117,7 +118,7 @@ public class AgentService
 
         // 5. Сохраняем ответ ассистента
         var assistantMessage = AgentMessage.Assistant(
-            conversation.Id, response.Text);
+            conversation, response.Text);
         await _messageRepository.AddAsync(assistantMessage, ct);
 
         // 6. Обновляем состояние (внутри UpdateState обновится LastMessageAt)

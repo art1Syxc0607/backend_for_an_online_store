@@ -38,57 +38,87 @@ public class UploadReviewFilesHandler : IRequestHandler<UploadReviewFilesCommand
         if (review == null)
             throw new DomainException($"Review with ID {command.ReviewId} not found");
 
+        // ✅ Валидация ДО записи на диск — чтобы не оставить orphan-файлы
+        review.EnsureCanAddFiles(command.Files.Count);
+
         var result = new List<FileUploadResponseDto>();
         var imageUrls = new List<string>();
         var videoUrls = new List<string>();
+        var uploadedUrls = new List<string>();
 
-        foreach (var file in command.Files)
+        try
         {
-            // Сохраняем файл
-            try
+            foreach (var file in command.Files)
             {
-                var url = await _fileStorageService.UploadFileAsync(
-                    file.Stream,
-                    file.FileName,
-                    file.ContentType,
-                    $"reviews/{review.Id}",
-                    ct);
-
-                result.Add(new FileUploadResponseDto
+                // Сохраняем файл
+                try
                 {
-                    OriginalFileName = file.FileName,
-                    FileUrl = url,
-                    ContentType = file.ContentType,
-                    Size = file.Length
-                });
+                    var url = await _fileStorageService.UploadFileAsync(
+                        file.Stream,
+                        file.FileName,
+                        file.ContentType,
+                        $"reviews/{review.Id}",
+                        ct);
+                    uploadedUrls.Add(url);
 
-                if (file.ContentType.StartsWith("image/"))
-                    imageUrls.Add(url);
-                else if (file.ContentType.StartsWith("video/"))
-                    videoUrls.Add(url);
+                    result.Add(new FileUploadResponseDto
+                    {
+                        OriginalFileName = file.FileName,
+                        FileUrl = url,
+                        ContentType = file.ContentType,
+                        Size = file.Length
+                    });
+
+                    if (file.ContentType.StartsWith("image/"))
+                        imageUrls.Add(url);
+                    else if (file.ContentType.StartsWith("video/"))
+                        videoUrls.Add(url);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to upload file {FileName} for review {ReviewId}",
+                        file.FileName, review.Id);
+                    // Продолжаем с другими файлами
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Failed to upload file {FileName} for review {ReviewId}",
-                    file.FileName, review.Id);
-                // Продолжаем с другими файлами
-            }
+
+            // Обновляем review
+            if (imageUrls.Any())
+                review.SetImageUrls(imageUrls);
+            if (videoUrls.Any())
+                review.SetVideoUrls(videoUrls);
+
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            // ✅ Указываем префиксы для инвалидации
+            command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));
+            command.AddCachePrefix(CacheKeys.Product(review.ProductId));
+            command.AddCachePrefix(CacheKeys.ProductsPrefix);
+
+            return result;
         }
-
-        // Обновляем review
-        review.SetImageUrls(imageUrls);
-        review.SetVideoUrls(videoUrls);
-
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        // ✅ Указываем префиксы для инвалидации
-        command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));
-        command.AddCachePrefix(CacheKeys.Product(review.ProductId));
-        command.AddCachePrefix(CacheKeys.ProductsPrefix);
-
-        return result;
+        catch
+        {
+            // ✅ Компенсация: БД откатит SaveChanges, а файлы удаляем вручную
+            await TryDeleteUploadedFilesAsync(uploadedUrls, ct);
+            throw;
+        }
     }
 
+    private async Task TryDeleteUploadedFilesAsync(List<string> urls, CancellationToken ct)
+    {
+        if (urls.Count == 0)
+            return;
 
+        try
+        {
+            await _fileStorageService.DeleteMultipleFilesAsync(urls, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to roll back {Count} uploaded review file(s)", urls.Count);
+        }
+    }
 }

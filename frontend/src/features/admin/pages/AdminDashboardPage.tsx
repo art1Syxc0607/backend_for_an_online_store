@@ -14,6 +14,7 @@ export default function AdminDashboardPage() {
     const [lastDay, setLastDay] = useState(
         new Date().toISOString().split('T')[0]
     )
+    const [popularPage, setPopularPage] = useState(1)
 
     const ordersQuery = useQuery({
         queryKey: ['admin', 'dashboard', 'orders', firstDay, lastDay],
@@ -26,8 +27,9 @@ export default function AdminDashboardPage() {
     })
 
     const popularQuery = useQuery({
-        queryKey: ['admin', 'dashboard', 'popular', firstDay, lastDay],
-        queryFn: () => getPopularProducts(firstDay, lastDay, 1, 10),
+        queryKey: ['admin', 'dashboard', 'popular', firstDay, lastDay, popularPage],
+        queryFn: () => getPopularProducts(firstDay, lastDay, popularPage, 10),
+        placeholderData: (prev) => prev,
     })
 
     const orders = ordersQuery.data
@@ -43,14 +45,14 @@ export default function AdminDashboardPage() {
                     <input
                         type="date"
                         value={firstDay}
-                        onChange={(e) => setFirstDay(e.target.value)}
+                        onChange={(e) => { setFirstDay(e.target.value); setPopularPage(1) }}
                         className="px-3 py-2 border rounded-lg text-sm"
                     />
                     <span className="text-gray-500">—</span>
                     <input
                         type="date"
                         value={lastDay}
-                        onChange={(e) => setLastDay(e.target.value)}
+                        onChange={(e) => { setLastDay(e.target.value); setPopularPage(1) }}
                         className="px-3 py-2 border rounded-lg text-sm"
                     />
                 </div>
@@ -102,45 +104,88 @@ export default function AdminDashboardPage() {
                 {popularQuery.isLoading ? (
                     <div className="text-center py-4 text-gray-500">Загрузка...</div>
                 ) : (
-                    <div className="space-y-2">
-                        {popularQuery.data?.items.map((product, idx) => (
-                            <div
-                                key={product.productId}
-                                className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
-                            >
-                                <div className="text-2xl font-bold text-gray-400 w-8">
-                                    #{idx + 1}
-                                </div>
-                                <div className="w-12 h-12 bg-gray-200 rounded overflow-hidden flex-shrink-0">
-                                    {product.imageUrls?.[0] ? (
-                                        <img
-                                            src={product.imageUrls[0]}
-                                            alt={product.name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                                            📷
+                    <>
+                        <div className="space-y-2">
+                            {popularQuery.data?.items.map((product, idx) => (
+                                <div
+                                    key={product.productId}
+                                    onClick={() => window.open(`/admin/products/${product.productId}`, '_blank', 'noopener,noreferrer')}
+                                    className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer"
+                                >
+                                    <div className="text-2xl font-bold text-gray-400 w-8">
+                                        #{(popularPage - 1) * 10 + idx + 1}
+                                    </div>
+                                    <div className="w-12 h-12 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+                                        {product.imageUrls?.[0] ? (
+                                            <img
+                                                src={product.imageUrls[0]}
+                                                alt={product.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                                                📷
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-medium truncate">{product.name}</div>
+                                        <div className="text-sm text-gray-500">
+                                            Продано: {product.totalPurchases} · Заказов: {product.presenceInOrders}
                                         </div>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-medium truncate">{product.name}</div>
-                                    <div className="text-sm text-gray-500">
-                                        Продано: {product.totalPurchases} · Заказов: {product.presenceInOrders}
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="font-bold text-blue-600">
+                                            {product.price.toLocaleString('ru-RU')} ₽
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                            ⭐ {product.averageRating.toFixed(1)} ({product.reviewCount})
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <div className="font-bold text-blue-600">
-                                        {product.price.toLocaleString('ru-RU')} ₽
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                        ⭐ {product.averageRating.toFixed(1)} ({product.reviewCount})
-                                    </div>
-                                </div>
+                            ))}
+                        </div>
+
+                        {/* ✅ Пагинация */}
+                        {popularQuery.data && popularQuery.data.totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-2 mt-6">
+                                <button
+                                    onClick={() => setPopularPage(1)}
+                                    disabled={popularPage <= 1}
+                                    className="px-3 py-2 bg-gray-200 rounded disabled:opacity-50"
+                                    title="Первая страница"
+                                >
+                                    «
+                                </button>
+                                <button
+                                    onClick={() => setPopularPage((p) => Math.max(1, p - 1))}
+                                    disabled={popularPage <= 1}
+                                    className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+                                >
+                                    ←
+                                </button>
+                                <span className="text-sm">
+                                    Страница <strong>{popularQuery.data.pageNumber}</strong> из{' '}
+                                    <strong>{popularQuery.data.totalPages}</strong>
+                                </span>
+                                <button
+                                    onClick={() => setPopularPage((p) => p + 1)}
+                                    disabled={!popularQuery.data.hasNextPage}
+                                    className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+                                >
+                                    →
+                                </button>
+                                <button
+                                    onClick={() => setPopularPage(popularQuery.data.totalPages)}
+                                    disabled={popularPage >= popularQuery.data.totalPages}
+                                    className="px-3 py-2 bg-gray-200 rounded disabled:opacity-50"
+                                    title="Последняя страница"
+                                >
+                                    »
+                                </button>
                             </div>
-                        ))}
-                    </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>
