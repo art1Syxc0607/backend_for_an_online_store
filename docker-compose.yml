@@ -37,9 +37,9 @@ services:
       Database__MigrateOnStartup: "true"
 
       # Секреты/интеграции
-      Jwt__Key: ${JWT_KEY:?JWT_KEY is required}
-      Jwt__Issuer: ${JWT_ISSUER:-MyAuthServer}
-      Jwt__Audience: ${JWT_AUDIENCE:-MyAuthClient}
+      JWT__KEY: ${JWT__KEY:-${JWT_KEY:?JWT__KEY or JWT_KEY is required}}
+      JWT__ISSUER: ${JWT_ISSUER:-MyAuthServer}
+      JWT__AUDIENCE: ${JWT_AUDIENCE:-MyAuthClient}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       Smtp__Password: ${SMTP_PASSWORD:-}
       IpInfo__ApiKey: ${IPINFO_API_KEY:-}

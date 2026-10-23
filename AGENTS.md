@@ -30,6 +30,13 @@ Controllers never touch EF or repositories directly.
 - `DB_PASSWORD` environment variable is **required**: `Infrastructure/DependencyInjection.cs`
   throws at startup if it is missing.
   PowerShell: `$env:DB_PASSWORD='your-password'`
+- `JWT__KEY` environment variable is **required** and must be at least 32 bytes (256 bits):
+  `JwtOptions.Load` in `Program.cs` fails fast if it is missing or too short. Do **not** put the
+  key back in `appsettings.json`; `JWT__KEY` maps to `Jwt:Key` and overrides any file value.
+  PowerShell: `$env:JWT__KEY='<random-base64-at-least-32-bytes>'`
+- Docker Compose reads the same variable from `.env` and passes it to the `api` container as
+  `JWT__KEY`; the legacy `JWT_KEY` name is still accepted as a fallback (see
+  `docker-compose.yml`, `.env.example`).
 - The AI agent needs `GROQ_API_KEY`; sending email needs `Smtp:Password` in `appsettings.json`.
   These are optional for startup but required for those features.
 - `Program.cs` seeds the database on startup (admin, categories, 1000 products) and rethrows on
@@ -48,9 +55,13 @@ profile is `http` (port 5277), which the frontend proxy does **not** use. Swagge
 
 ### EF migrations
 
-`Program.cs` does **not** apply migrations automatically — run them manually:
+`Program.cs` does **not** apply migrations automatically — run them manually. Because EF tooling
+executes `Program.cs` up to `builder.Build()`, the JWT fail-fast check also runs, so export the
+required secrets first:
 
 ```powershell
+$env:DB_PASSWORD='your-password'
+$env:JWT__KEY='<random-base64-at-least-32-bytes>'
 dotnet ef database update --project Infrastructure --startup-project WebApi
 dotnet ef migrations add <Name> --project Infrastructure --startup-project WebApi
 ```

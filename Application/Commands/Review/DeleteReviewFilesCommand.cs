@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Application.Commands.Review;
 
-public class DeleteReviewFilesCommand : IRequest<DeleteFilesResponseDto>, ICacheInvalidatingCommandWithCallback
+public class DeleteReviewFilesCommand : IRequest<DeleteFilesResponseDto>, ICacheInvalidatingCommand
 {
     public int ReviewId { get; set; }
     public int UserId { get; set; }
@@ -19,15 +19,8 @@ public class DeleteReviewFilesCommand : IRequest<DeleteFilesResponseDto>, ICache
     // ✅ Внутренний контекст — Handler заполняет, Behavior читает
     private readonly CacheInvalidationContext _cacheContext = new();
 
-    // ✅ Пустой — Handler заполнит через SetCacheInvalidationData
     public IEnumerable<string> CachePrefixesToInvalidate
         => _cacheContext.GetPrefixes();
-
-    // ✅ Handler вызывает этот метод
-    public void SetCacheInvalidationData(CacheInvalidationContext context)
-    {
-        context.AddPrefixes(_cacheContext.GetPrefixes().ToArray());
-    }
 
     // ✅ Helper для Handler'а
     internal void AddCachePrefix(string prefix)

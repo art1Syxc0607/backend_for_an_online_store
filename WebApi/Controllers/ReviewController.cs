@@ -11,6 +11,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using WebApi.Common;
 using WebApi.DTOs.Review;
 
 namespace WebApi.Controllers;
@@ -70,25 +71,9 @@ public class ReviewController : Controller
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<int>> LeaveComment([FromForm] AddReviewDto dto)
     {
-        // Проверка файлов
-        if (dto.Files != null)
-        {
-            const int maxFiles = 8;
-            if (dto.Files.Count > maxFiles)
-                return BadRequest($"Maximum {maxFiles} files allowed");
-
-            foreach (var file in dto.Files)
-            {
-                if (file.Length == 0)
-                    return BadRequest($"File '{file.FileName}' is empty");
-
-                if (file.Length > 500 * 1024 * 1024) // 500MB
-                    return BadRequest($"File '{file.FileName}' exceeds 500MB");
-
-                if (!IsValidFileType(file.ContentType))
-                    return BadRequest($"Unsupported file type: {file.ContentType}");
-            }
-        }
+        var validationError = FileUploadValidation.Validate(dto.Files);
+        if (validationError != null)
+            return BadRequest(validationError);
 
 
         var command = new AddReviewCommand
@@ -128,37 +113,20 @@ public class ReviewController : Controller
 
 
     [Authorize(Roles = "User")]
-    [HttpPost("uploadReviewsFiles")]
+    [HttpPost("{reviewId}/files")]
+    [Consumes("multipart/form-data")]
     public async Task<ActionResult<List<Application.DTOs.File.FileUploadResponseDto>>> UploadFiles(
-    int reviewtId,
-    [FromQuery] List<IFormFile> files)
+    int reviewId,
+    [FromForm] List<IFormFile> files)
     {
-        // 1. Проверка количества
-        if (files == null || !files.Any())
-            return BadRequest("No files uploaded");
+        var validationError = FileUploadValidation.Validate(files, required: true);
+        if (validationError != null)
+            return BadRequest(validationError);
 
-        const int maxFiles = 8;
-        if (files.Count > maxFiles)
-            return BadRequest($"Maximum {maxFiles} files allowed");
-
-        // 2. Проверка каждого файла
-        foreach (var file in files)
-        {
-            if (file.Length == 0)
-                return BadRequest($"File '{file.FileName}' is empty");
-
-            if (file.Length > 500 * 1024 * 1024) // 500MB
-                return BadRequest($"File '{file.FileName}' exceeds 500MB");
-
-            var isValidType = IsValidFileType(file.ContentType);
-            if (!isValidType)
-                return BadRequest($"File '{file.FileName}' has unsupported type: {file.ContentType}");
-        }
-
-        // 3. Команда
         var command = new UploadReviewFilesCommand
         {
-            ReviewId = reviewtId,
+            ReviewId = reviewId,
+            UserId = GetCurrentUserId(),
             Files = files.Select(f => new Application.DTOs.File.FileUploadDto
             {
                 Stream = f.OpenReadStream(),
@@ -184,21 +152,6 @@ public class ReviewController : Controller
         };
 
         return await _mediator.Send(command);
-    }
-
-    private bool IsValidFileType(string contentType)
-    {
-        var allowedTypes = new HashSet<string>
-        {
-            // Images
-            "image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml",
-            // Videos
-            "video/mp4", "video/webm", "video/ogg", "video/quicktime",
-            // Documents
-            "application/pdf", "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        };
-        return allowedTypes.Contains(contentType);
     }
 
     private int GetCurrentUserId()

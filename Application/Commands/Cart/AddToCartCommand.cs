@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Application.Commands.Cart;
 
-public class AddToCartCommand : IRequest
+public class AddToCartCommand : IRequest, ICacheInvalidatingCommand
 {
     [Required]
     public int ProductId { get; set; }

@@ -36,18 +36,18 @@ public class DeleteReviewFilesHandler : IRequestHandler<DeleteReviewFilesCommand
             throw new DomainException("No files specified for deletion");
 
         var review = await _reviewRepository.GetReviewByIdAsync(command.ReviewId, ct);
-        if(review == null) throw new DomainException($"Review with ID {command.ReviewId} not found");
+        if (review == null) throw new DomainException($"Review with ID {command.ReviewId} not found");
         if (review.UserId != command.UserId)
             throw new DomainException($"Review with ID {command.ReviewId} doesn't belong to the user");
 
-
         var response = new DeleteFilesResponseDto();
+        var urlsToDelete = new List<string>();
 
-        foreach (var fileUrl in command.FileUrls)
+        // 1. Сначала меняем только БД-состояние
+        foreach (var fileUrl in command.FileUrls.Distinct())
         {
-            // 2. Проверяем, есть ли такой URL у продукта
             var isImage = review._imageUrls.Contains(fileUrl);
-            var isVideo = review._videoUrls.Contains(fileUrl);
+            var isVideo = !isImage && review._videoUrls.Contains(fileUrl);
 
             if (!isImage && !isVideo)
             {
@@ -56,38 +56,43 @@ public class DeleteReviewFilesHandler : IRequestHandler<DeleteReviewFilesCommand
                 continue;
             }
 
-            try
-            {
-                // 3. Удаляем физический файл
-                await _fileStorageService.DeleteFileAsync(fileUrl, ct);
+            if (isImage)
+                review.RemoveImage(fileUrl);
+            else
+                review.RemoveVideo(fileUrl);
 
-                // 4. Удаляем URL из сущности
-                if (isImage)
-                    review.RemoveImage(fileUrl);
-                else if (isVideo)
-                    review.RemoveVideo(fileUrl);
-
-                response.DeletedUrls.Add(fileUrl);
-            }
-            catch (Exception ex)
-            {
-                response.FailedUrls.Add(fileUrl);
-                // Логируем ошибку, но продолжаем удалять другие файлы
-                _logger.LogWarning("Error to delete fileUrl: {fileUrl}.", fileUrl);
-            }
+            response.DeletedUrls.Add(fileUrl);
+            urlsToDelete.Add(fileUrl);
         }
 
-        // 5. Сохраняем изменения
+        // 2. Коммитим изменения в БД
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // 5. ✅ Заполняем контекст инвалидации
+        // 3. И только после успешного коммита удаляем физические файлы
+        await TryDeleteFilesAsync(urlsToDelete, ct);
+
+        // 4. ✅ Заполняем контекст инвалидации
         // Handler ЗНАЕТ, какие префиксы нужны, но НЕ вызывает кэш напрямую
         command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));
         command.AddCachePrefix(CacheKeys.Product(review.ProductId));
         command.AddCachePrefix(CacheKeys.ProductsPrefix);
 
         return response;
+    }
 
-
+    private async Task TryDeleteFilesAsync(IEnumerable<string> urls, CancellationToken ct)
+    {
+        foreach (var url in urls)
+        {
+            try
+            {
+                await _fileStorageService.DeleteFileAsync(url, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to delete physical file {FileUrl} after DB commit", url);
+            }
+        }
     }
 }

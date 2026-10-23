@@ -26,14 +26,14 @@ public class GetMostPopularProductsForThePeriodForUserHandler
         GetMostPopularProductsForThePeriodForUserCommand command,
         CancellationToken ct = default)
     {
-        if (command.FirstDayOfThePeriod > command.LastDayOfThePeriod)
+        if (!DateRange.IsValid(command.FirstDayOfThePeriod, command.LastDayOfThePeriod))
         {
             _logger.LogWarning(
-                "FirstDate {FirstDate} is later than LastDate {LastDate}",
-                command.FirstDayOfThePeriod,
-                command.LastDayOfThePeriod);
+                "Invalid period: first day {FirstDay:yyyy-MM-dd} is later than last day {LastDay:yyyy-MM-dd}",
+                command.FirstDayOfThePeriod.Date,
+                command.LastDayOfThePeriod.Date);
 
-            throw new DomainException("FirstDate can't be later than LastDate");
+            throw new DomainException("First day of the period cannot be later than last day");
         }
 
         var pageNumber = Math.Max(1, command.PageNumber ?? 1);

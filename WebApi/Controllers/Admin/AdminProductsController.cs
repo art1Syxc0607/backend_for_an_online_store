@@ -16,6 +16,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using WebApi.Common;
 using WebApi.DTOs.Product;
 
 namespace WebApi.Controllers.Admin;
@@ -36,25 +37,9 @@ public class AdminProductsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<int>> AddProduct([FromForm] AddProductDto dto)
     {
-        // Проверка файлов
-        if (dto.Files != null)
-        {
-            const int maxFiles = 8;
-            if (dto.Files.Count > maxFiles)
-                return BadRequest($"Maximum {maxFiles} files allowed");
-
-            foreach (var file in dto.Files)
-            {
-                if (file.Length == 0)
-                    return BadRequest($"File '{file.FileName}' is empty");
-
-                if (file.Length > 500 * 1024 * 1024) // 500MB
-                    return BadRequest($"File '{file.FileName}' exceeds 500MB");
-
-                if (!IsValidFileType(file.ContentType))
-                    return BadRequest($"Unsupported file type: {file.ContentType}");
-            }
-        }
+        var validationError = FileUploadValidation.Validate(dto.Files);
+        if (validationError != null)
+            return BadRequest(validationError);
 
         var command = new AddProductCommand
         {
@@ -125,29 +110,11 @@ public class AdminProductsController : ControllerBase
     int productId,
     [FromForm] List<IFormFile> files)
     {
-        // 1. Проверка количества
-        if (files == null || !files.Any())
-            return BadRequest("No files uploaded");
+        var validationError = FileUploadValidation.Validate(files, required: true);
+        if (validationError != null)
+            return BadRequest(validationError);
 
-        const int maxFiles = 8;
-        if (files.Count > maxFiles)
-            return BadRequest($"Maximum {maxFiles} files allowed");
-
-        // 2. Проверка каждого файла
-        foreach (var file in files)
-        {
-            if (file.Length == 0)
-                return BadRequest($"File '{file.FileName}' is empty");
-
-            if (file.Length > 500 * 1024 * 1024) // 500MB
-                return BadRequest($"File '{file.FileName}' exceeds 500MB");
-
-            var isValidType = IsValidFileType(file.ContentType);
-            if (!isValidType)
-                return BadRequest($"File '{file.FileName}' has unsupported type: {file.ContentType}");
-        }
-
-        // 3. Команда
+        // 2. Команда
         var command = new UploadProductFilesCommand
         {
             ProductId = productId,
@@ -236,21 +203,5 @@ public class AdminProductsController : ControllerBase
         var result = await _mediator.Send(query);
         return Ok(result);
     }
-
-    private bool IsValidFileType(string contentType)
-    {
-        var allowedTypes = new HashSet<string>
-        {
-            // Images
-            "image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml",
-            // Videos
-            "video/mp4", "video/webm", "video/ogg", "video/quicktime",
-            // Documents
-            "application/pdf", "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        };
-        return allowedTypes.Contains(contentType);
-    }
-
 
 }

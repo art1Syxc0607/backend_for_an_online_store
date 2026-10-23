@@ -1,18 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Domain.Exceptions;
 
-namespace Domain.Exceptions;
+/// <summary>
+/// Одна ошибка валидации: имя поля и сообщение.
+/// </summary>
+public sealed record ValidationErrorDetail(string Field, string Message);
 
 public class ValidationException : DomainException
 {
-    public List<string> Errors { get; }
+    public IReadOnlyList<ValidationErrorDetail> Errors { get; }
 
-    public ValidationException(List<string> errors)
+    public ValidationException(IEnumerable<ValidationErrorDetail> errors)
         : base("Validation failed", "VALIDATION_ERROR", 400)
     {
-        Errors = errors;
+        Errors = errors.ToList();
     }
 }

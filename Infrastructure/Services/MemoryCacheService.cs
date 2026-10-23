@@ -75,23 +75,4 @@ public class MemoryCacheService : ICacheService
 
         return Task.CompletedTask;
     }
-
-    // ✅ Атомарно через GetOrCreate
-    public async Task<T> GetOrSetAsync<T>(
-        string key,
-        Func<Task<T>> factory,
-        TimeSpan? expiration = null,
-        CancellationToken ct = default)
-    {
-        var cached = await GetAsync<T>(key, ct);
-        if (cached != null)
-            return cached;
-
-        var value = await factory();
-
-        if (value != null)
-            await SetAsync(key, value, expiration, ct);
-
-        return value;
-    }
 }

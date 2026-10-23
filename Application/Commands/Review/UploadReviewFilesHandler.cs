@@ -2,6 +2,7 @@
 using Application.DTOs.File;
 using Application.Interfaces;
 using Application.Interfaces.Caching;
+using Application.Validators.Common;
 using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
@@ -38,6 +39,19 @@ public class UploadReviewFilesHandler : IRequestHandler<UploadReviewFilesCommand
         if (review == null)
             throw new DomainException($"Review with ID {command.ReviewId} not found");
 
+        // ✅ Проверка владельца: пользователь может загружать файлы только в свой отзыв
+        if (review.UserId != command.UserId)
+            throw new DomainException($"Review with ID {command.ReviewId} doesn't belong to the user");
+
+        if (command.Files == null || command.Files.Count == 0)
+            throw new DomainException("No files specified for upload");
+
+        foreach (var file in command.Files)
+        {
+            if (!AllowedFileTypes.IsAllowed(file.ContentType))
+                throw new DomainException($"Unsupported file type: {file.ContentType}");
+        }
+
         // ✅ Валидация ДО записи на диск — чтобы не оставить orphan-файлы
         review.EnsureCanAddFiles(command.Files.Count);
 
@@ -50,37 +64,26 @@ public class UploadReviewFilesHandler : IRequestHandler<UploadReviewFilesCommand
         {
             foreach (var file in command.Files)
             {
-                // Сохраняем файл
-                try
-                {
-                    var url = await _fileStorageService.UploadFileAsync(
-                        file.Stream,
-                        file.FileName,
-                        file.ContentType,
-                        $"reviews/{review.Id}",
-                        ct);
-                    uploadedUrls.Add(url);
+                var url = await _fileStorageService.UploadFileAsync(
+                    file.Stream,
+                    file.FileName,
+                    file.ContentType,
+                    $"reviews/{review.Id}",
+                    ct);
+                uploadedUrls.Add(url);
 
-                    result.Add(new FileUploadResponseDto
-                    {
-                        OriginalFileName = file.FileName,
-                        FileUrl = url,
-                        ContentType = file.ContentType,
-                        Size = file.Length
-                    });
-
-                    if (file.ContentType.StartsWith("image/"))
-                        imageUrls.Add(url);
-                    else if (file.ContentType.StartsWith("video/"))
-                        videoUrls.Add(url);
-                }
-                catch (Exception ex)
+                result.Add(new FileUploadResponseDto
                 {
-                    _logger.LogError(ex,
-                        "Failed to upload file {FileName} for review {ReviewId}",
-                        file.FileName, review.Id);
-                    // Продолжаем с другими файлами
-                }
+                    OriginalFileName = file.FileName,
+                    FileUrl = url,
+                    ContentType = file.ContentType,
+                    Size = file.Length
+                });
+
+                if (file.ContentType.StartsWith("image/"))
+                    imageUrls.Add(url);
+                else if (file.ContentType.StartsWith("video/"))
+                    videoUrls.Add(url);
             }
 
             // Обновляем review

@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.File;
 using Application.Interfaces;
+using Application.Validators.Common;
 using Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -35,6 +36,15 @@ public class UploadProductFilesHandler : IRequestHandler<UploadProductFilesComma
         var product = await _productRepository.GetByIdAsync(command.ProductId, ct);
         if (product == null)
             throw new DomainException($"Product with ID {command.ProductId} not found");
+
+        if (command.Files == null || command.Files.Count == 0)
+            throw new DomainException("No files specified for upload");
+
+        foreach (var file in command.Files)
+        {
+            if (!AllowedFileTypes.IsAllowed(file.ContentType))
+                throw new DomainException($"Unsupported file type: {file.ContentType}");
+        }
 
         // ✅ Валидация ДО записи на диск — чтобы не оставить orphan-файлы
         product.EnsureCanAddFiles(command.Files.Count);

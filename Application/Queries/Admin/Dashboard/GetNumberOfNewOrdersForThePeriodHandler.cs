@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Order;
+﻿using Application.Common;
+using Application.DTOs.Order;
 using Application.Enums;
 using Application.Interfaces;
 using Domain.Exceptions;
@@ -27,13 +28,14 @@ public class GetNumberOfNewOrdersForThePeriodHandler : IRequestHandler<GetNumber
 
     public async Task<NumberOfNewOrdersForThePeriodResponseDto> Handle(GetNumberOfNewOrdersForThePeriodCommand command, CancellationToken ct = default)
     {
-        if (command.FirstDayOfThePriod > command.LastDayOfThePriod)
+        if (!DateRange.IsValid(command.FirstDayOfThePriod, command.LastDayOfThePriod))
         {
-            _logger.LogWarning("firstDate - {command.FirstDayOfThePriod}, " +
-                "is later than lastDate - {command.LastDayOfThePriod}.", command.FirstDayOfThePriod,
-                 command.LastDayOfThePriod);
+            _logger.LogWarning(
+                "Invalid period: first day {FirstDay:yyyy-MM-dd} is later than last day {LastDay:yyyy-MM-dd}",
+                command.FirstDayOfThePriod.Date,
+                command.LastDayOfThePriod.Date);
 
-            throw new DomainException("firstDate can't be later than lastDate");
+            throw new DomainException("First day of the period cannot be later than last day");
         }
 
         return await _orderRepository.GetNumberOfNewOrdersAsync(command.LastDayOfThePriod,

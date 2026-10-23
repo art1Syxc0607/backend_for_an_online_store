@@ -40,7 +40,6 @@ public class AddProductHandlerTests
             productRepoMock.Object,
             categoryRepoMock.Object,
             fileStorageMock.Object,
-            Mock.Of<ICacheService>(),
             Mock.Of<ILogger<AddProductCommandHandler>>(),
             unitOfWorkMock.Object
         );
@@ -74,7 +73,6 @@ public class AddProductHandlerTests
             Mock.Of<IProductRepository>(),
             categoryRepoMock.Object,
             Mock.Of<IFileStorageService>(),
-            Mock.Of<ICacheService>(),
             Mock.Of<ILogger<AddProductCommandHandler>>(),
             Mock.Of<IUnitOfWork>()
         );

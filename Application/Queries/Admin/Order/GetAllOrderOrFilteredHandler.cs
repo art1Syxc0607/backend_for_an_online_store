@@ -28,30 +28,6 @@ public class GetAllOrderOrFilteredHandler : IRequestHandler<GetAllOrderOrFiltere
     {
         var orders = await _orderRepository.GetOrdersFilterAsync(command, ct);
 
-        //var result = orders.Select(o => new OrderResponseDto // before
-        //{
-        //    OrderId = o.Id,
-        //    Items = o.Items.Select(ot => new OrderItemDto
-        //    {
-        //        ProductId = ot.ProductId,
-        //        Quantity = ot.Quantity,
-        //        PriceAtPurchase = ot.PriceAtPurchase,
-        //        ProductNameAtPurchase = ot.ProductNameAtPurchase
-        //    }).ToList(),
-        //    UserId = o.UserId,
-        //    TotalAmount = o.TotalAmount,
-        //    ShippingAddress = o.ShippingAddress,
-        //    Status = o.Status,
-
-        //    // info 
-        //    CreatedAt = o.CreatedAt,
-        //    PaidAt = o.PaidAt,
-        //    ShippedAt = o.ShippedAt,
-        //    DeliveredAt = o.DeliveredAt,
-        //    ReceivedAt = o.ReceivedAt,
-        //    CancelledAt = o.CancelledAt
-        //}).OrderByDescending(orDto => orDto.CreatedAt).ToList();
-
         // Маппим через AutoMapper
         var result = _mapper.Map<List<OrderResponseDto>>(orders);
 

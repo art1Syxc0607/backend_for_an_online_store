@@ -87,5 +87,34 @@ public class GetRevenueForPeriodHandlerTests
         result.Income.Should().Be(0m);
     }
 
+    [Fact]
+    public async Task Handle_WhenSameCalendarDayWithDifferentTimes_ShouldNotThrow()
+    {
+        // Arrange
+        var orderRepoMock = new Mock<IOrderRepository>();
+        orderRepoMock.Setup(x => x.GetRevenueForThePeriodAsync(
+            It.IsAny<DateTime>(),
+            It.IsAny<DateTime>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Application.DTOs.Admin.Order.RevenueForThePeriodDto());
+
+        var handler = new GetRevenueForThePeriodHandler(
+            orderRepoMock.Object,
+            Mock.Of<ILogger<GetRevenueForThePeriodHandler>>());
+
+        var command = new GetRevenueForThePeriodCommand
+        {
+            // Один и тот же календарный день, но первая граница позже по времени.
+            FirstDayOfThePriod = new DateTime(2026, 1, 1, 18, 0, 0),
+            LastDayOfThePriod = new DateTime(2026, 1, 1, 9, 0, 0)
+        };
+
+        // Act
+        Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await act.Should().NotThrowAsync();
+    }
+
     //Сводка теста: всего: 2; сбой: 0; успешно: 2; пропущено: 0; длительность: 1,3 с
 }

@@ -35,22 +35,18 @@ public class GetMostPopularProductsForThePeriodHandler
     public async Task<PagedResult<PopularProductDto>> Handle(GetMostPopularProductsForThePeriodCommand command,
         CancellationToken ct = default)
     {
-        if (command.FirstDayOfThePeriod > command.LastDayOfThePeriod)
+        if (!DateRange.IsValid(command.FirstDayOfThePeriod, command.LastDayOfThePeriod))
         {
-            _logger.LogWarning("firstDate - {command.FirstDayOfThePriod}, " +
-                "is later than lastDate - {command.LastDayOfThePriod}.", command.FirstDayOfThePeriod,
-                 command.LastDayOfThePeriod);
+            _logger.LogWarning(
+                "Invalid period: first day {FirstDay:yyyy-MM-dd} is later than last day {LastDay:yyyy-MM-dd}",
+                command.FirstDayOfThePeriod.Date,
+                command.LastDayOfThePeriod.Date);
 
-            throw new DomainException("firstDate can't be later than lastDate");
+            throw new DomainException("First day of the period cannot be later than last day");
         }
 
         var pageNumber = command.PageNumber ?? 1;
         var pageSize = command.PageSize ?? 20;
-        var firstDay = command.FirstDayOfThePeriod.Date;  // только дата, без времени
-        var lastDay = command.LastDayOfThePeriod.Date;
-
-        
-
 
         var result = await _productRepository.
             GetMostPopularProductsForThePeriodAsync

@@ -35,13 +35,26 @@ public class ExceptionHandlingMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        // 1. Логируем исключение (со всей информацией для разработчика)
-        _logger.LogError(
-            exception,
-            "Unhandled exception occurred: {Message}, Path: {Path}",
-            exception.Message,
-            context.Request.Path
-        );
+        // 1. Логируем исключение.
+        // Ожидаемые клиентские ошибки (4xx) — Warning, без засорения error-логов.
+        if (exception is DomainException domainException && domainException.StatusCode < 500)
+        {
+            _logger.LogWarning(
+                exception,
+                "Request rejected: {Message}, Path: {Path}",
+                exception.Message,
+                context.Request.Path
+            );
+        }
+        else
+        {
+            _logger.LogError(
+                exception,
+                "Unhandled exception occurred: {Message}, Path: {Path}",
+                exception.Message,
+                context.Request.Path
+            );
+        }
 
         // 2. Преобразуем в понятный ответ
         var response = CreateErrorResponse(exception, context);
@@ -74,10 +87,10 @@ public class ExceptionHandlingMiddleware
                 Timestamp = DateTime.UtcNow,
                 Path = context.Request.Path,
                 TraceId = traceId,
-                ValidationErrors = validationEx.Errors?.Select(e => new ValidationError
+                ValidationErrors = validationEx.Errors.Select(e => new ValidationError
                 {
-                    Field = e.Split(':')[0]?.Trim() ?? "",
-                    Message = e
+                    Field = e.Field,
+                    Message = e.Message
                 }).ToList()
             },
 

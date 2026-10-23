@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using Xunit;
 
 namespace InfrastructureTests.Services;
@@ -24,14 +23,8 @@ public class LocalFileStorageServiceTests : IDisposable
 
         _environment = new TestWebHostEnvironment(_testRootPath);
 
-        // ✅ ПРАВИЛЬНО: создаем мок IHttpContextAccessor
-        // HttpContext = null (по умолчанию), поэтому GetFileUrlAsync вернет относительный URL
-        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
-        httpContextAccessorMock.Setup(x => x.HttpContext).Returns((HttpContext?)null);
-
         _fileStorageService = new LocalFileStorageService(
             _environment,
-            httpContextAccessorMock.Object, // ← Мок, а не null!
             NullLogger<LocalFileStorageService>.Instance);
     }
 
@@ -180,7 +173,7 @@ public class LocalFileStorageServiceTests : IDisposable
     [Fact]
     public async Task DeleteFileAsync_WithAbsoluteUrl_ShouldDeleteFile()
     {
-        // Arrange: загружаем файл (получаем относительный URL, т.к. HttpContext = null)
+        // Arrange: загружаем файл (получаем относительный URL)
         var file = TestFileHelper.CreateImageFile("test.jpg");
         var relativeUrl = await _fileStorageService.UploadFileAsync(
             file.OpenReadStream(), file.FileName, file.ContentType, "products/1");
@@ -188,7 +181,7 @@ public class LocalFileStorageServiceTests : IDisposable
         var filePath = Path.Combine(_testRootPath, relativeUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         File.Exists(filePath).Should().BeTrue();
 
-        // В проде GetFileUrlAsync возвращает абсолютный URL с двойным слэшем
+        // Старые записи в БД могли хранить абсолютный URL — удаление должно их понимать
         var absoluteUrl = $"https://localhost:7197/{relativeUrl}";
 
         // Act

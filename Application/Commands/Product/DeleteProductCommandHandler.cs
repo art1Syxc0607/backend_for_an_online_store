@@ -14,19 +14,19 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand>
 {
     private readonly IProductRepository _productRepository;
     private readonly IOrderRepository _orderRepository;
-    private readonly ICacheService _cacheService;
-    private readonly ILogger<AddProductCommandHandler> _logger;
+    private readonly IFileStorageService _fileStorageService;
+    private readonly ILogger<DeleteProductCommandHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
     public DeleteProductCommandHandler(IProductRepository productRepository, IUnitOfWork unitOfWork,
-        IOrderRepository orderRepository, ILogger<AddProductCommandHandler> logger,
-        ICacheService cacheService)
+        IOrderRepository orderRepository, IFileStorageService fileStorageService,
+        ILogger<DeleteProductCommandHandler> logger)
     {
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _orderRepository = orderRepository;
+        _fileStorageService = fileStorageService;
         _logger = logger;
-        _cacheService = cacheService;
     }
 
     public async Task Handle(DeleteProductCommand command, CancellationToken ct)
@@ -44,8 +44,26 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand>
         if (await _orderRepository.HasProductInOrdersAsync(command.Id, ct))
             throw new DomainException("Cannot delete product that has orders");
 
+        // 1. Запоминаем файлы и удаляем товар из БД
+        var fileUrls = product.GetAllFileUrls();
+
         await _productRepository.DeleteProductAsync(product, ct);
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        // 2. Физические файлы удаляем только после успешного коммита
+        foreach (var url in fileUrls)
+        {
+            try
+            {
+                await _fileStorageService.DeleteFileAsync(url, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to delete physical file {FileUrl} after product {ProductId} deletion",
+                    url, product.Id);
+            }
+        }
 
         _logger.LogWarning(
             "Product deleted: ProductId {ProductId}, Name {Name}, Time {Time}",
@@ -53,9 +71,5 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand>
             product.Name,
             DateTime.UtcNow
         );
-
-        // ✅ Удаляем из кэша всё
-        await _cacheService.RemoveByPrefix("products:");
-
     }
 }

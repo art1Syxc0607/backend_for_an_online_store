@@ -133,7 +133,8 @@ public class ProductRepository : IProductRepository
             //    (p.Description != null && EF.Functions.ILike(p.Description, $"%{SearchText}%")))
             .WhereIf(PriceLimitMin != null, p => p.Price >= PriceLimitMin)
             .WhereIf(PriceLimitMax != null, p => p.Price <= PriceLimitMax)
-            .WhereIf(OnlyAvailable != null, p => p.StockQuantity - p.ReservedQuantity > 0); // or !=
+            // ✅ OnlyAvailable=false/null означает "без фильтра", а не "как true"
+            .WhereIf(OnlyAvailable == true, p => p.StockQuantity - p.ReservedQuantity > 0);
 
         var totalCount = search.Count();
 
@@ -169,7 +170,8 @@ public class ProductRepository : IProductRepository
             //    (p.Description != null && EF.Functions.ILike(p.Description, $"%{SearchText}%")))
             .WhereIf(command.PriceLimitMin != null, p => p.Price >= command.PriceLimitMin)
             .WhereIf(command.PriceLimitMax != null, p => p.Price <= command.PriceLimitMax)
-            .WhereIf(command.OnlyAvailable != null, p => p.StockQuantity - p.ReservedQuantity > 0); // or !=
+            // ✅ OnlyAvailable=false/null означает "без фильтра", а не "как true"
+            .WhereIf(command.OnlyAvailable == true, p => p.StockQuantity - p.ReservedQuantity > 0);
 
         var totalCount = search.Count();
 

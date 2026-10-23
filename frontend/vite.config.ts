@@ -22,6 +22,28 @@ export default defineConfig({
                 changeOrigin: true,
                 secure: false,
             },
+            // Медиа теперь хранится относительными URL (/images/..., /videos/...)
+            '/images': {
+                target: 'https://localhost:7197',
+                changeOrigin: true,
+                secure: false,
+            },
+            '/videos': {
+                target: 'https://localhost:7197',
+                changeOrigin: true,
+                secure: false,
+            },
+            // Legacy-файлы, загруженные до запрета документов
+            '/documents': {
+                target: 'https://localhost:7197',
+                changeOrigin: true,
+                secure: false,
+            },
+            '/others': {
+                target: 'https://localhost:7197',
+                changeOrigin: true,
+                secure: false,
+            },
         },
     },
 })

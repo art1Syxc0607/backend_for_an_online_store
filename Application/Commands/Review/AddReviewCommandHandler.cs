@@ -1,5 +1,6 @@
 ﻿using Application.Commands.Order;
 using Application.Interfaces;
+using Application.Validators.Common;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Domain.Exceptions;
@@ -71,11 +72,18 @@ public class AddReviewCommandHandler : IRequestHandler<AddReviewCommand, int>
             // 5. ✅ СНАЧАЛА загружаем файлы
             if (command.Files != null)
             {
+                foreach (var file in command.Files)
+                {
+                    if (!AllowedFileTypes.IsAllowed(file.ContentType))
+                        throw new DomainException($"Unsupported file type: {file.ContentType}");
+                }
+
                 // ✅ Валидация ДО записи на диск — чтобы не оставить orphan-файлы
                 review.EnsureCanAddFiles(command.Files.Count);
 
                 var imageUrls = new List<string>();
                 var videoUrls = new List<string>();
+                var reviewMediaFolder = $"reviews/{Guid.NewGuid():N}";
 
                 foreach (var file in command.Files)
                 {
@@ -83,7 +91,7 @@ public class AddReviewCommandHandler : IRequestHandler<AddReviewCommand, int>
                         file.Stream,
                         file.FileName,
                         file.ContentType,
-                        $"products/{product.Id}",
+                        reviewMediaFolder,
                         ct
                     );
                     uploadedUrls.Add(url);

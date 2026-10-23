@@ -51,6 +51,10 @@ public static class DependencyInjection
         options.UseNpgsql(connectionString,
             b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
 
+        // JWT options are read from the combined configuration (JWT__KEY env var,
+        // appsettings.json, user-secrets). JwtOptions.Load validates the key at startup.
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+
         // for current reauest
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentRequestService, CurrentRequestService>();

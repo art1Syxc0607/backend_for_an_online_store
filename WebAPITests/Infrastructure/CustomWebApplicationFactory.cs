@@ -12,6 +12,10 @@ namespace WebAPITests.Infrastructure;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    // Program.cs validates JWT configuration before the host is built, so the
+    // test key must be visible as an environment variable before CreateClient().
+    private const string TestJwtKey = "integration-test-jwt-signing-key-32+chars";
+
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
         .WithImage("postgres:16-alpine")
         .WithDatabase("webstore_test")
@@ -21,6 +25,11 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         .Build();
 
     public string ConnectionString => _dbContainer.GetConnectionString();
+
+    public CustomWebApplicationFactory()
+    {
+        Environment.SetEnvironmentVariable("JWT__KEY", TestJwtKey);
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

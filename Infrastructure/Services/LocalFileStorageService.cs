@@ -1,7 +1,6 @@
 ﻿using Application.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,16 +12,13 @@ namespace Infrastructure.Services;
 public class LocalFileStorageService : IFileStorageService
 {
     private readonly IWebHostEnvironment _environment;
-    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<LocalFileStorageService> _logger;
     
 
     public LocalFileStorageService(IWebHostEnvironment environment,
-        IHttpContextAccessor httpContextAccessor,
         ILogger<LocalFileStorageService> logger)
     {
         _environment = environment;
-        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
     }
 
@@ -52,7 +48,9 @@ public class LocalFileStorageService : IFileStorageService
         using var fileStreamOutput = new FileStream(filePath, FileMode.Create);
         await fileStream.CopyToAsync(fileStreamOutput, ct);
 
-        // 4. Возвращаем URL
+        // 4. Возвращаем относительный URL.
+        // Хост и схема не должны попадать в БД: за прокси/в Docker они
+        // зависят от окружения и могут давать неверный протокол.
         var urlPath = string.IsNullOrEmpty(subFolder) 
             ? $"/{fileType}/{uniqueName}"
             : $"/{fileType}/{subFolder}/{uniqueName}";
@@ -62,23 +60,9 @@ public class LocalFileStorageService : IFileStorageService
 
     public Task<string> GetFileUrlAsync(string fileName)
     {
-        var request = _httpContextAccessor.HttpContext?.Request;
-
-
-        //if (request == null)
-        //{
-        //    throw new ArgumentNullException("HttpContext is null");
-        //}
-
-        // ✅ Если HttpContext нет (тесты, фоновые задачи) — возвращаем относительный URL
-        if (request == null)
-        {
-            return Task.FromResult(fileName);
-        }
-
-        // Абсолютный URL
-        var url = $"{request.Scheme}://{request.Host}/{fileName}";
-        return Task.FromResult(url);
+        // Всегда относительный URL: /images/..., /videos/...
+        // Фронтенд и nginx проксируют эти пути на API.
+        return Task.FromResult(fileName);
     }
 
     public Task DeleteFileAsync(string fileUrl, CancellationToken ct = default)
@@ -128,18 +112,13 @@ public class LocalFileStorageService : IFileStorageService
     private string GetFileType(string contentType)
     {
         if (string.IsNullOrEmpty(contentType))
-            return "images/products";
+            return "images";
 
         if (contentType.StartsWith("image/"))
             return "images";
 
         if (contentType.StartsWith("video/"))
             return "videos";
-
-        if (contentType == "application/pdf" ||
-            contentType == "application/msword" ||
-            contentType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-            return "documents";
 
         return "others";
     }
@@ -150,11 +129,4 @@ public class LocalFileStorageService : IFileStorageService
 
     public bool IsVideoFile(string contentType)
         => !string.IsNullOrEmpty(contentType) && contentType.StartsWith("video/");
-
-    public bool IsDocumentFile(string contentType)
-        => !string.IsNullOrEmpty(contentType) && (
-            contentType == "application/pdf" ||
-            contentType == "application/msword" ||
-            contentType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        );
 }

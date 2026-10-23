@@ -11,7 +11,12 @@ public class GetAllProductsCommand : IRequest<PagedResult<ProductResponseDto>>, 
     {
         get
         {
-            return CacheKeys.ProductsPrefix;
+            // ✅ Ключ обязан учитывать пагинацию, иначе все страницы
+            // делят одну запись кэша.
+            var pageNumber = Math.Max(1, PageNumber);
+            var pageSize = Math.Clamp(PageSize, 1, 50);
+
+            return CacheKeys.ProductsList(pageNumber, pageSize);
         }
     }
 

@@ -1,4 +1,6 @@
-﻿using Application.Interfaces;
+﻿using Application.DTOs.File;
+using Application.Interfaces;
+using Application.Validators.Common;
 using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
@@ -16,19 +18,17 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
     private readonly IProductRepository _productRepository;
     private readonly ICategoryRepository _categoryRepository;
     private readonly IFileStorageService _fileStorageService;
-    private readonly ICacheService _cacheService;
     private readonly ILogger<AddProductCommandHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
     public AddProductCommandHandler(IProductRepository productRepository, 
         ICategoryRepository categoryRepository, 
-        IFileStorageService fileStorageService, ICacheService cacheService, ILogger<AddProductCommandHandler> logger,
+        IFileStorageService fileStorageService, ILogger<AddProductCommandHandler> logger,
         IUnitOfWork unitOfWork)
     {
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _categoryRepository = categoryRepository;
-        _cacheService = cacheService;
         _logger = logger;
         _fileStorageService = fileStorageService;
     }
@@ -50,7 +50,17 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
                 throw new DomainException($"Category {command.CategoryId} not found");
         }
 
-        // 2. Создаем продукт
+        // 2. Валидация ДО записи в БД и на диск — чтобы не создавать товар
+        //    и не оставлять orphan-файлы при некорректном запросе.
+        var files = command.Files ?? new List<FileUploadDto>();
+
+        foreach (var file in files)
+        {
+            if (!AllowedFileTypes.IsAllowed(file.ContentType))
+                throw new DomainException($"Unsupported file type: {file.ContentType}");
+        }
+
+        // 3. Создаем продукт
         var product = new Domain.Entities.Product(
             command.Name,
             command.Price,
@@ -60,53 +70,105 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
             command.CategoryId
         );
 
-        await _productRepository.AddProductAsync(product, ct);
+        product.EnsureCanAddFiles(files.Count);
 
-        // 3. Если есть файлы — сохраняем и обновляем продукт
-        var imageUrls = new List<string>();
-        var videoUrls = new List<string>();
+        var uploadedUrls = new List<string>();
+        var productPersisted = false;
 
-        if (command.Files != null)
+        try
         {
-            foreach (var file in command.Files)
+            // 4. Сохраняем товар, чтобы получить реальный Id.
+            //    До SaveChanges EF не генерирует идентификатор, поэтому
+            //    использовать product.Id в пути загрузки нельзя.
+            await _productRepository.AddProductAsync(product, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+            productPersisted = true;
+
+            // 5. Если есть файлы — загружаем их в папку уже существующего товара
+            if (files.Count > 0)
             {
-                // Сохраняем файл
-                var url = await _fileStorageService.UploadFileAsync(
-                    file.Stream,
-                    file.FileName,
-                    file.ContentType,
-                    $"products/{product.Id}",
-                    ct
-                );
+                var imageUrls = new List<string>();
+                var videoUrls = new List<string>();
 
-                // Определяем тип и сохраняем в соответствующую коллекцию
-                if (file.ContentType.StartsWith("image/"))
-                    imageUrls.Add(url);
-                else if (file.ContentType.StartsWith("video/"))
-                    videoUrls.Add(url);
+                foreach (var file in files)
+                {
+                    var url = await _fileStorageService.UploadFileAsync(
+                        file.Stream,
+                        file.FileName,
+                        file.ContentType,
+                        $"products/{product.Id}",
+                        ct
+                    );
+                    uploadedUrls.Add(url);
 
+                    if (file.ContentType.StartsWith("image/"))
+                        imageUrls.Add(url);
+                    else if (file.ContentType.StartsWith("video/"))
+                        videoUrls.Add(url);
+                }
+
+                if (imageUrls.Any())
+                    product.SetImageUrls(imageUrls);
+
+                if (videoUrls.Any())
+                    product.SetVideoUrls(videoUrls);
+
+                // 6. Сохраняем URL медиа у товара
+                await _unitOfWork.SaveChangesAsync(ct);
             }
 
-            // Обновляем продукт
-            product.SetImageUrls(imageUrls);
-            product.SetVideoUrls(videoUrls);
+            _logger.LogInformation(
+                "Product created successfully: ProductId {ProductId}, Name {Name}, Price {Price}, " +
+                "Stock {Stock}",
+                product.Id,
+                product.Name,
+                product.Price,
+                product.StockQuantity
+            );
+
+            return product.Id;
         }
+        catch
+        {
+            // 7. Компенсация. Сначала откатываем запись товара в БД,
+            //    затем удаляем уже загруженные физические файлы.
+            if (productPersisted)
+                await TryDeleteProductAsync(product, ct);
 
-        // 4. Единое сохранение!
-        await _unitOfWork.SaveChangesAsync(ct);
+            await TryDeleteUploadedFilesAsync(uploadedUrls, ct);
+            throw;
+        }
+    }
 
-        _logger.LogInformation(
-            "Product created successfully: ProductId {ProductId}, Name {Name}, Price {Price}, " +
-            "Stock {Stock}",
-            product.Id,
-            product.Name,
-            product.Price,
-            product.StockQuantity
-        );
+    private async Task TryDeleteProductAsync(Domain.Entities.Product product, CancellationToken ct)
+    {
+        try
+        {
+            await _productRepository.DeleteProductAsync(product, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to roll back product {ProductId} after media upload error",
+                product.Id);
+        }
+    }
 
-        // ✅ Очищаем кэш товаров
-        await _cacheService.RemoveByPrefix("products:");
+    private async Task TryDeleteUploadedFilesAsync(List<string> urls, CancellationToken ct)
+    {
+        if (urls.Count == 0)
+            return;
 
-        return product.Id;
+        try
+        {
+            await _fileStorageService.DeleteMultipleFilesAsync(urls, ct);
+        }
+        catch (Exception ex)
+        {
+            // best-effort: файлы могли не удалиться, но основной сбой важнее
+            _logger.LogError(ex,
+                "Failed to roll back {Count} uploaded product file(s)", urls.Count);
+        }
     }
 }

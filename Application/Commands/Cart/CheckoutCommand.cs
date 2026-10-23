@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Application.Commands.Cart;
 
-public class CheckoutCommand : IRequest<int> // Id of an Order
+public class CheckoutCommand : IRequest<int>, ICacheInvalidatingCommand // Id of an Order
 {
     [Required]
     public int UserId { get; init; }

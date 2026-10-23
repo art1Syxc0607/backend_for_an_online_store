@@ -34,24 +34,6 @@ public class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, OrderResponse
         if (order == null) throw new DomainException("No such order");
         if (order.UserId != query.UserId) throw new DomainException("This order doesn't belong to the user");
 
-        //var result = new OrderResponseDto
-        //{
-        //    OrderId = order.Id,
-        //    UserId = order.UserId,
-        //    Items = order.Items.Select(ot => new OrderItemDto
-        //    {
-        //        ProductId = ot.ProductId,
-        //        Quantity = ot.Quantity,
-        //        PriceAtPurchase = ot.PriceAtPurchase,
-        //        ProductNameAtPurchase = ot.ProductNameAtPurchase
-        //    }).ToList(),
-        //    TotalAmount = order.TotalAmount,
-        //    ShippingAddress = order.ShippingAddress,
-        //    Status = order.Status,
-        //    CreatedAt = order.CreatedAt,
-        //    PaidAt = order.PaidAt,
-        //};
-
         // Маппим через AutoMapper
         var result = _mapper.Map<OrderResponseDto>(order);
 

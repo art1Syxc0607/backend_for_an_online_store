@@ -2,33 +2,29 @@
 using System.Security.Claims;
 using Domain.Entities;
 using FluentAssertions;
+using Infrastructure.Options;
 using Infrastructure.Services;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace InfrastructureTests.Services;
 
 public class JwtServiceTests
 {
-    private readonly IConfiguration _configuration;
     private readonly JwtService _jwtService;
 
     public JwtServiceTests()
     {
         JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
-        var configDict = new Dictionary<string, string>
+        var options = Options.Create(new JwtOptions
         {
-            ["Jwt:Key"] = "mysupersecretkeywithmorethan32characters!",
-            ["Jwt:Issuer"] = "TestIssuer",
-            ["Jwt:Audience"] = "TestAudience"
-        };
+            Key = "test-only-jwt-signing-key-at-least-32-bytes!",
+            Issuer = "TestIssuer",
+            Audience = "TestAudience"
+        });
 
-        _configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configDict!)
-            .Build();
-
-        _jwtService = new JwtService(_configuration);
+        _jwtService = new JwtService(options);
     }
 
     //[Fact]

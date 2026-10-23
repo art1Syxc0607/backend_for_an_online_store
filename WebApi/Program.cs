@@ -1,9 +1,12 @@
 ﻿using Application;
 using Application.Interfaces;
+using Application.Validators.Common;
 using Infrastructure;
 using Infrastructure.Data;
 using Infrastructure.Data.Seed;
+using Infrastructure.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -22,6 +25,23 @@ using WebAPI.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Лимиты загрузки файлов должны совпадать с nginx client_max_body_size
+// и проверками в контроллерах/валидаторах.
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = AllowedFileTypes.MaxRequestSizeBytes;
+});
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = AllowedFileTypes.MaxRequestSizeBytes;
+});
+
+// JWT: ключ обязателен и задаётся через переменную окружения JWT__KEY
+// (в Docker — через docker-compose). Fail-fast, чтобы приложение не стартовало
+// с отсутствующим или слишком коротким ключом.
+var jwtOptions = JwtOptions.Load(builder.Configuration);
+
 // Добавляем аутентификацию с указанием схемы
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // "Bearer"
     .AddJwtBearer(options =>
@@ -29,12 +49,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // "B
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidIssuer = jwtOptions.Issuer,
             ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidAudience = jwtOptions.Audience,
             ValidateLifetime = true,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
+                Encoding.UTF8.GetBytes(jwtOptions.Key)
             ),
             ValidateIssuerSigningKey = true,
             //ClockSkew = TimeSpan.Zero // опционально
