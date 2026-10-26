@@ -16,6 +16,12 @@ public interface IOrderRepository
 {
     Task<Order?> GetOrder(int id, CancellationToken ct = default);
 
+    /// <summary>
+    /// Locks the order row for the duration of the current transaction.
+    /// Used by payment and order-state transitions.
+    /// </summary>
+    Task<Order?> GetOrderForUpdateAsync(int id, CancellationToken ct = default);
+
     Task<(List<Order>, int)> GetAllAsync(GetOrderHistoryQuery query,
         CancellationToken ct = default);
     //Task CreateOrder(User user, 

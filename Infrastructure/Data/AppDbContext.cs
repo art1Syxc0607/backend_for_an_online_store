@@ -33,6 +33,27 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        // PostgreSQL system column used as an optimistic concurrency token.
+        // Kept provider-specific so InMemory-based unit tests keep working.
+        if (Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            builder.Entity<Product>()
+                .Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
+
+            builder.Entity<Order>()
+                .Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
+
+            builder.Entity<Payment>()
+                .Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
+        }
+
         base.OnModelCreating(builder);
     }
 }

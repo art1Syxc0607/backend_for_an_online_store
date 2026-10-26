@@ -41,44 +41,52 @@ public class InitiateShipmentCommandHandler : IRequestHandler<InitiateShipmentCo
 
     public async Task Handle(InitiateShipmentCommand command, CancellationToken ct)
     {
-        var order = await _orderRepository.GetOrder(command.OrderId, ct);
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        if (order == null) throw new Exception("No such order");
-        if (order == null)
-        {
-            _logger.LogWarning("Order not found: OrderId {OrderId}", command.OrderId);
-            throw new DomainException($"Order with ID {command.OrderId} not found");
-        }
-
-        var user = await _userRepository.GetByIdAsync(order.UserId, ct);
-        if (user == null)
-        {
-            _logger.LogWarning("User not found: UserId {UserId}", order.UserId);
-            throw new DomainException($"User with ID {order.UserId} not found");
-        }
-
-        order.Ship();
-
-        await _unitOfWork.SaveChangesAsync();
-        _logger.LogInformation(
-            "Order shipped successfully: OrderId {OrderId}, UserId {UserId}",
-            order.Id,
-            order.UserId
-        );
-
-
-        // Отправляем email уведомление
         try
         {
-            var emailToSend = _emailTemplateService.CreateShipmentEmail(order, user, command.BaseUrl);
-            await _emailBackgroundService.Enqueue(emailToSend);
-            _logger.LogInformation("Shipment email sent to {Email}", user.Email);
+            var order = await _orderRepository.GetOrderForUpdateAsync(command.OrderId, ct);
+            if (order == null)
+            {
+                _logger.LogWarning("Order not found: OrderId {OrderId}", command.OrderId);
+                throw new DomainException($"Order with ID {command.OrderId} not found");
+            }
+
+            var user = await _userRepository.GetByIdAsync(order.UserId, ct);
+            if (user == null)
+            {
+                _logger.LogWarning("User not found: UserId {UserId}", order.UserId);
+                throw new DomainException($"User with ID {order.UserId} not found");
+            }
+
+            order.Ship();
+
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            _logger.LogInformation(
+                "Order shipped successfully: OrderId {OrderId}, UserId {UserId}",
+                order.Id,
+                order.UserId
+            );
+
+            // Отправляем email уведомление только после COMMIT
+            try
+            {
+                var emailToSend = _emailTemplateService.CreateShipmentEmail(order, user, command.BaseUrl);
+                await _emailBackgroundService.Enqueue(emailToSend);
+                _logger.LogInformation("Shipment email sent to {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send shipment email for OrderId {OrderId}", order.Id);
+                // Не бросаем исключение — заказ уже отправлен
+            }
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.LogError(ex, "Failed to send shipment email for OrderId {OrderId}", order.Id);
-            // Не бросаем исключение, чтобы не откатывать транзакцию
-            // Логируем ошибку, но заказ уже отправлен
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
         }
     }
 

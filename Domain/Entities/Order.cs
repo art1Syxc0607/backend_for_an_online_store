@@ -78,26 +78,43 @@ public class Order
 
     public void MarkAsPaid()
     {
-        if (Status == OrderStatus.Paid)
-            throw new DomainException("Order is already paid.");
-        if (Status == OrderStatus.Cancelled)
-            throw new DomainException("Cannot pay for a cancelled order.");
+        if (Status != OrderStatus.Pending)
+            throw new DomainException("Only pending orders can be paid.");
+
+        // Validate every item before mutating anything. Otherwise a failure on
+        // the second product could leave the first one partially confirmed.
+        foreach (var item in _items)
+        {
+            if (item.Product.ReservedQuantity < item.Quantity)
+                throw new DomainException(
+                    $"Cannot confirm more than reserved. Product: {item.ProductId}, " +
+                    $"Reserved: {item.Product.ReservedQuantity}, Required: {item.Quantity}");
+        }
+
         Status = OrderStatus.Paid;
         PaidAt = DateTime.UtcNow;
 
-        _items.ForEach(oi => oi.Product.ConfirmReservation(oi.Quantity)); // увеличиваем количестов 
-        // покупок у продукта
+        foreach (var item in _items)
+            item.Product.ConfirmReservation(item.Quantity);
     }
 
     public void Cancel()
     {
-        if (Status == OrderStatus.Paid || Status == OrderStatus.Shipped)
-            throw new DomainException("Cannot cancel a paid or shipped order.");
+        if (Status != OrderStatus.Pending)
+            throw new DomainException("Cannot cancel a paid or shipped order. Only pending orders can be cancelled.");
 
+        // Pre-validate all reservations before releasing any of them.
+        foreach (var item in _items)
+        {
+            if (item.Product.ReservedQuantity < item.Quantity)
+                throw new DomainException(
+                    $"Cannot release more than reserved. Product: {item.ProductId}, " +
+                    $"Reserved: {item.Product.ReservedQuantity}, Required: {item.Quantity}");
+        }
 
-        _items.ForEach(oi => oi.Product.ReleaseReservation(oi.Quantity)); // увеличиваем количестов 
-                                                                          // отмен у продукта
-                                                                          // и отпускаем резерв товаров, котрый брал этот заказ
+        foreach (var item in _items)
+            item.Product.ReleaseReservation(item.Quantity);
+
         Status = OrderStatus.Cancelled;
         CancelledAt = DateTime.UtcNow;
     }

@@ -1,31 +1,31 @@
 ﻿using Application.Commands.Email;
-using Application.DTOs.Order;
 using Application.Interfaces;
 using Domain.DTOs.Order;
 using Domain.Entities;
 using Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Application.Commands.Order;
 
-public class CreateOrderCommandHandler : IRequestHandler
-    <CreateOrderCommand, int>
+public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, int>
 {
     private readonly IOrderRepository _orderRepository;
     private readonly IUserRepository _userRepository;
     private readonly IProductRepository _productRepository;
-    private readonly ILogger<CreateOrderCommandHandler> _logger;
     private readonly IEmailTemplateService _emailTamplate;
     private readonly IEmailBackgroundService _emailBackgroundService;
+    private readonly ILogger<CreateOrderCommandHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CreateOrderCommandHandler(
-        IOrderRepository orderRepository,
-        IUserRepository userRepository, IProductRepository productRepository,
-        ILogger<CreateOrderCommandHandler> logger,
-        IEmailTemplateService emailTamplate,
-        IEmailBackgroundService emailBackgroundService,
+    public CreateOrderCommandHandler(IOrderRepository orderRepository, IUserRepository userRepository,
+        IProductRepository productRepository, IEmailTemplateService emailTamplate,
+        IEmailBackgroundService emailBackgroundService, ILogger<CreateOrderCommandHandler> logger,
         IUnitOfWork unitOfWork)
     {
         _orderRepository = orderRepository;
@@ -37,8 +37,7 @@ public class CreateOrderCommandHandler : IRequestHandler
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<int> Handle(CreateOrderCommand command,
-        CancellationToken ct)
+    public async Task<int> Handle(CreateOrderCommand command, CancellationToken ct)
     {
         _logger.LogInformation(
             "Order creation started: UserId {UserId}, ItemsCount {ItemsCount}",
@@ -46,8 +45,7 @@ public class CreateOrderCommandHandler : IRequestHandler
             command.Items.Count
         );
 
-        var user = await _userRepository.GetByIdAsync(command.UserId,
-            ct);
+        var user = await _userRepository.GetByIdAsync(command.UserId, ct);
         if (user == null)
         {
             _logger.LogWarning(
@@ -55,66 +53,73 @@ public class CreateOrderCommandHandler : IRequestHandler
                 command.UserId
             );
             throw new DomainException("User not found.");
-        } 
+        }
 
         // Проверка подтверждения email
         user.EnsureEmailConfirmed();
 
-        var productIds = command.Items.Select(i => i.ProductId).ToList();
-        var products = await _productRepository.GetByIdsAsync(productIds, ct);
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        if(products == null) throw new DomainException("Some products not found");
-        if (products.Count != productIds.Count)
-            throw new DomainException("Some products not found");
-
-        // 2. Создаём словарь для быстрого поиска продукта по ID
-        var productDict = products.ToDictionary(p => p.Id);
-
-        // 3. Создаём OrderItemDomainDto из command.Items
-        var orderItemDtos = command.Items
-            .Select(item => new OrderItemDomainDto(
-                productDict[item.ProductId], // ← продукт из словаря
-                item.Quantity
-            ))
-            .ToList();
-
-
-        // 4. Создаем заказ (вся бизнес-логика внутри Order)
-        var order = new Domain.Entities.Order(command.UserId, command.ShippingAddress, orderItemDtos);
-
-
-
-        await _orderRepository.CreateOrder(order, ct);
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation(
-            "Order created successfully: OrderId {OrderId}, UserId {UserId}, TotalAmount " +
-            "{TotalAmount}, ItemsCount {ItemsCount}",
-            order.Id,
-            order.UserId,
-            order.TotalAmount,
-            order.Items.Count
-        );
-
-
-        // Отправляем email уведомление
         try
         {
-            // 6. Отправляем письмо с подтверждением
-            // добавление в очередь фонового сервиса для отправки Email
-            var emailToSend = _emailTamplate
-                .CreateOrderConfirmationEmail(order, user, command.BaseUrl);
-            await _emailBackgroundService.Enqueue(emailToSend);
+            var productIds = command.Items
+                .Select(i => i.ProductId)
+                .Distinct()
+                .OrderBy(id => id)
+                .ToList();
 
-            _logger.LogInformation("Order confirmation sent to {Email}", user.Email);
+            // Lock and refresh products before the order constructor checks
+            // AvailableQuantity and reserves stock.
+            var products = await _productRepository.GetByIdsForUpdateAsync(productIds, ct);
+
+            if (products.Count != productIds.Count)
+                throw new DomainException("Some products not found");
+
+            var productDict = products.ToDictionary(p => p.Id);
+
+            var orderItemDtos = command.Items
+                .Select(item => new OrderItemDomainDto(
+                    productDict[item.ProductId],
+                    item.Quantity
+                ))
+                .ToList();
+
+            var order = new Domain.Entities.Order(command.UserId, command.ShippingAddress, orderItemDtos);
+
+            await _orderRepository.CreateOrder(order, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            _logger.LogInformation(
+                "Order created successfully: OrderId {OrderId}, UserId {UserId}, TotalAmount " +
+                "{TotalAmount}, ItemsCount {ItemsCount}",
+                order.Id,
+                order.UserId,
+                order.TotalAmount,
+                order.Items.Count
+            );
+
+            // Отправляем email только после успешного COMMIT
+            try
+            {
+                var emailToSend = _emailTamplate
+                    .CreateOrderConfirmationEmail(order, user, command.BaseUrl);
+                await _emailBackgroundService.Enqueue(emailToSend);
+
+                _logger.LogInformation("Order confirmation sent to {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send Order confirmation to {Email}", user.Email);
+                // Не бросаем исключение — заказ уже создан
+            }
+
+            return order.Id;
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.LogError(ex, "Failed to send Order confirmation to {Email}", user.Email);
-            // Не бросаем исключение, чтобы не откатывать транзакцию
-            // Логируем ошибку, но заказ уже отправлен
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
         }
-
-        return order.Id;
     }
 }

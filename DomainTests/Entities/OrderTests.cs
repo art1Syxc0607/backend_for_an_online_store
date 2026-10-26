@@ -139,5 +139,43 @@ public class OrderTests
         product.AmountOfPaid.Should().Be(0);
     }
 
+    [Fact]
+    public void Cancel_WhenOrderIsAlreadyCancelled_ShouldThrowDomainException()
+    {
+        // Arrange
+        var user = new User("test@mail.com", "hash", "John");
+        user.TestsSetUser(1);
+        var order = new Order(user.Id, "ул. Ленина, 1", new List<OrderItemDomainDto>());
+        var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
+        order.AddItem(product, 2);
+        order.Cancel();
+
+        // Act
+        Action act = () => order.Cancel();
+
+        // Assert
+        act.Should().Throw<DomainException>()
+            .WithMessage("*Only pending orders can be cancelled*");
+    }
+
+    [Fact]
+    public void MarkAsPaid_WhenOrderIsCancelled_ShouldThrowDomainException()
+    {
+        // Arrange
+        var user = new User("test@mail.com", "hash", "John");
+        user.TestsSetUser(1);
+        var order = new Order(user.Id, "ул. Ленина, 1", new List<OrderItemDomainDto>());
+        var product = new Product("Phone", 599.99m, 500.99m, 10, "Test product");
+        order.AddItem(product, 2);
+        order.Cancel();
+
+        // Act
+        Action act = () => order.MarkAsPaid();
+
+        // Assert
+        act.Should().Throw<DomainException>()
+            .WithMessage("*Only pending orders can be paid*");
+    }
+
     // All tests complets succesfull so far
 }

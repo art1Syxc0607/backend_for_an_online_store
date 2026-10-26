@@ -125,6 +125,7 @@ public class OrderController : ControllerBase
         var command = new ConfirmPaymentCommand
         {
             PaymentIntentId = dto.PaymentIntentId,
+            UserId = GetCurrentUserId(),
             BaseUrl = $"{Request.Scheme}://{Request.Host}"
         };
 

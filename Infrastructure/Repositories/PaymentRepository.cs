@@ -41,6 +41,24 @@ public class PaymentRepository : IPaymentRepository
             .FirstOrDefaultAsync(p => p.TransactionId == transactionId, ct);
     }
 
+    public async Task<Payment?> GetByTransactionIdForUpdateAsync(
+        string transactionId,
+        CancellationToken ct = default)
+    {
+        var payment = await _context.Payments
+            .FromSqlInterpolated(
+                $@"SELECT *, xmin FROM ""Payments""
+                   WHERE ""TransactionId"" = {transactionId}
+                   FOR UPDATE")
+            .FirstOrDefaultAsync(ct);
+
+        // A tracking query does not refresh an entity that is already tracked.
+        if (payment != null)
+            await _context.Entry(payment).ReloadAsync(ct);
+
+        return payment;
+    }
+
     public async Task<Payment?> GetByExternalTransactionIdAsync(string externalTransactionId, CancellationToken ct = default)
     {
         return await _context.Payments
@@ -64,7 +82,7 @@ public class PaymentRepository : IPaymentRepository
 
     public Task UpdateAsync(Payment payment, CancellationToken ct = default)
     {
-        _context.Payments.Update(payment);
+        // The payment is already tracked by EF.
         return Task.CompletedTask;
     }
 

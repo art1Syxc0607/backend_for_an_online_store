@@ -27,6 +27,14 @@ public interface IPaymentRepository
     Task<Payment?> GetByTransactionIdAsync(string transactionId, CancellationToken ct = default);
 
     /// <summary>
+    /// Locks the payment row for the duration of the current transaction.
+    /// Used by payment confirmation to make the operation idempotent.
+    /// </summary>
+    Task<Payment?> GetByTransactionIdForUpdateAsync(
+        string transactionId,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Получить платеж по ExternalTransactionId (идентификатор от платежного шлюза)
     /// </summary>
     Task<Payment?> GetByExternalTransactionIdAsync(string externalTransactionId, CancellationToken ct = default);

@@ -15,6 +15,7 @@ namespace Application.Commands.Order;
 public class ReceiveOrderCommandHandler : IRequestHandler<ReceiveOrderCommand>
 {
     private readonly IOrderRepository _orderRepository;
+    private readonly IProductRepository _productRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserRepository _userRepository;
     private readonly IEmailTemplateService _emailTemplateService;
@@ -24,6 +25,7 @@ public class ReceiveOrderCommandHandler : IRequestHandler<ReceiveOrderCommand>
 
     public ReceiveOrderCommandHandler(
         IOrderRepository orderRepository,
+        IProductRepository productRepository,
         IUnitOfWork unitOfWork,
         IUserRepository userRepository,
         IEmailTemplateService emailTemplateService,
@@ -32,6 +34,7 @@ public class ReceiveOrderCommandHandler : IRequestHandler<ReceiveOrderCommand>
         ILogger<ReceiveOrderCommandHandler> logger)
     {
         _orderRepository = orderRepository;
+        _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _userRepository = userRepository;
         _emailTemplateService = emailTemplateService;
@@ -48,68 +51,89 @@ public class ReceiveOrderCommandHandler : IRequestHandler<ReceiveOrderCommand>
             command.UserId
         );
 
-        // 1. Получаем заказ
-        var order = await _orderRepository.GetOrder(command.OrderId, ct);
-        if (order == null)
-        {
-            _logger.LogWarning("Order not found: OrderId {OrderId}", command.OrderId);
-            throw new DomainException($"Order with ID {command.OrderId} not found");
-        }
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        // 2. Проверяем, что заказ принадлежит пользователю
-        if (order.UserId != command.UserId)
-        {
-            _logger.LogWarning(
-                "Unauthorized receipt confirmation: OrderId {OrderId}, UserId {UserId}",
-                command.OrderId,
-                command.UserId
-            );
-            throw new UnauthorizedAccessException("This order doesn't belong to the user");
-        }
-
-        // 3. Проверяем, что заказ уже доставлен
-        if (order.Status != OrderStatus.Delivered)
-        {
-            _logger.LogWarning(
-                "Cannot receive order: OrderId {OrderId}, CurrentStatus {Status}",
-                order.Id,
-                order.Status
-            );
-            throw new DomainException($"Cannot receive order in status '{order.Status}'. Order must be delivered first.");
-        }
-
-        // 4. Получаем пользователя для отправки email
-        var user = await _userRepository.GetByIdAsync(order.UserId, ct);
-        if (user == null)
-        {
-            _logger.LogWarning("User not found: UserId {UserId}", order.UserId);
-            throw new DomainException($"User with ID {order.UserId} not found");
-        }
-
-        // 5. Обновляем статус заказа на "Получен"
-        order.ReceivedByUser();
-
-        // 6. Сохраняем изменения
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation(
-            "Order receipt confirmed successfully: OrderId {OrderId}, UserId {UserId}",
-            order.Id,
-            order.UserId
-        );
-
-        // 7. Отправляем email уведомление о подтверждении получения
         try
         {
-            var emailToSend = _emailTemplateService.CreateReceiptEmail(order, user, command.BaseUrl);
-            await _emailBackgroundService.Enqueue(emailToSend);
-            _logger.LogInformation("Receipt confirmation email sent to {Email}", user.Email);
+            // 1. Блокируем заказ на время смены статуса
+            var order = await _orderRepository.GetOrderForUpdateAsync(command.OrderId, ct);
+            if (order == null)
+            {
+                _logger.LogWarning("Order not found: OrderId {OrderId}", command.OrderId);
+                throw new DomainException($"Order with ID {command.OrderId} not found");
+            }
+
+            // 2. Проверяем, что заказ принадлежит пользователю
+            if (order.UserId != command.UserId)
+            {
+                _logger.LogWarning(
+                    "Unauthorized receipt confirmation: OrderId {OrderId}, UserId {UserId}",
+                    command.OrderId,
+                    command.UserId
+                );
+                throw new UnauthorizedAccessException("This order doesn't belong to the user");
+            }
+
+            // 3. Проверяем, что заказ уже доставлен
+            if (order.Status != OrderStatus.Delivered)
+            {
+                _logger.LogWarning(
+                    "Cannot receive order: OrderId {OrderId}, CurrentStatus {Status}",
+                    order.Id,
+                    order.Status
+                );
+                throw new DomainException($"Cannot receive order in status '{order.Status}'. Order must be delivered first.");
+            }
+
+            // 4. Получаем пользователя для отправки email
+            var user = await _userRepository.GetByIdAsync(order.UserId, ct);
+            if (user == null)
+            {
+                _logger.LogWarning("User not found: UserId {UserId}", order.UserId);
+                throw new DomainException($"User with ID {order.UserId} not found");
+            }
+
+            // 5. Блокируем товары: ReceivedByUser меняет счётчики продуктов
+            var productIds = order.Items
+                .Select(i => i.ProductId)
+                .Distinct()
+                .OrderBy(id => id)
+                .ToList();
+
+            var products = await _productRepository.GetByIdsForUpdateAsync(productIds, ct);
+            if (products.Count != productIds.Count)
+                throw new DomainException("Some products from the order were not found");
+
+            // 6. Обновляем статус заказа на "Получен"
+            order.ReceivedByUser();
+
+            // 7. Сохраняем изменения
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            _logger.LogInformation(
+                "Order receipt confirmed successfully: OrderId {OrderId}, UserId {UserId}",
+                order.Id,
+                order.UserId
+            );
+
+            // 8. Отправляем email только после COMMIT
+            try
+            {
+                var emailToSend = _emailTemplateService.CreateReceiptEmail(order, user, command.BaseUrl);
+                await _emailBackgroundService.Enqueue(emailToSend);
+                _logger.LogInformation("Receipt confirmation email sent to {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send receipt confirmation email for OrderId {OrderId}", order.Id);
+                // Не бросаем исключение — заказ уже отмечен как полученный
+            }
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.LogError(ex, "Failed to send receipt confirmation email for OrderId {OrderId}", order.Id);
-            // Не бросаем исключение, чтобы не откатывать транзакцию
-            // Заказ уже отмечен как полученный
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
         }
     }
 

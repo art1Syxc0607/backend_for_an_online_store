@@ -32,13 +32,36 @@ public class OrderRepository : IOrderRepository
 
     public async Task<Order?> GetOrder(int id, CancellationToken ct = default)
     {
-        var result = await _dpContext.Orders
+        return await _dpContext.Orders
             .Include(o => o.Items)
-                .ThenInclude(i => i.Product)  // ← ДОБАВИТЬ! Загружаем продукты
-                    .ThenInclude(p => p.Category) // ← категория для CategoryName
-            .FirstOrDefaultAsync(o => o.Id == id);
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p.Category)
+            .FirstOrDefaultAsync(o => o.Id == id, ct);
+    }
 
-        return result;
+    public async Task<Order?> GetOrderForUpdateAsync(int id, CancellationToken ct = default)
+    {
+        var order = await _dpContext.Orders
+            .FromSqlInterpolated(
+                $@"SELECT *, xmin FROM ""Orders"" WHERE ""Id"" = {id} FOR UPDATE")
+            .FirstOrDefaultAsync(ct);
+
+        if (order == null)
+            return null;
+
+        // A tracking query does not refresh an entity that is already tracked.
+        await _dpContext.Entry(order).ReloadAsync(ct);
+
+        // Load items and products while the order row is locked. Product rows are
+        // locked separately by IProductRepository.GetByIdsForUpdateAsync.
+        await _dpContext.Orders
+            .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p.Category)
+            .Where(o => o.Id == id)
+            .LoadAsync(ct);
+
+        return order;
     }
 
     // UserOrderHistory
@@ -94,13 +117,15 @@ public class OrderRepository : IOrderRepository
     public async Task CreateOrder(Order order,
         CancellationToken ct = default)
     {
-        await _dpContext.Orders.AddAsync(order);
+        await _dpContext.Orders.AddAsync(order, ct);
     }
 
-    public async Task UpdateOrder(Order order, CancellationToken ct = default)
+    public Task UpdateOrder(Order order, CancellationToken ct = default)
     {
-        _dpContext.Orders.Update(order);
-        await Task.CompletedTask;
+        // The order is already tracked by EF. DbSet.Update would mark the whole
+        // graph (including products) as modified and could overwrite concurrent
+        // stock changes.
+        return Task.CompletedTask;
     }
 
     public async Task<bool> HasProductInOrdersAsync(int productId, CancellationToken ct = default)

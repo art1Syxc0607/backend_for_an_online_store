@@ -18,6 +18,14 @@ public interface IProductRepository
     Task<Product?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<List<Product>?> GetByIdsAsync(List<int> Ids, CancellationToken ct = default);
 
+    /// <summary>
+    /// Locks product rows for the duration of the current transaction.
+    /// Rows are locked in ascending Id order to avoid deadlocks.
+    /// </summary>
+    Task<List<Product>> GetByIdsForUpdateAsync(
+        IReadOnlyCollection<int> ids,
+        CancellationToken ct = default);
+
     Task<(List<Product> Items, int TotalCount)> GetAllProductsAsync(
         int pageNumber,
         int pageSize,

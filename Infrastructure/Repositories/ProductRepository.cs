@@ -40,8 +40,42 @@ public class ProductRepository : IProductRepository
 
     public async Task<List<Product>?> GetByIdsAsync(List<int> Ids, CancellationToken ct = default)
     {
-        var result = await _dpContext.Products.Where(p => Ids.Contains(p.Id)).ToListAsync();
+        var result = await _dpContext.Products
+            .Where(p => Ids.Contains(p.Id))
+            .ToListAsync(ct);
         return result;
+    }
+
+    public async Task<List<Product>> GetByIdsForUpdateAsync(
+        IReadOnlyCollection<int> ids,
+        CancellationToken ct = default)
+    {
+        var orderedIds = ids
+            .Where(id => id > 0)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
+
+        if (orderedIds.Length == 0)
+            return new List<Product>();
+
+        // FOR NO KEY UPDATE is enough because we never change the primary key.
+        // ORDER BY makes the lock acquisition order deterministic and prevents
+        // deadlocks between checkouts that contain the same products.
+        var products = await _dpContext.Products
+            .FromSqlInterpolated(
+                $@"SELECT *, xmin FROM ""Products""
+                   WHERE ""Id"" = ANY({orderedIds})
+                   ORDER BY ""Id""
+                   FOR NO KEY UPDATE")
+            .ToListAsync(ct);
+
+        // A tracked entity is not refreshed by a tracking query. Reload it while
+        // the row lock is still held so business checks use the current values.
+        foreach (var product in products)
+            await _dpContext.Entry(product).ReloadAsync(ct);
+
+        return products;
     }
 
     public async Task<(List<Product> Items, int TotalCount)> GetAllProductsAsync(
@@ -79,10 +113,9 @@ public class ProductRepository : IProductRepository
 
     public Task UpdateProductAsync(Product product, CancellationToken ct = default)
     {
-        _dpContext.Products.Update(product);
-
+        // The product is already tracked by EF. Calling DbSet.Update would mark
+        // every property as modified and could overwrite concurrent changes.
         return Task.CompletedTask;
-
     }
 
     public Task DeleteProductAsync(Product product, CancellationToken ct = default)

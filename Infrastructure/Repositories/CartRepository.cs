@@ -22,12 +22,28 @@ public class CartRepository : ICartRepository
             .FirstOrDefaultAsync(c => c.UserId == userId, ct);
     }
 
-    public async void UpdateAsync(Cart cart, CancellationToken ct = default)
+    public async Task<Cart?> GetByUserIdForCheckoutAsync(int userId, CancellationToken ct = default)
     {
-        _context.Carts.Update(cart);
+        // Lock only the cart row. Items are loaded without products: products are
+        // locked separately in a deterministic order by the product repository.
+        var cart = await _context.Carts
+            .FromSqlInterpolated(
+                $@"SELECT * FROM ""Carts"" WHERE ""UserId"" = {userId} FOR UPDATE")
+            .FirstOrDefaultAsync(ct);
 
+        if (cart == null)
+            return null;
+
+        await _context.Entry(cart)
+            .Collection(c => c.Items)
+            .LoadAsync(ct);
+
+        return cart;
     }
 
-    // ... другие методы
+    public Task UpdateAsync(Cart cart, CancellationToken ct = default)
+    {
+        // The cart is tracked by EF; SaveChanges will persist its changes.
+        return Task.CompletedTask;
+    }
 }
-

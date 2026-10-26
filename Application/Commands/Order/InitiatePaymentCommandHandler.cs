@@ -63,10 +63,9 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
         if (order.UserId != command.UserId)
             throw new UnauthorizedAccessException("This order doesn't belong to you");
 
-        if (order.Status == OrderStatus.Paid)
-            throw new DomainException("Order is already paid");
-        if (order.Status == OrderStatus.Cancelled)
-            throw new DomainException("Cannot pay for a cancelled order");
+        if (order.Status != OrderStatus.Pending)
+            throw new DomainException(
+                $"Cannot pay for an order in status '{order.Status}'. Only pending orders can be paid.");
 
         // 2. Получаем пользователя для отправки email
         var user = await _userRepository.GetByIdAsync(command.UserId, ct);
@@ -99,27 +98,57 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
             );
         }
 
-        // 4. Создаем Payment со статусом Pending
-        var payment = new Payment(
-            order,
-            order.TotalAmount,
-            command.Method,
-            result.PaymentIntentId
-        );
+        // Не сохраняем заведомо неуспешную попытку оплаты.
+        if (!result.Success)
+            return result;
 
+        if (string.IsNullOrWhiteSpace(result.PaymentIntentId))
+            throw new DomainException("Payment provider did not return a payment intent id");
 
-        await _paymentRepository.AddAsync(payment, ct);
-        await _unitOfWork.SaveChangesAsync(ct);
-        _logger.LogInformation(
-            "Payment saved successfully: OrderId {OrderId}, UserId {UserId}, " +
-            "Method {Method}, PaymentIntentId {PaymentIntentId}",
-            command.OrderId,
-            command.UserId,
-            command.Method,
-            result.PaymentIntentId
-        );
+        // 4. После ответа шлюза блокируем заказ и проверяем его статус ещё раз.
+        //    Внешний HTTP-вызов не должен выполняться под блокировкой БД.
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        return result;
+        try
+        {
+            var lockedOrder = await _orderRepository.GetOrderForUpdateAsync(order.Id, ct);
+            if (lockedOrder == null)
+                throw new DomainException("Order not found");
+
+            if (lockedOrder.UserId != command.UserId)
+                throw new UnauthorizedAccessException("This order doesn't belong to you");
+
+            if (lockedOrder.Status != OrderStatus.Pending)
+                throw new DomainException(
+                    $"Cannot pay for an order in status '{lockedOrder.Status}'. Only pending orders can be paid.");
+
+            var payment = new Payment(
+                lockedOrder,
+                lockedOrder.TotalAmount,
+                command.Method,
+                result.PaymentIntentId
+            );
+
+            await _paymentRepository.AddAsync(payment, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            _logger.LogInformation(
+                "Payment saved successfully: OrderId {OrderId}, UserId {UserId}, " +
+                "Method {Method}, PaymentIntentId {PaymentIntentId}",
+                command.OrderId,
+                command.UserId,
+                command.Method,
+                result.PaymentIntentId
+            );
+
+            return result;
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
+        }
     }
 
     private async Task SendPaymentInitiationEmailAsync(Domain.Entities.Order order, Domain.Entities.User user, string paymentMethod, string paymentIntentId)

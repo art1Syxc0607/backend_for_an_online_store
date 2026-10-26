@@ -2,32 +2,29 @@
 using Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Application.Commands.Order;
 
 public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand>
 {
     private readonly IOrderRepository _orderRepository;
-    private readonly ILogger<InitiatePaymentHandler> _logger;
+    private readonly IProductRepository _productRepository;
+    private readonly ILogger<CancelOrderCommandHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
     public CancelOrderCommandHandler(
         IOrderRepository orderRepository,
-        IUnitOfWork unitOfWork, ILogger<InitiatePaymentHandler> logger, 
-        IUserRepository userRepository)
+        IProductRepository productRepository,
+        IUnitOfWork unitOfWork,
+        ILogger<CancelOrderCommandHandler> logger)
     {
         _orderRepository = orderRepository;
+        _productRepository = productRepository;
         _logger = logger;
         _unitOfWork = unitOfWork;
     }
 
-    public async Task Handle(CancelOrderCommand command,
-        CancellationToken ct)
+    public async Task Handle(CancelOrderCommand command, CancellationToken ct)
     {
         _logger.LogInformation(
             "Order cancellation started: OrderId {OrderId}, UserId {UserId}",
@@ -35,25 +32,45 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand>
             command.UserId
         );
 
-        var order = await _orderRepository.GetOrder(command.OrderId, ct);
-        if (order == null)
-            throw new DomainException("Order not found");
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        if (order.UserId != command.UserId)
-            throw new DomainException("This order doesn't belong to this user");
+        try
+        {
+            // Lock order first, then products in ascending Id order.
+            var order = await _orderRepository.GetOrderForUpdateAsync(command.OrderId, ct);
+            if (order == null)
+                throw new DomainException("Order not found");
 
-        order.Cancel();
+            if (order.UserId != command.UserId)
+                throw new DomainException("This order doesn't belong to this user");
 
-        await _orderRepository.UpdateOrder(order, ct);
-        await _unitOfWork.SaveChangesAsync(ct);
+            var productIds = order.Items
+                .Select(i => i.ProductId)
+                .Distinct()
+                .OrderBy(id => id)
+                .ToList();
 
-        _logger.LogInformation(
-            "Order cancelled successfully: OrderId {OrderId}, UserId {UserId}, Status {Status}, Time {Time}",
-            order.Id,
-            command.UserId,
-            order.Status,
-            DateTime.UtcNow
-        );
+            var products = await _productRepository.GetByIdsForUpdateAsync(productIds, ct);
+            if (products.Count != productIds.Count)
+                throw new DomainException("Some products from the order were not found");
 
+            order.Cancel();
+
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            _logger.LogInformation(
+                "Order cancelled successfully: OrderId {OrderId}, UserId {UserId}, Status {Status}, Time {Time}",
+                order.Id,
+                command.UserId,
+                order.Status,
+                DateTime.UtcNow
+            );
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
+        }
     }
 }

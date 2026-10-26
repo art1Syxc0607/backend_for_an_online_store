@@ -43,33 +43,53 @@ public class DeliverOrderCommandHandler : IRequestHandler<DeliverOrderCommand>
     {
         _logger.LogInformation("Delivery started for OrderId {OrderId}", command.OrderId);
 
-        // 1. Получаем заказ
-        var order = await _orderRepository.GetOrder(command.OrderId, ct);
-        if (order == null)
+        await _unitOfWork.BeginTransactionAsync(ct);
+
+        try
         {
-            _logger.LogWarning("Order not found: OrderId {OrderId}", command.OrderId);
-            throw new DomainException($"Order with ID {command.OrderId} not found");
-        }
+            // 1. Блокируем заказ на время смены статуса
+            var order = await _orderRepository.GetOrderForUpdateAsync(command.OrderId, ct);
+            if (order == null)
+            {
+                _logger.LogWarning("Order not found: OrderId {OrderId}", command.OrderId);
+                throw new DomainException($"Order with ID {command.OrderId} not found");
+            }
 
-        // 2. Получаем пользователя
-        var user = await _userRepository.GetByIdAsync(order.UserId, ct);
-        if (user == null)
+            // 2. Получаем пользователя
+            var user = await _userRepository.GetByIdAsync(order.UserId, ct);
+            if (user == null)
+            {
+                _logger.LogWarning("User not found: UserId {UserId}", order.UserId);
+                throw new DomainException($"User with ID {order.UserId} not found");
+            }
+
+            // 3. Обновляем статус заказа на "Доставлен"
+            order.Deliver();
+
+            // 4. Сохраняем изменения
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            _logger.LogInformation(
+                "Order delivered successfully: OrderId {OrderId}, UserId {UserId}",
+                order.Id,
+                order.UserId
+            );
+
+            await SendDeliveryEmailAsync(order, user, command);
+        }
+        catch
         {
-            _logger.LogWarning("User not found: UserId {UserId}", order.UserId);
-            throw new DomainException($"User with ID {order.UserId} not found");
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
         }
+    }
 
-        // 3. Обновляем статус заказа на "Доставлен"
-        order.Deliver();
-
-        // 4. Сохраняем изменения
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation(
-            "Order delivered successfully: OrderId {OrderId}, UserId {UserId}",
-            order.Id,
-            order.UserId
-        );
+    private async Task SendDeliveryEmailAsync(
+        Domain.Entities.Order order,
+        Domain.Entities.User user,
+        DeliverOrderCommand command)
+    {
 
         // 5. Отправляем email уведомление о доставке
         try

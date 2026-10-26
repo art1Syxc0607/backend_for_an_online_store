@@ -15,6 +15,9 @@ public class ConfirmPaymentCommand : IRequest<PaymentConfirmation>, ICacheInvali
 {
     [Required]
     public string PaymentIntentId { get; init; } = string.Empty;
+
+    public int UserId { get; init; }
+
     [Required]
     public string BaseUrl { get; init; } = string.Empty;
 
