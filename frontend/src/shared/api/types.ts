@@ -51,3 +51,12 @@ export interface PagedResult<T> {
     hasPreviousPage: boolean
     hasNextPage: boolean
 }
+
+export interface UserProfileDto {
+    id: number
+    userName: string
+    email: string
+    role: string
+    isEmailConfirmed: boolean
+    createdAt: string
+}

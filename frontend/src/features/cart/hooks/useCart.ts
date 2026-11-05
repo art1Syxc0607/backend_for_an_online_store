@@ -2,7 +2,7 @@
 import {
     getCart,
     addToCart,
-    updateQuantity,
+    updateQuantity as updateQuantityApi,
     removeFromCart,
     clearCart,
 } from '../api/cartApi'
@@ -32,11 +32,16 @@ export function useCart() {
     // ✅ Обновить — productId + quantity
     const updateMutation = useMutation({
         mutationFn: ({ productId, quantity }: { productId: number; quantity: number }) =>
-            updateQuantity(productId, quantity),
+            updateQuantityApi(productId, quantity),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY })
         },
     })
+
+    // CartDrawer calls this with positional arguments, while mutateAsync
+    // expects a single variables object. Keep the public hook API simple.
+    const updateQuantity = (productId: number, quantity: number) =>
+        updateMutation.mutateAsync({ productId, quantity })
 
     // ✅ Удалить — productId
     const removeMutation = useMutation({
@@ -61,7 +66,7 @@ export function useCart() {
         addToCart: addMutation.mutateAsync,
         isAdding: addMutation.isPending,
 
-        updateQuantity: updateMutation.mutateAsync,
+        updateQuantity,
         isUpdating: updateMutation.isPending,
 
         removeFromCart: removeMutation.mutateAsync,

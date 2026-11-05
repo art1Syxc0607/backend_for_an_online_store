@@ -11,6 +11,7 @@ export interface ReviewDto {
     rating: number
     imagesUrls?: string[]   // ✅ с "s"
     videosUrls?: string[]   // ✅ с "s"
+    isVerifiedPurchase?: boolean
     status: number
     adminResponse?: string
     adminResponseAt?: string
@@ -68,5 +69,55 @@ export async function addReview(
     const { data } = await apiClient.post<number>('/review', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
     })
+    return data
+}
+
+export interface UploadedReviewFileDto {
+    originalFileName: string
+    fileUrl: string
+    contentType: string
+    size: number
+}
+
+export interface DeleteReviewFilesResponseDto {
+    deletedUrls: string[]
+    notFoundUrls: string[]
+}
+
+export async function editReview(
+    reviewId: number,
+    text: string,
+    rating: number
+): Promise<void> {
+    await apiClient.put('/review', {
+        reviewId,
+        newText: text,
+        newRating: rating,
+    })
+}
+
+export async function uploadReviewFiles(
+    reviewId: number,
+    files: File[]
+): Promise<UploadedReviewFileDto[]> {
+    const formData = new FormData()
+    files.forEach((file) => formData.append('files', file))
+
+    const { data } = await apiClient.post<UploadedReviewFileDto[]>(
+        `/review/${reviewId}/files`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+    return data
+}
+
+export async function deleteReviewFiles(
+    reviewId: number,
+    urls: string[]
+): Promise<DeleteReviewFilesResponseDto> {
+    const { data } = await apiClient.delete<DeleteReviewFilesResponseDto>(
+        `/review/${reviewId}/files`,
+        { data: urls }
+    )
     return data
 }

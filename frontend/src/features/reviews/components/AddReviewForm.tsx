@@ -2,7 +2,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { addReview } from '../api/reviewApi'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import StarRating from '@/shared/ui/StarRating'
 
 interface Props {
     productId: number

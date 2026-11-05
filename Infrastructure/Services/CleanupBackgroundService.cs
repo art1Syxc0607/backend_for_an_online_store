@@ -60,7 +60,7 @@ public class CleanupBackgroundService : BackgroundService
         Dictionary<string, DateTime> lastRun,
         CancellationToken ct)
     {
-        using var scope = _serviceProvider.CreateScope();
+        await using var scope = _serviceProvider.CreateAsyncScope();
         var tasks = scope.ServiceProvider.GetServices<ICleanupTask>();
         var now = DateTime.UtcNow;
 
