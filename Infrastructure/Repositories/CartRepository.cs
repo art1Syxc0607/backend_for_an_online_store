@@ -41,6 +41,20 @@ public class CartRepository : ICartRepository
         return cart;
     }
 
+    public async Task<Cart?> GetCartForUpdateAsync(int userId, CancellationToken ct = default)
+    {
+        // Lock the cart row for the duration of the transaction so concurrent
+        // cart mutations (add/update/remove/clear) cannot overwrite each other.
+        var cart = await _context.Carts
+            .FromSqlInterpolated(
+                $@"SELECT * FROM ""Carts"" WHERE ""UserId"" = {userId} FOR UPDATE")
+            .Include(c => c.Items)
+                .ThenInclude(i => i.Product)
+            .FirstOrDefaultAsync(ct);
+
+        return cart;
+    }
+
     public Task UpdateAsync(Cart cart, CancellationToken ct = default)
     {
         // The cart is tracked by EF; SaveChanges will persist its changes.

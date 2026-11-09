@@ -18,10 +18,25 @@ public class RemoveFromCartHandler : IRequestHandler<RemoveFromCartCommand>
 
     public async Task Handle(RemoveFromCartCommand request, CancellationToken ct)
     {
-        var cart = await _cartRepository.GetByUserIdAsync(request.UserId, ct);
-        if (cart == null) throw new NotFoundException("Cart not found");
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        cart.RemoveItem(request.ProductId); // ← вызывает метод сущности
-        await _unitOfWork.SaveChangesAsync(ct);
+        try
+        {
+            var cart = await _cartRepository.GetCartForUpdateAsync(request.UserId, ct);
+            if (cart == null)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new NotFoundException("Cart not found");
+            }
+
+            cart.RemoveItem(request.ProductId); // ← вызывает метод сущности
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
+        }
     }
 }

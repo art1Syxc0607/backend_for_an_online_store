@@ -35,49 +35,68 @@ public class DeleteReviewFilesHandler : IRequestHandler<DeleteReviewFilesCommand
         if (command.FileUrls == null || !command.FileUrls.Any())
             throw new DomainException("No files specified for deletion");
 
-        var review = await _reviewRepository.GetReviewByIdAsync(command.ReviewId, ct);
-        if (review == null) throw new DomainException($"Review with ID {command.ReviewId} not found");
-        if (review.UserId != command.UserId)
-            throw new DomainException($"Review with ID {command.ReviewId} doesn't belong to the user");
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        var response = new DeleteFilesResponseDto();
-        var urlsToDelete = new List<string>();
-
-        // 1. Сначала меняем только БД-состояние
-        foreach (var fileUrl in command.FileUrls.Distinct())
+        try
         {
-            var isImage = review._imageUrls.Contains(fileUrl);
-            var isVideo = !isImage && review._videoUrls.Contains(fileUrl);
-
-            if (!isImage && !isVideo)
+            // Lock the review row so concurrent file deletions cannot lose
+            // each other's URL removals (lost update on ImageUrls / VideoUrls).
+            var review = await _reviewRepository.GetReviewForUpdateAsync(command.ReviewId, ct);
+            if (review == null)
             {
-                response.NotFoundUrls.Add(fileUrl);
-                _logger.LogWarning("FileUrl: {fileUrl}, isn't found.", fileUrl);
-                continue;
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException($"Review with ID {command.ReviewId} not found");
+            }
+            if (review.UserId != command.UserId)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException($"Review with ID {command.ReviewId} doesn't belong to the user");
             }
 
-            if (isImage)
-                review.RemoveImage(fileUrl);
-            else
-                review.RemoveVideo(fileUrl);
+            var response = new DeleteFilesResponseDto();
+            var urlsToDelete = new List<string>();
 
-            response.DeletedUrls.Add(fileUrl);
-            urlsToDelete.Add(fileUrl);
+            // 1. Сначала меняем только БД-состояние
+            foreach (var fileUrl in command.FileUrls.Distinct())
+            {
+                var isImage = review._imageUrls.Contains(fileUrl);
+                var isVideo = !isImage && review._videoUrls.Contains(fileUrl);
+
+                if (!isImage && !isVideo)
+                {
+                    response.NotFoundUrls.Add(fileUrl);
+                    _logger.LogWarning("FileUrl: {fileUrl}, isn't found.", fileUrl);
+                    continue;
+                }
+
+                if (isImage)
+                    review.RemoveImage(fileUrl);
+                else
+                    review.RemoveVideo(fileUrl);
+
+                response.DeletedUrls.Add(fileUrl);
+                urlsToDelete.Add(fileUrl);
+            }
+
+            // 2. Коммитим изменения в БД
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            // 3. И только после успешного коммита удаляем физические файлы
+            await TryDeleteFilesAsync(urlsToDelete, ct);
+
+            // 4. ✅ Заполняем контекст инвалидации
+            command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));
+            command.AddCachePrefix(CacheKeys.Product(review.ProductId));
+            command.AddCachePrefix(CacheKeys.ProductsPrefix);
+
+            return response;
         }
-
-        // 2. Коммитим изменения в БД
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        // 3. И только после успешного коммита удаляем физические файлы
-        await TryDeleteFilesAsync(urlsToDelete, ct);
-
-        // 4. ✅ Заполняем контекст инвалидации
-        // Handler ЗНАЕТ, какие префиксы нужны, но НЕ вызывает кэш напрямую
-        command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));
-        command.AddCachePrefix(CacheKeys.Product(review.ProductId));
-        command.AddCachePrefix(CacheKeys.ProductsPrefix);
-
-        return response;
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
+        }
     }
 
     private async Task TryDeleteFilesAsync(IEnumerable<string> urls, CancellationToken ct)

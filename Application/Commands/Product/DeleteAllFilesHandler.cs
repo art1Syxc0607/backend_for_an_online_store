@@ -31,28 +31,44 @@ public class DeleteAllFilesHandler : IRequestHandler<DeleteAllFilesCommand>
 
     public async Task Handle(DeleteAllFilesCommand command, CancellationToken ct)
     {
-        var product = await _productRepository.GetByIdAsync(command.ProductId, ct);
-        if (product == null)
-            throw new DomainException($"Product with ID {command.ProductId} not found");
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        // 1. Запоминаем файлы и сначала очищаем ссылки в БД
-        var fileUrls = product.GetAllFileUrls();
-        product.ClearAllFiles();
-
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        // 2. Физические файлы удаляем только после успешного коммита
-        foreach (var url in fileUrls)
+        try
         {
-            try
+            // Lock the product row so concurrent file operations cannot lose
+            // this clear-all operation (lost update on ImageUrls / VideoUrls).
+            var product = await _productRepository.GetProductForUpdateAsync(command.ProductId, ct);
+            if (product == null)
             {
-                await _fileStorageService.DeleteFileAsync(url, ct);
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException($"Product with ID {command.ProductId} not found");
             }
-            catch (Exception ex)
+
+            // 1. Запоминаем файлы и сначала очищаем ссылки в БД
+            var fileUrls = product.GetAllFileUrls();
+            product.ClearAllFiles();
+
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            // 2. Физические файлы удаляем только после успешного коммита
+            foreach (var url in fileUrls)
             {
-                _logger.LogWarning(ex,
-                    "Failed to delete physical file {FileUrl} after DB commit", url);
+                try
+                {
+                    await _fileStorageService.DeleteFileAsync(url, ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Failed to delete physical file {FileUrl} after DB commit", url);
+                }
             }
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
         }
     }
 }

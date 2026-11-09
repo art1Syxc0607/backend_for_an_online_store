@@ -22,7 +22,7 @@ public class UploadReviewFilesHandlerTests
         review.TestsSetReviewId(42);
 
         var reviewRepoMock = new Mock<IReviewRepository>();
-        reviewRepoMock.Setup(x => x.GetReviewByIdAsync(42, It.IsAny<CancellationToken>()))
+        reviewRepoMock.Setup(x => x.GetReviewForUpdateAsync(42, It.IsAny<CancellationToken>()))
             .ReturnsAsync(review);
 
         var handler = new UploadReviewFilesHandler(

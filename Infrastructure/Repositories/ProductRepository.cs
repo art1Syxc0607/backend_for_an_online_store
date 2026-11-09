@@ -78,6 +78,28 @@ public class ProductRepository : IProductRepository
         return products;
     }
 
+    public async Task<Product?> GetProductForUpdateAsync(
+        int id,
+        CancellationToken ct = default)
+    {
+        var product = await _dpContext.Products
+            .FromSqlInterpolated(
+                $@"SELECT *, xmin FROM ""Products""
+                   WHERE ""Id"" = {id}
+                   FOR NO KEY UPDATE")
+            .FirstOrDefaultAsync(ct);
+
+        if (product == null)
+            return null;
+
+        // Reload while the row lock is still held so business checks use
+        // the current values and EF tracks the latest xmin for optimistic
+        // concurrency protection.
+        await _dpContext.Entry(product).ReloadAsync(ct);
+
+        return product;
+    }
+
     public async Task<(List<Product> Items, int TotalCount)> GetAllProductsAsync(
     int pageNumber,
     int pageSize,

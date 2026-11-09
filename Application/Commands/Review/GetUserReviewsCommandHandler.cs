@@ -26,7 +26,8 @@ public class GetUserReviewsCommandHandler : IRequestHandler<GetUserReviewsQuery,
     public async Task<List<ReviewResponseDto>> Handle(GetUserReviewsQuery command, CancellationToken ct)
     {
         var userReviews = await _reviewRepositiry.GetUserReviews(command.UserId, ct);
-        if (userReviews == null || userReviews.Count == 0) new DomainException("The User didn't left comments");
+        if (userReviews == null || userReviews.Count == 0)
+            return new List<ReviewResponseDto>();
 
         var userReviewsdto = _mapper.Map<List<ReviewResponseDto>>(userReviews);
 

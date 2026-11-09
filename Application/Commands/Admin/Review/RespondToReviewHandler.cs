@@ -76,7 +76,21 @@ public class RespondToReviewHandler : IRequestHandler<RespondToReviewCommand>
         // 4. Добавляем ответ
         review.AddAdminResponse(command.Response);
 
-        await _unitOfWork.SaveChangesAsync(ct);
+        // 5. Сохраняем в транзакции с оптимистической блокировкой (xmin).
+        // Если другой админ обновил этот отзыв между чтением и записью,
+        // EF выбросит DbUpdateConcurrencyException → middleware мапит в 409.
+        await _unitOfWork.BeginTransactionAsync(ct);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync(ct);
+            _logger.LogWarning(ex, "Conflict responding to review {ReviewId}", review.Id);
+            throw;
+        }
 
         // ✅ Отправляем email в фоне
         try

@@ -36,52 +36,62 @@ public class DeleteFilesHandler : IRequestHandler<DeleteFilesCommand, DeleteFile
         if (command.FileUrls == null || !command.FileUrls.Any())
             throw new DomainException("No files specified for deletion");
 
-        // 1. Проверяем продукт
-        var product = await _productRepository.GetByIdAsync(command.ProductId, ct);
-        if (product == null)
+        await _unitOfWork.BeginTransactionAsync(ct);
+
+        try
         {
-            _logger.LogWarning("Product with ID {ProductId} not found",
-                command.ProductId);
-
-            throw new DomainException($"Product with ID {command.ProductId} not found");
-        }
-
-        var response = new DeleteFilesResponseDto();
-        var urlsToDelete = new List<string>();
-
-        // 2. Сначала меняем только БД-состояние. Физические файлы удаляем
-        //    только после успешного SaveChanges, иначе при ошибке БД
-        //    товар останется со ссылками на уже удалённые файлы.
-        foreach (var fileUrl in command.FileUrls.Distinct())
-        {
-            var isImage = product.ImageUrls.Contains(fileUrl);
-            var isVideo = !isImage && product.VideoUrls.Contains(fileUrl);
-
-            if (!isImage && !isVideo)
+            // Lock the product row so concurrent file deletions cannot lose each other's
+            // URL removals (lost update on ImageUrls / VideoUrls).
+            var product = await _productRepository.GetProductForUpdateAsync(command.ProductId, ct);
+            if (product == null)
             {
-                response.NotFoundUrls.Add(fileUrl);
-                _logger.LogWarning("FileUrl: {fileUrl}, isn't found.", fileUrl);
-                continue;
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException($"Product with ID {command.ProductId} not found");
             }
 
-            if (isImage)
-                product.RemoveImage(fileUrl);
-            else
-                product.RemoveVideo(fileUrl);
+            var response = new DeleteFilesResponseDto();
+            var urlsToDelete = new List<string>();
 
-            response.DeletedUrls.Add(fileUrl);
-            urlsToDelete.Add(fileUrl);
+            // 2. Сначала меняем только БД-состояние. Физические файлы удаляем
+            //    только после успешного SaveChanges, иначе при ошибке БД
+            //    товар останется со ссылками на уже удалённые файлы.
+            foreach (var fileUrl in command.FileUrls.Distinct())
+            {
+                var isImage = product.ImageUrls.Contains(fileUrl);
+                var isVideo = !isImage && product.VideoUrls.Contains(fileUrl);
+
+                if (!isImage && !isVideo)
+                {
+                    response.NotFoundUrls.Add(fileUrl);
+                    _logger.LogWarning("FileUrl: {fileUrl}, isn't found.", fileUrl);
+                    continue;
+                }
+
+                if (isImage)
+                    product.RemoveImage(fileUrl);
+                else
+                    product.RemoveVideo(fileUrl);
+
+                response.DeletedUrls.Add(fileUrl);
+                urlsToDelete.Add(fileUrl);
+            }
+
+            // 3. Коммитим изменения в БД
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            // 4. После успешного коммита удаляем физические файлы.
+            //    Ошибка удаления файла больше не ломает состояние БД:
+            //    останется только orphan-файл, который можно убрать отдельно.
+            await TryDeleteFilesAsync(urlsToDelete, ct);
+
+            return response;
         }
-
-        // 3. Коммитим изменения в БД
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        // 4. После успешного коммита удаляем физические файлы.
-        //    Ошибка удаления файла больше не ломает состояние БД:
-        //    останется только orphan-файл, который можно убрать отдельно.
-        await TryDeleteFilesAsync(urlsToDelete, ct);
-
-        return response;
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
+        }
     }
 
     private async Task TryDeleteFilesAsync(IEnumerable<string> urls, CancellationToken ct)

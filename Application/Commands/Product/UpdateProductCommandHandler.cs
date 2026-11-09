@@ -25,107 +25,107 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand>
 
     public async Task Handle(UpdateProductCommand command, CancellationToken ct)
     {
-        var product = await _productRepository.GetByIdAsync(command.ProductId, ct);
-        if (product == null)
-        {
-            _logger.LogWarning(
-                "Update product failed: Product not found. ProductId {ProductId}",
-                command.ProductId
-            );
-            throw new DomainException("Product not found");
-        }
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        _logger.LogInformation(
-            "Update product started: ProductId {ProductId}, Name {Name}",
-            command.ProductId,
-            product.Name
-        );
-
-        // Проверяем категорию
-        if (command.CategoryId.HasValue)
+        try
         {
-            var category = await _categoryRepository.GetByIdAsync(command.CategoryId.Value, ct);
-            if (category == null)
+            // Lock the product row so concurrent updates cannot overwrite each other.
+            var product = await _productRepository.GetProductForUpdateAsync(command.ProductId, ct);
+            if (product == null)
             {
-                _logger.LogWarning(
-                    "Update product failed: Category not found. ProductId {ProductId}, " +
-                    "CategoryId {CategoryId}",
-                    command.ProductId,
-                    command.CategoryId.Value
-                );
-                throw new DomainException($"Category {command.CategoryId} not found");
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException("Product not found");
             }
-            product.AssignCategory(category);
-        }
 
-        // Сохраняем старые значения для логирования
-        var oldName = product.Name;
-        var oldPrice = product.Price;
-        var oldPurchasePrice = product.PurchasePrice;
-        var oldStockQuantity = product.StockQuantity;
-        var oldDescription = product.Description;
-        var oldSku = product.Sku;
-        var oldCategoryId = product.CategoryId;
-
-        // Обновляем остальные поля
-        product.UpdateDetails(
-            categoryId: command.CategoryId,
-            name: command.Name,
-            price: command.Price,
-            purchasePrice: command.PurchasePrice,
-            stockQuantity: command.StockQuantity,
-            reservedQuantity: command.ReservedQuantity,
-            description: command.Description,
-            sku: command.Sku           
-        );
-
-
-        await _productRepository.UpdateProductAsync(product, ct);
-        await _unitOfWork.SaveChangesAsync();
-
-        // 6. ✅ Логируем ВСЕ изменения (только если параметр не null)
-        var changes = new List<string>();
-
-        if (command.Name != null && oldName != command.Name)
-            changes.Add($"Name: '{oldName}' → '{command.Name}'");
-
-        if (command.Price.HasValue && oldPrice != command.Price.Value)
-            changes.Add($"Price: {oldPrice:C} → {command.Price.Value:C}");
-
-        if (command.PurchasePrice.HasValue && oldPurchasePrice != command.PurchasePrice.Value)
-            changes.Add($"PurchasePrice: {oldPurchasePrice:C} → {command.PurchasePrice.Value:C}");
-
-        if (command.StockQuantity.HasValue && oldStockQuantity != command.StockQuantity.Value)
-            changes.Add($"Stock: {oldStockQuantity} → {command.StockQuantity.Value}");
-
-        if (command.Description != null && oldDescription != command.Description)
-            changes.Add($"Description updated (length: {oldDescription?.Length ?? 0} → {command.Description.Length})");
-
-        if (command.Sku != null && oldSku != command.Sku)
-            changes.Add($"SKU: '{oldSku}' → '{command.Sku}'");
-
-        if (command.CategoryId.HasValue && oldCategoryId != command.CategoryId.Value)
-            changes.Add($"CategoryId: {oldCategoryId} → {command.CategoryId.Value}");
-
-        if (changes.Any())
-        {
-            _logger.LogWarning(
-                //"Product updated: ProductId {ProductId}, Name {Name}, Changes: {Changes}, AdminId {AdminId}, Time {Time}",
-                "Product updated: ProductId {ProductId}, Name {Name}, Changes: {Changes}, Time {Time}",
-                product.Id,
-                product.Name,
-                string.Join("; ", changes),
-                //GetCurrentAdminId(),
-                DateTime.UtcNow
-            );
-        }
-        else
-        {
             _logger.LogInformation(
-                "Product update completed with no changes: ProductId {ProductId}, Name {Name}",
-                product.Id,
+                "Update product started: ProductId {ProductId}, Name {Name}",
+                command.ProductId,
                 product.Name
             );
+
+            // Проверяем категорию
+            if (command.CategoryId.HasValue)
+            {
+                var category = await _categoryRepository.GetByIdAsync(command.CategoryId.Value, ct);
+                if (category == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                    throw new DomainException($"Category {command.CategoryId} not found");
+                }
+                product.AssignCategory(category);
+            }
+
+            // Сохраняем старые значения для логирования
+            var oldName = product.Name;
+            var oldPrice = product.Price;
+            var oldPurchasePrice = product.PurchasePrice;
+            var oldStockQuantity = product.StockQuantity;
+            var oldDescription = product.Description;
+            var oldSku = product.Sku;
+            var oldCategoryId = product.CategoryId;
+
+            // Обновляем остальные поля
+            product.UpdateDetails(
+                categoryId: command.CategoryId,
+                name: command.Name,
+                price: command.Price,
+                purchasePrice: command.PurchasePrice,
+                stockQuantity: command.StockQuantity,
+                reservedQuantity: command.ReservedQuantity,
+                description: command.Description,
+                sku: command.Sku
+            );
+
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            // 6. ✅ Логируем ВСЕ изменения (только если параметр не null)
+            var changes = new List<string>();
+
+            if (command.Name != null && oldName != command.Name)
+                changes.Add($"Name: '{oldName}' → '{command.Name}'");
+
+            if (command.Price.HasValue && oldPrice != command.Price.Value)
+                changes.Add($"Price: {oldPrice:C} → {command.Price.Value:C}");
+
+            if (command.PurchasePrice.HasValue && oldPurchasePrice != command.PurchasePrice.Value)
+                changes.Add($"PurchasePrice: {oldPurchasePrice:C} → {command.PurchasePrice.Value:C}");
+
+            if (command.StockQuantity.HasValue && oldStockQuantity != command.StockQuantity.Value)
+                changes.Add($"Stock: {oldStockQuantity} → {command.StockQuantity.Value}");
+
+            if (command.Description != null && oldDescription != command.Description)
+                changes.Add($"Description updated (length: {oldDescription?.Length ?? 0} → {command.Description.Length})");
+
+            if (command.Sku != null && oldSku != command.Sku)
+                changes.Add($"SKU: '{oldSku}' → '{command.Sku}'");
+
+            if (command.CategoryId.HasValue && oldCategoryId != command.CategoryId.Value)
+                changes.Add($"CategoryId: {oldCategoryId} → {command.CategoryId.Value}");
+
+            if (changes.Any())
+            {
+                _logger.LogWarning(
+                    "Product updated: ProductId {ProductId}, Name {Name}, Changes: {Changes}, Time {Time}",
+                    product.Id,
+                    product.Name,
+                    string.Join("; ", changes),
+                    DateTime.UtcNow
+                );
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Product update completed with no changes: ProductId {ProductId}, Name {Name}",
+                    product.Id,
+                    product.Name
+                );
+            }
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
         }
     }
 }

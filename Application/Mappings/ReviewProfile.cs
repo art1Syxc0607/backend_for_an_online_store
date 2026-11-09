@@ -18,6 +18,7 @@ public class ReviewProfile : Profile
 
             .ForMember(dest => dest.Text, opt => opt.MapFrom(src => src.Text))
             .ForMember(dest => dest.Rating, opt => opt.MapFrom(src => src.Rating))
+            .ForMember(dest => dest.IsVerifiedPurchase, opt => opt.MapFrom(src => src.IsVerifiedPurchase))
             .ForMember(dest => dest.ImagesUrls, opt => opt.MapFrom(src =>
                 src._imageUrls))
             .ForMember(dest => dest.VideosUrls, opt => opt.MapFrom(src =>

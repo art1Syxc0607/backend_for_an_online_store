@@ -29,57 +29,78 @@ public class EditReviewCommandHandler
         EditReviewCommamd command,
         CancellationToken ct)
     {
-        // 1. Загружаем Review
-        var review = await _reviewRepository.GetReviewByIdAsync(
-            command.ReviewId, ct);
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        if (review == null)
-            throw new DomainException("Review not found");
-
-        // 2. Проверяем владельца
-        if (review.UserId != command.UserId)
-            throw new UnauthorizedAccessException(
-                "You can only edit your own reviews");
-
-        // 3. Сохраняем ProductId ДО изменений
-        var productId = review.ProductId;
-
-        // 4. Обновляем (только если есть изменения)
-        var hasChanges = false;
-
-        if (!string.IsNullOrWhiteSpace(command.NewText)
-            && command.NewText != review.Text)
+        try
         {
-            review.Update(newText: command.NewText);
-            hasChanges = true;
-        }
+            // 1. Загружаем Review с блокировкой строки
+            var review = await _reviewRepository.GetReviewForUpdateAsync(
+                command.ReviewId, ct);
 
-        if (command.NewRating.HasValue
-            && command.NewRating != review.Rating)
-        {
-            if (command.NewRating < 1 || command.NewRating > 5)
-                throw new DomainException("Rating must be 1-5");
+            if (review == null)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException("Review not found");
+            }
 
-            review.Update(newRating: command.NewRating.Value);
-            hasChanges = true;
-        }
+            // 2. Проверяем владельца
+            if (review.UserId != command.UserId)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new UnauthorizedAccessException(
+                    "You can only edit your own reviews");
+            }
 
-        if (!hasChanges)
-        {
+            // 3. Сохраняем ProductId ДО изменений
+            var productId = review.ProductId;
+
+            // 4. Обновляем (только если есть изменения)
+            var hasChanges = false;
+
+            if (!string.IsNullOrWhiteSpace(command.NewText)
+                && command.NewText != review.Text)
+            {
+                review.Update(newText: command.NewText);
+                hasChanges = true;
+            }
+
+            if (command.NewRating.HasValue
+                && command.NewRating != review.Rating)
+            {
+                if (command.NewRating < 1 || command.NewRating > 5)
+                {
+                    await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                    throw new DomainException("Rating must be 1-5");
+                }
+
+                review.Update(newRating: command.NewRating.Value);
+                hasChanges = true;
+            }
+
+            if (!hasChanges)
+            {
+                await _unitOfWork.CommitTransactionAsync(ct);
+                _logger.LogInformation(
+                    "No changes for review {ReviewId}", review.Id);
+                return;
+            }
+
+            // 5. Сохраняем
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            // 6. ✅ Указываем префиксы для инвалидации
+            command.AddCachePrefix(CacheKeys.ReviewsForProduct(productId));
+            command.AddCachePrefix(CacheKeys.Product(productId));
+            command.AddCachePrefix(CacheKeys.ProductsPrefix);
+
             _logger.LogInformation(
-                "No changes for review {ReviewId}", review.Id);
-            return;
+                "Review {ReviewId} edited successfully", review.Id);
         }
-
-        // 5. Сохраняем
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        // 6. ✅ Указываем префиксы для инвалидации
-        command.AddCachePrefix(CacheKeys.ReviewsForProduct(productId));
-        command.AddCachePrefix(CacheKeys.Product(productId));
-        command.AddCachePrefix(CacheKeys.ProductsPrefix);
-
-        _logger.LogInformation(
-            "Review {ReviewId} edited successfully", review.Id);
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
+        }
     }
 }

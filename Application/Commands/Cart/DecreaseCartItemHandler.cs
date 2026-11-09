@@ -23,11 +23,26 @@ public class DecreaseCartItemHandler : IRequestHandler<DecreaseCartItemCommand>
 
     public async Task Handle(DecreaseCartItemCommand request, CancellationToken ct)
     {
-        var cart = await _cartRepository.GetByUserIdAsync(request.UserId, ct);
-        if (cart == null) throw new NotFoundException("Cart not found");
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        cart.DecreaseItemQuantity(request.ProductId, request.Quantity);
-        await _unitOfWork.SaveChangesAsync(ct);
+        try
+        {
+            var cart = await _cartRepository.GetCartForUpdateAsync(request.UserId, ct);
+            if (cart == null)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new NotFoundException("Cart not found");
+            }
+
+            cart.DecreaseItemQuantity(request.ProductId, request.Quantity);
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
+        }
     }
 
 

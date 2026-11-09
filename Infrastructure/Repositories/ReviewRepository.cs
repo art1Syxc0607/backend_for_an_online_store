@@ -33,6 +33,7 @@ public class ReviewRepository : IReviewRepository
             .Include(r => r.User)      // ← подгружаем пользователя
             .Include(r => r.Product)   // ← подгружаем продукт
             .Where(r => r.UserId == userId)
+            .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(ct);
     }
 
@@ -165,6 +166,12 @@ public class ReviewRepository : IReviewRepository
         await _dpcontext.Reviews.AddAsync(review, ct);
     }
 
+    public Task DeleteReviewAsync(Review review, CancellationToken ct = default)
+    {
+        _dpcontext.Reviews.Remove(review);
+        return Task.CompletedTask;
+    }
+
     public async Task<(List<Review> Items, int TotalCount)> GetAllWithFiltersAsync(
        GetAllReviewsCommand command, CancellationToken ct)
     {       
@@ -200,10 +207,33 @@ public class ReviewRepository : IReviewRepository
         int productId,
         CancellationToken ct = default)
     {
+        // Учитываем отзыв в любом статусе: уникальный индекс
+        // ("UserId", "ProductId") запрещает вторую запись независимо от статуса.
         return await _dpcontext.Reviews
             .AsNoTracking()
             .AnyAsync(r => r.UserId == userId
-                        && r.ProductId == productId
-                        && r.Status == ReviewStatus.Approved, ct);
+                        && r.ProductId == productId, ct);
+    }
+
+    public async Task<Review?> GetReviewForUpdateAsync(
+        int id,
+        CancellationToken ct = default)
+    {
+        var review = await _dpcontext.Reviews
+            .FromSqlInterpolated(
+                $@"SELECT *, xmin FROM ""Reviews""
+                   WHERE ""Id"" = {id}
+                   FOR NO KEY UPDATE")
+            .FirstOrDefaultAsync(ct);
+
+        if (review == null)
+            return null;
+
+        // Reload while the row lock is still held so business checks use
+        // the current values and EF tracks the latest xmin for optimistic
+        // concurrency protection.
+        await _dpcontext.Entry(review).ReloadAsync(ct);
+
+        return review;
     }
 }

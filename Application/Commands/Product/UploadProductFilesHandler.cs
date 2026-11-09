@@ -33,70 +33,92 @@ public class UploadProductFilesHandler : IRequestHandler<UploadProductFilesComma
 
     public async Task<List<FileUploadResponseDto>> Handle(UploadProductFilesCommand command, CancellationToken ct)
     {
-        var product = await _productRepository.GetByIdAsync(command.ProductId, ct);
-        if (product == null)
-            throw new DomainException($"Product with ID {command.ProductId} not found");
-
-        if (command.Files == null || command.Files.Count == 0)
-            throw new DomainException("No files specified for upload");
-
-        foreach (var file in command.Files)
-        {
-            if (!AllowedFileTypes.IsAllowed(file.ContentType))
-                throw new DomainException($"Unsupported file type: {file.ContentType}");
-        }
-
-        // ✅ Валидация ДО записи на диск — чтобы не оставить orphan-файлы
-        product.EnsureCanAddFiles(command.Files.Count);
-
-        var result = new List<FileUploadResponseDto>();
-        var imageUrls = new List<string>();
-        var videoUrls = new List<string>();
-        var uploadedUrls = new List<string>();
+        await _unitOfWork.BeginTransactionAsync(ct);
 
         try
         {
-            foreach (var file in command.Files)
+            // Lock the product row so concurrent uploads cannot overwrite each other's
+            // URL lists (lost update on ImageUrls / VideoUrls).
+            var product = await _productRepository.GetProductForUpdateAsync(command.ProductId, ct);
+            if (product == null)
             {
-                // Сохраняем файл
-                var url = await _fileStorageService.UploadFileAsync(
-                    file.Stream,
-                    file.FileName,
-                    file.ContentType,
-                    $"products/{command.ProductId}",
-                    ct
-                );
-                uploadedUrls.Add(url);
-
-                // Определяем тип и сохраняем в соответствующую коллекцию
-                if (file.ContentType.StartsWith("image/"))
-                    imageUrls.Add(url);
-                else if (file.ContentType.StartsWith("video/"))
-                    videoUrls.Add(url);
-
-                result.Add(new FileUploadResponseDto
-                {
-                    OriginalFileName = file.FileName,
-                    FileUrl = url,
-                    ContentType = file.ContentType,
-                    Size = file.Length
-                });
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException($"Product with ID {command.ProductId} not found");
             }
 
-            // Обновляем продукт
-            if (imageUrls.Any())
-                product.SetImageUrls(imageUrls);
-            if (videoUrls.Any())
-                product.SetVideoUrls(videoUrls);
+            if (command.Files == null || command.Files.Count == 0)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException("No files specified for upload");
+            }
 
-            await _unitOfWork.SaveChangesAsync(ct);
+            foreach (var file in command.Files)
+            {
+                if (!AllowedFileTypes.IsAllowed(file.ContentType))
+                {
+                    await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                    throw new DomainException($"Unsupported file type: {file.ContentType}");
+                }
+            }
 
-            return result;
+            // ✅ Валидация ДО записи на диск — чтобы не оставить orphan-файлы
+            product.EnsureCanAddFiles(command.Files.Count);
+
+            var result = new List<FileUploadResponseDto>();
+            var imageUrls = new List<string>();
+            var videoUrls = new List<string>();
+            var uploadedUrls = new List<string>();
+
+            try
+            {
+                foreach (var file in command.Files)
+                {
+                    // Сохраняем файл
+                    var url = await _fileStorageService.UploadFileAsync(
+                        file.Stream,
+                        file.FileName,
+                        file.ContentType,
+                        $"products/{command.ProductId}",
+                        ct
+                    );
+                    uploadedUrls.Add(url);
+
+                    // Определяем тип и сохраняем в соответствующую коллекцию
+                    if (file.ContentType.StartsWith("image/"))
+                        imageUrls.Add(url);
+                    else if (file.ContentType.StartsWith("video/"))
+                        videoUrls.Add(url);
+
+                    result.Add(new FileUploadResponseDto
+                    {
+                        OriginalFileName = file.FileName,
+                        FileUrl = url,
+                        ContentType = file.ContentType,
+                        Size = file.Length
+                    });
+                }
+
+                // Обновляем продукт
+                if (imageUrls.Any())
+                    product.SetImageUrls(imageUrls);
+                if (videoUrls.Any())
+                    product.SetVideoUrls(videoUrls);
+
+                await _unitOfWork.SaveChangesAsync(ct);
+                await _unitOfWork.CommitTransactionAsync(ct);
+
+                return result;
+            }
+            catch
+            {
+                // ✅ Компенсация: БД откатит SaveChanges, а файлы удаляем вручную
+                await TryDeleteUploadedFilesAsync(uploadedUrls, ct);
+                throw;
+            }
         }
         catch
         {
-            // ✅ Компенсация: БД откатит SaveChanges, а файлы удаляем вручную
-            await TryDeleteUploadedFilesAsync(uploadedUrls, ct);
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
             throw;
         }
     }

@@ -29,22 +29,38 @@ public class AddToCartCommandHandler : IRequestHandler<AddToCartCommand>
 
     public async Task Handle(AddToCartCommand request, CancellationToken ct)
     {
-        // 1. Получаем корзину
-        var cart = await _cartRepository.GetByUserIdAsync(request.UserId, ct);
-        if (cart == null)
-            throw new NotFoundException("Cart not found");
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        // 2. Получаем товар
-        var product = await _productRepository.GetByIdAsync(request.ProductId, ct);
-        if (product == null)
-            throw new DomainException("Product not found");
+        try
+        {
+            // 1. Получаем и блокируем корзину
+            var cart = await _cartRepository.GetCartForUpdateAsync(request.UserId, ct);
+            if (cart == null)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new NotFoundException("Cart not found");
+            }
 
-        // 3. Добавляем в корзину (бизнес-логика внутри сущности)
-        cart.AddItem(product, request.Quantity);
+            // 2. Получаем товар
+            var product = await _productRepository.GetByIdAsync(request.ProductId, ct);
+            if (product == null)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException("Product not found");
+            }
 
-        // 4. Сохраняем
-        await _unitOfWork.SaveChangesAsync(ct);
+            // 3. Добавляем в корзину (бизнес-логика внутри сущности)
+            cart.AddItem(product, request.Quantity);
 
+            // 4. Сохраняем
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
+        }
     }
 
 

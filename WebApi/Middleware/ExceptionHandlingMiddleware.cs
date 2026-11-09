@@ -2,6 +2,7 @@
 using Application.DTOs.Error;
 using Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using SendGrid.Helpers.Errors.Model;
 using Serilog;
 using System.ComponentModel.DataAnnotations;
@@ -138,6 +139,40 @@ public class ExceptionHandlingMiddleware
                 TraceId = traceId
             },
 
+            // Конфликт конкурентного обновления (xmin / row version mismatch)
+            Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException concurrencyEx => new ErrorResponseDto
+            {
+                Error = "The record was modified by another request. Please reload and try again.",
+                ErrorCode = "CONCURRENCY_ERROR",
+                StatusCode = 409,
+                Timestamp = DateTime.UtcNow,
+                Path = context.Request.Path,
+                TraceId = traceId
+            },
+
+            // Нарушение уникального ограничения (23505) — дубль в избранном, отзыве и т.д.
+            Npgsql.PostgresException pgEx when pgEx.SqlState == "23505" => new ErrorResponseDto
+            {
+                Error = "Запись уже существует.",
+                ErrorCode = "DUPLICATE_ENTRY",
+                StatusCode = 409,
+                Timestamp = DateTime.UtcNow,
+                Path = context.Request.Path,
+                TraceId = traceId
+            },
+
+            // Нарушение уникального ограничения, обёрнутое EF Core в DbUpdateException.
+            // SaveChanges() почти всегда приходит именно так: PostgresException лежит во InnerException.
+            DbUpdateException dupEx when IsUniqueViolation(dupEx) => new ErrorResponseDto
+            {
+                Error = "Запись уже существует.",
+                ErrorCode = "DUPLICATE_ENTRY",
+                StatusCode = 409,
+                Timestamp = DateTime.UtcNow,
+                Path = context.Request.Path,
+                TraceId = traceId
+            },
+
             // Ошибка базы данных
             DbUpdateException dbEx => new ErrorResponseDto
             {
@@ -160,5 +195,20 @@ public class ExceptionHandlingMiddleware
                 TraceId = traceId
             }
         };
+    }
+
+    /// <summary>
+    /// Проверяет цепочку InnerException на нарушение уникальности PostgreSQL (23505).
+    /// EF Core оборачивает PostgresException в DbUpdateException при SaveChanges.
+    /// </summary>
+    private static bool IsUniqueViolation(Exception exception)
+    {
+        for (var current = exception; current != null; current = current.InnerException)
+        {
+            if (current is PostgresException pg && pg.SqlState == "23505")
+                return true;
+        }
+
+        return false;
     }
 }

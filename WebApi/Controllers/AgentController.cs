@@ -190,9 +190,14 @@ public class AgentController : ControllerBase
         // 2. Гость — читаем cookie
         var guestId = Request.Cookies[GuestIdCookieName];
 
-        // Если cookie нет — генерируем новый
+        // Если cookie нет — генерируем новый и сразу выставляем,
+        // чтобы параллельные запросы от одного гостя использовали один guestId.
         if (string.IsNullOrWhiteSpace(guestId))
+        {
             guestId = $"guest-{Guid.NewGuid():N}";
+            SetGuestIdCookie(guestId);
+            _logger.LogInformation("Guest cookie generated: {GuestId}", guestId);
+        }
 
         return (null, guestId);
     }

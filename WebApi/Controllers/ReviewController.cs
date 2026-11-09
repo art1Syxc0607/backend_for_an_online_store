@@ -140,6 +140,21 @@ public class ReviewController : Controller
         return Ok(result);
     }
 
+    [Authorize]
+    [HttpDelete("{reviewId:int}")]
+    public async Task<IActionResult> DeleteReview(int reviewId, CancellationToken ct)
+    {
+        var command = new DeleteReviewCommand
+        {
+            ReviewId = reviewId,
+            UserId = GetCurrentUserId()
+        };
+
+        await _mediator.Send(command, ct);
+
+        return NoContent();
+    }
+
     [Authorize(Roles = "User")]
     [HttpDelete("{reviewId}/files")]
     public async Task<DeleteFilesResponseDto> DeleteReviewFiles([FromBody] List<string> urls, int reviewId)

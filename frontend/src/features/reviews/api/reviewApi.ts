@@ -12,7 +12,7 @@ export interface ReviewDto {
     imagesUrls?: string[]   // ✅ с "s"
     videosUrls?: string[]   // ✅ с "s"
     isVerifiedPurchase?: boolean
-    status: number
+    status: string | number
     adminResponse?: string
     adminResponseAt?: string
     createdAt: string
@@ -120,4 +120,18 @@ export async function deleteReviewFiles(
         { data: urls }
     )
     return data
+}
+
+/**
+ * Отзывы текущего авторизованного пользователя.
+ * Возвращаются отзывы во всех статусах (включая скрытые и отклонённые).
+ */
+export async function getUserReviews(): Promise<ReviewDto[]> {
+    const { data } = await apiClient.get<ReviewDto[]>('/review')
+    return data
+}
+
+/** Удаление собственного отзыва. */
+export async function deleteReview(reviewId: number): Promise<void> {
+    await apiClient.delete(`/review/${reviewId}`)
 }

@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<CartItem> CartItems { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<Review> Reviews { get; set; }
+    public DbSet<Favorite> Favorites { get; set; }
     public DbSet<Payment> Payments { get; set; } 
     public DbSet<PasswordResetCode> PasswordResetCodes { get; set; }
 
@@ -49,6 +50,16 @@ public class AppDbContext : DbContext
                 .IsRowVersion();
 
             builder.Entity<Payment>()
+                .Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
+
+            builder.Entity<AgentConversationEntity>()
+                .Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
+
+            builder.Entity<Review>()
                 .Property<uint>("xmin")
                 .HasColumnType("xid")
                 .IsRowVersion();

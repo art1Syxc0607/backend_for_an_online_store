@@ -31,45 +31,65 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand>
 
     public async Task Handle(DeleteProductCommand command, CancellationToken ct)
     {
-        var product = await _productRepository.GetByIdAsync(command.Id, ct);
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        if (product == null) throw new DomainException("No such product");
-
-        _logger.LogWarning(
-            "Product deletion started: ProductId {ProductId}, Name {Name}",
-            product.Id,
-            product.Name
-        );
-
-        if (await _orderRepository.HasProductInOrdersAsync(command.Id, ct))
-            throw new DomainException("Cannot delete product that has orders");
-
-        // 1. Запоминаем файлы и удаляем товар из БД
-        var fileUrls = product.GetAllFileUrls();
-
-        await _productRepository.DeleteProductAsync(product, ct);
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        // 2. Физические файлы удаляем только после успешного коммита
-        foreach (var url in fileUrls)
+        try
         {
-            try
-            {
-                await _fileStorageService.DeleteFileAsync(url, ct);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex,
-                    "Failed to delete physical file {FileUrl} after product {ProductId} deletion",
-                    url, product.Id);
-            }
-        }
+            // Lock the product row so checkout cannot reserve it while we decide
+            // whether deletion is allowed.
+            var product = await _productRepository.GetProductForUpdateAsync(command.Id, ct);
 
-        _logger.LogWarning(
-            "Product deleted: ProductId {ProductId}, Name {Name}, Time {Time}",
-            product.Id,
-            product.Name,
-            DateTime.UtcNow
-        );
+            if (product == null)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException("No such product");
+            }
+
+            _logger.LogWarning(
+                "Product deletion started: ProductId {ProductId}, Name {Name}",
+                product.Id,
+                product.Name
+            );
+
+            if (await _orderRepository.HasProductInOrdersAsync(command.Id, ct))
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException("Cannot delete product that has orders");
+            }
+
+            // 1. Запоминаем файлы и удаляем товар из БД
+            var fileUrls = product.GetAllFileUrls();
+
+            await _productRepository.DeleteProductAsync(product, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            // 2. Физические файлы удаляем только после успешного коммита
+            foreach (var url in fileUrls)
+            {
+                try
+                {
+                    await _fileStorageService.DeleteFileAsync(url, ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Failed to delete physical file {FileUrl} after product {ProductId} deletion",
+                        url, product.Id);
+                }
+            }
+
+            _logger.LogWarning(
+                "Product deleted: ProductId {ProductId}, Name {Name}, Time {Time}",
+                product.Id,
+                product.Name,
+                DateTime.UtcNow
+            );
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
+        }
     }
 }

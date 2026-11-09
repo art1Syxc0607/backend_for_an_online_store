@@ -30,24 +30,36 @@ public class ClearCartHandler : IRequestHandler<ClearCartCommand>
            "Clearing cart for user {UserId}",
            command.UserId);
 
-        var cart = await _cartRepository.GetByUserIdAsync(command.UserId, ct);
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        if (cart == null)
+        try
         {
-            _logger.LogWarning(
-                "Cart not found for user {UserId}",
-                command.UserId);
-            throw new DomainException("Cart isn't found");
+            var cart = await _cartRepository.GetCartForUpdateAsync(command.UserId, ct);
+
+            if (cart == null)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                _logger.LogWarning(
+                    "Cart not found for user {UserId}",
+                    command.UserId);
+                throw new DomainException("Cart isn't found");
+            }
+
+            var itemsCount = cart.Items.Count;
+            cart.Clear();
+
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+
+            _logger.LogInformation(
+                "Cart cleared for user {UserId}. Removed {Count} items",
+                command.UserId,
+                itemsCount);
         }
-
-        var itemsCount = cart.Items.Count;
-        cart.Clear();
-
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        _logger.LogInformation(
-            "Cart cleared for user {UserId}. Removed {Count} items",
-            command.UserId,
-            itemsCount);
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
+        }
     }
 }

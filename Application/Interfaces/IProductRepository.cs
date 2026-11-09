@@ -26,6 +26,12 @@ public interface IProductRepository
         IReadOnlyCollection<int> ids,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Locks a single product row for the duration of the current transaction.
+    /// Returns null when the product does not exist.
+    /// </summary>
+    Task<Product?> GetProductForUpdateAsync(int id, CancellationToken ct = default);
+
     Task<(List<Product> Items, int TotalCount)> GetAllProductsAsync(
         int pageNumber,
         int pageSize,

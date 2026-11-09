@@ -42,87 +42,115 @@ public class AddReviewCommandHandler : IRequestHandler<AddReviewCommand, int>
 
     public async Task<int> Handle(AddReviewCommand command, CancellationToken ct)
     {
-        var user = await _userRepository.GetByIdAsync(command.UserId, ct);
-        if (user == null) throw new DomainException("No such user");
-        // Проверка подтверждения email
-        user.EnsureEmailConfirmed();
-
-        var product = await _productRepository.GetByIdAsync(command.ProductId, ct);
-        if (product == null) throw new DomainException("No such product");
-
-        if (!await _orderRepository.HasUserPurchasedProductAsync(command.UserId, command.ProductId, ct))
-            throw new DomainException("User didn't recieved this product.");
-
-        // ✅ Проверка 2: не оставлял ли уже отзыв
-        if (await _reviewRepository.HasUserReviewedProductAsync(
-                command.UserId, command.ProductId, ct))
-        {
-            throw new DomainException(
-                "You have already reviewed this product. " +
-                "Only one review per product is allowed.");
-        }
-
-        // 4. Создаём отзыв
-        var review = new Domain.Entities.Review(user, product, command.Text, command.Rating, true);
-
-        var uploadedUrls = new List<string>();
+        await _unitOfWork.BeginTransactionAsync(ct);
 
         try
         {
-            // 5. ✅ СНАЧАЛА загружаем файлы
-            if (command.Files != null)
+            var user = await _userRepository.GetByIdAsync(command.UserId, ct);
+            if (user == null)
             {
-                foreach (var file in command.Files)
-                {
-                    if (!AllowedFileTypes.IsAllowed(file.ContentType))
-                        throw new DomainException($"Unsupported file type: {file.ContentType}");
-                }
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException("No such user");
+            }
+            // Проверка подтверждения email
+            user.EnsureEmailConfirmed();
 
-                // ✅ Валидация ДО записи на диск — чтобы не оставить orphan-файлы
-                review.EnsureCanAddFiles(command.Files.Count);
-
-                var imageUrls = new List<string>();
-                var videoUrls = new List<string>();
-                var reviewMediaFolder = $"reviews/{Guid.NewGuid():N}";
-
-                foreach (var file in command.Files)
-                {
-                    var url = await _fileStorageService.UploadFileAsync(
-                        file.Stream,
-                        file.FileName,
-                        file.ContentType,
-                        reviewMediaFolder,
-                        ct
-                    );
-                    uploadedUrls.Add(url);
-
-                    if (file.ContentType.StartsWith("image/"))
-                        imageUrls.Add(url);
-                    else if (file.ContentType.StartsWith("video/"))
-                        videoUrls.Add(url);
-                }
-
-                if (imageUrls.Any())
-                    review.SetImageUrls(imageUrls);
-                if (videoUrls.Any())
-                    review.SetVideoUrls(videoUrls);
+            var product = await _productRepository.GetByIdAsync(command.ProductId, ct);
+            if (product == null)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException("No such product");
             }
 
-            // 6. Сохраняем отзыв (с файлами)
-            await _reviewRepository.AddReviewAsync(review, ct);
-            await _unitOfWork.SaveChangesAsync(ct);
+            if (!await _orderRepository.HasUserPurchasedProductAsync(command.UserId, command.ProductId, ct))
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException("User didn't recieved this product.");
+            }
 
-            // не нужно явно добовлять product.AddReview?
-            //Короткий ответ: ДА, НЕ НУЖНО!
-            //Если связь настроена правильно(через навигационные свойства), EF Core сам свяжет Review
-            //с Product и User.Явно добавлять product.Reviews.Add(review) не обязательно.
+            // ✅ Проверка 2: не оставлял ли уже отзыв
+            if (await _reviewRepository.HasUserReviewedProductAsync(
+                    command.UserId, command.ProductId, ct))
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException(
+                    "You have already reviewed this product. " +
+                    "Only one review per product is allowed.",
+                    "DUPLICATE_ENTRY",
+                    409);
+            }
 
-            return review.Id;
+            // 4. Создаём отзыв
+            var review = new Domain.Entities.Review(user, product, command.Text, command.Rating, true);
+
+            var uploadedUrls = new List<string>();
+
+            try
+            {
+                // 5. ✅ СНАЧАЛА загружаем файлы
+                if (command.Files != null)
+                {
+                    foreach (var file in command.Files)
+                    {
+                        if (!AllowedFileTypes.IsAllowed(file.ContentType))
+                        {
+                            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                            throw new DomainException($"Unsupported file type: {file.ContentType}");
+                        }
+                    }
+
+                    // ✅ Валидация ДО записи на диск — чтобы не оставить orphan-файлы
+                    review.EnsureCanAddFiles(command.Files.Count);
+
+                    var imageUrls = new List<string>();
+                    var videoUrls = new List<string>();
+                    var reviewMediaFolder = $"reviews/{Guid.NewGuid():N}";
+
+                    foreach (var file in command.Files)
+                    {
+                        var url = await _fileStorageService.UploadFileAsync(
+                            file.Stream,
+                            file.FileName,
+                            file.ContentType,
+                            reviewMediaFolder,
+                            ct
+                        );
+                        uploadedUrls.Add(url);
+
+                        if (file.ContentType.StartsWith("image/"))
+                            imageUrls.Add(url);
+                        else if (file.ContentType.StartsWith("video/"))
+                            videoUrls.Add(url);
+                    }
+
+                    if (imageUrls.Any())
+                        review.SetImageUrls(imageUrls);
+                    if (videoUrls.Any())
+                        review.SetVideoUrls(videoUrls);
+                }
+
+                // 6. Сохраняем отзыв (с файлами)
+                await _reviewRepository.AddReviewAsync(review, ct);
+                await _unitOfWork.SaveChangesAsync(ct);
+                await _unitOfWork.CommitTransactionAsync(ct);
+
+                // не нужно явно добовлять product.AddReview?
+                //Короткий ответ: ДА, НЕ НУЖНО!
+                //Если связь настроена правильно(через навигационные свойства), EF Core сам свяжет Review
+                //с Product и User.Явно добавлять product.Reviews.Add(review) не обязательно.
+
+                return review.Id;
+            }
+            catch
+            {
+                // ✅ Компенсация: БД откатит SaveChanges, а файлы удаляем вручную
+                await TryDeleteUploadedFilesAsync(uploadedUrls, ct);
+                throw;
+            }
         }
         catch
         {
-            // ✅ Компенсация: БД откатит SaveChanges, а файлы удаляем вручную
-            await TryDeleteUploadedFilesAsync(uploadedUrls, ct);
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
             throw;
         }
     }

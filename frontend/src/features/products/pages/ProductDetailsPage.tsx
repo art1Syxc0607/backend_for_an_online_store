@@ -1,4 +1,4 @@
-﻿import { useParams, Link } from 'react-router'
+﻿import { useParams, Link, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { getProductById } from '../api/productApi'
@@ -7,10 +7,13 @@ import AddReviewForm from '@/features/reviews/components/AddReviewForm'
 import ReviewList from '@/features/reviews/components/ReviewList'
 import AddToCartButton from '@/features/cart/components/AddToCartButton'
 import AddToCurrentOrderButton from '@/features/current-order/components/AddToCurrentOrderButton'
+import FavoriteButton from '@/features/favorites/components/FavoriteButton'
 
 export default function ProductDetailsPage() {
     const { id } = useParams<{ id: string }>()
+    const [searchParams] = useSearchParams()
     const productId = Number(id)
+    const highlightReviewId = Number(searchParams.get('reviewId')) || undefined
     const [selectedMedia, setSelectedMedia] = useState(0)
 
     const { data: product, isLoading, error } = useQuery({
@@ -138,6 +141,13 @@ export default function ProductDetailsPage() {
                             size="lg"
                             className="flex-1"
                         />
+
+                        {/* ✅ Кнопка избранного */}
+                        <FavoriteButton
+                            productId={productId}
+                            size="lg"
+                            className="flex-1"
+                        />
                     </div>
 
                     {/* Описание */}
@@ -165,7 +175,10 @@ export default function ProductDetailsPage() {
                 <AddReviewForm productId={productId} />
 
                 {/* ✅ Список отзывов с фильтрами */}
-                <ReviewList productId={productId} />
+                <ReviewList
+                    productId={productId}
+                    highlightReviewId={highlightReviewId}
+                />
             </div>
         </div>
     )

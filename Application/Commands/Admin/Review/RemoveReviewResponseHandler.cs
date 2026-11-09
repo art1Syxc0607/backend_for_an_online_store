@@ -33,7 +33,21 @@ public class RemoveReviewResponseHandler : IRequestHandler<RemoveReviewResponseC
             throw new DomainException("No response to remove");
 
         review.RemoveAdminResponse();
-        await _unitOfWork.SaveChangesAsync(ct);
+
+        // Сохраняем в транзакции с оптимистической блокировкой (xmin).
+        // При конфликте с другим администратором → DbUpdateConcurrencyException → middleware мапит в 409.
+        await _unitOfWork.BeginTransactionAsync(ct);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync(ct);
+            _logger.LogWarning(ex, "Conflict removing response from review {ReviewId}", review.Id);
+            throw;
+        }
 
         // 6. ✅ Указываем префиксы для инвалидации
         command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));

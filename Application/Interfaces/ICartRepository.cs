@@ -17,6 +17,13 @@ public interface ICartRepository
     /// </summary>
     Task<Cart?> GetByUserIdForCheckoutAsync(int userId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Locks the user's cart row for the duration of the current transaction.
+    /// Used by cart mutation endpoints (add/update/remove/clear) to prevent
+    /// lost updates when multiple requests modify the same cart concurrently.
+    /// </summary>
+    Task<Cart?> GetCartForUpdateAsync(int userId, CancellationToken ct = default);
+
     Task UpdateAsync(Cart cart, CancellationToken ct = default);
     //Task<Cart?> GetByIdAsync(int id, CancellationToken ct = default);
     //Task AddAsync(Cart cart, CancellationToken ct = default);

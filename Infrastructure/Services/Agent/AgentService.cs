@@ -5,8 +5,10 @@ using Domain.Entities.Agent;
 using Domain.Exceptions;
 using Infrastructure.Options;
 using Microsoft.Agents.AI;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace Infrastructure.Services.Agent;
@@ -20,6 +22,9 @@ public class AgentService
     private readonly AgentOptions _options;
     private readonly ILogger<AgentService> _logger;
     private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Web;
+
+    // Семафоры на sessionId для защиты от параллельных запросов к одной сессии
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new();
 
     public AgentService(
         AIAgent agent,
@@ -47,30 +52,46 @@ public class AgentService
         if (request.UserId == null && string.IsNullOrWhiteSpace(request.GuestId))
             throw new DomainException("Either UserId or GuestId is required");
 
-        // 1. Находим или создаём
+        // Определяем sessionId (генерируем для новых диалогов)
+        string sessionId = request.SessionId ?? Guid.NewGuid().ToString();
+
+        // 🔒 Защита от параллельных запросов к одной сессии.
+        // Семафор гарантирует, что два запроса с одинаковым SessionId не будут
+        // читать одно состояние JsonState, вызывать агента дважды и перезаписывать
+        // изменения друг друга (lost update).
+        var sem = _sessionLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
+        await sem.WaitAsync(ct);
+        try
+        {
+            return await ChatWithLockAsync(request, sessionId, ct);
+        }
+        finally
+        {
+            sem.Release();
+        }
+    }
+
+    private async Task<ChatResponse> ChatWithLockAsync(
+        ChatRequest request, string sessionId, CancellationToken ct)
+    {
         AgentConversationEntity conversation;
 
         if (string.IsNullOrWhiteSpace(request.SessionId))
         {
+            // Новый диалог
             conversation = request.UserId.HasValue
-                ? new AgentConversationEntity(
-                    request.UserId.Value,
-                    Guid.NewGuid().ToString())
-                : new AgentConversationEntity(
-                    request.GuestId!,
-                    Guid.NewGuid().ToString());  // ← без retentionDays
+                ? new AgentConversationEntity(request.UserId.Value, sessionId)
+                : new AgentConversationEntity(request.GuestId!, sessionId);
 
             conversation.SetTitle(request.Message);
-            // ✅ НЕ сохраняем здесь: диалог + оба сообщения сохраним ОДНИМ SaveChanges ниже,
-            // чтобы ход был атомарным (всё или ничего).
+            // Добавляем в контекст, сохранение произойдёт одним SaveChanges ниже.
             await _conversationRepository.AddAsync(conversation, ct);
         }
         else
         {
             conversation = await _conversationRepository
-                .GetByConversationIdAsync(request.SessionId, ct)
-                ?? throw new DomainException(
-                    $"Session {request.SessionId} not found");
+                .GetByConversationIdAsync(sessionId, ct)
+                ?? throw new DomainException($"Session {sessionId} not found");
 
             // Проверка владельца
             var isOwner = request.UserId.HasValue
@@ -78,8 +99,7 @@ public class AgentService
                 : conversation.IsOwnedByGuest(request.GuestId!);
 
             if (!isOwner)
-                throw new UnauthorizedAccessException(
-                    "You don't own this conversation");
+                throw new UnauthorizedAccessException("You don't own this conversation");
 
             // ✅ Проверка "неактивности" вместо ExpiresAt
             if (conversation.IsExpired(_options.GuestConversationRetentionDays))
@@ -113,12 +133,21 @@ public class AgentService
                 cancellationToken: ct);
         }
 
-        // 4. Запускаем агента
-        var response = await _agent.RunAsync(request.Message, agentSession);
+        // 4. Запускаем агента (внешний вызов — может упасть)
+        string responseText;
+        try
+        {
+            var response = await _agent.RunAsync(request.Message, agentSession);
+            responseText = response.Text;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Agent RunAsync failed for session {SessionId}", sessionId);
+            throw new DomainException("ИИ-помощник временно недоступен. Попробуйте позже.");
+        }
 
         // 5. Сохраняем ответ ассистента
-        var assistantMessage = AgentMessage.Assistant(
-            conversation, response.Text);
+        var assistantMessage = AgentMessage.Assistant(conversation, responseText);
         await _messageRepository.AddAsync(assistantMessage, ct);
 
         // 6. Обновляем состояние (внутри UpdateState обновится LastMessageAt)
@@ -126,11 +155,31 @@ public class AgentService
         conversation.UpdateState(serializedSession.GetRawText());
         conversation.IncrementMessageCount(2);
 
-        await _unitOfWork.SaveChangesAsync(ct);
+        // 7. Явная транзакция вокруг SaveChanges с оптимистической блокировкой xmin.
+        // При конфликте (другой запрос уже обновил эту сессию) EF выбросит
+        // DbUpdateConcurrencyException — мы откатываем транзакцию и кидаем
+        // DomainException, который middleware мапит в 409 Conflict.
+        await _unitOfWork.BeginTransactionAsync(ct);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync(ct);
+            _logger.LogWarning(ex, "Concurrency conflict for session {SessionId}", sessionId);
+            throw new DomainException("Разговор был обновлён другим запросом. Повторите попытку.");
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(ct);
+            throw;
+        }
 
         return new ChatResponse
         {
-            Reply = response.Text,
+            Reply = responseText,
             SessionId = conversation.AgentConversationId,
             MessageCount = conversation.MessageCount,
             IsGuest = conversation.IsGuest,

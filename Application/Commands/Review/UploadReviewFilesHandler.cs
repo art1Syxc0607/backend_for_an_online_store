@@ -35,76 +35,101 @@ public class UploadReviewFilesHandler : IRequestHandler<UploadReviewFilesCommand
 
     public async Task<List<FileUploadResponseDto>> Handle(UploadReviewFilesCommand command, CancellationToken ct)
     {
-        var review = await _reviewRepository.GetReviewByIdAsync(command.ReviewId, ct);
-        if (review == null)
-            throw new DomainException($"Review with ID {command.ReviewId} not found");
-
-        // ✅ Проверка владельца: пользователь может загружать файлы только в свой отзыв
-        if (review.UserId != command.UserId)
-            throw new DomainException($"Review with ID {command.ReviewId} doesn't belong to the user");
-
-        if (command.Files == null || command.Files.Count == 0)
-            throw new DomainException("No files specified for upload");
-
-        foreach (var file in command.Files)
-        {
-            if (!AllowedFileTypes.IsAllowed(file.ContentType))
-                throw new DomainException($"Unsupported file type: {file.ContentType}");
-        }
-
-        // ✅ Валидация ДО записи на диск — чтобы не оставить orphan-файлы
-        review.EnsureCanAddFiles(command.Files.Count);
-
-        var result = new List<FileUploadResponseDto>();
-        var imageUrls = new List<string>();
-        var videoUrls = new List<string>();
-        var uploadedUrls = new List<string>();
+        await _unitOfWork.BeginTransactionAsync(ct);
 
         try
         {
-            foreach (var file in command.Files)
+            // Lock the review row so concurrent file uploads cannot overwrite
+            // each other's URL lists (lost update on ImageUrls / VideoUrls).
+            var review = await _reviewRepository.GetReviewForUpdateAsync(command.ReviewId, ct);
+            if (review == null)
             {
-                var url = await _fileStorageService.UploadFileAsync(
-                    file.Stream,
-                    file.FileName,
-                    file.ContentType,
-                    $"reviews/{review.Id}",
-                    ct);
-                uploadedUrls.Add(url);
-
-                result.Add(new FileUploadResponseDto
-                {
-                    OriginalFileName = file.FileName,
-                    FileUrl = url,
-                    ContentType = file.ContentType,
-                    Size = file.Length
-                });
-
-                if (file.ContentType.StartsWith("image/"))
-                    imageUrls.Add(url);
-                else if (file.ContentType.StartsWith("video/"))
-                    videoUrls.Add(url);
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException($"Review with ID {command.ReviewId} not found");
             }
 
-            // Обновляем review
-            if (imageUrls.Any())
-                review.SetImageUrls(imageUrls);
-            if (videoUrls.Any())
-                review.SetVideoUrls(videoUrls);
+            // ✅ Проверка владельца: пользователь может загружать файлы только в свой отзыв
+            if (review.UserId != command.UserId)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException($"Review with ID {command.ReviewId} doesn't belong to the user");
+            }
 
-            await _unitOfWork.SaveChangesAsync(ct);
+            if (command.Files == null || command.Files.Count == 0)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new DomainException("No files specified for upload");
+            }
 
-            // ✅ Указываем префиксы для инвалидации
-            command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));
-            command.AddCachePrefix(CacheKeys.Product(review.ProductId));
-            command.AddCachePrefix(CacheKeys.ProductsPrefix);
+            foreach (var file in command.Files)
+            {
+                if (!AllowedFileTypes.IsAllowed(file.ContentType))
+                {
+                    await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                    throw new DomainException($"Unsupported file type: {file.ContentType}");
+                }
+            }
 
-            return result;
+            // ✅ Валидация ДО записи на диск — чтобы не оставить orphan-файлы
+            review.EnsureCanAddFiles(command.Files.Count);
+
+            var result = new List<FileUploadResponseDto>();
+            var imageUrls = new List<string>();
+            var videoUrls = new List<string>();
+            var uploadedUrls = new List<string>();
+
+            try
+            {
+                foreach (var file in command.Files)
+                {
+                    var url = await _fileStorageService.UploadFileAsync(
+                        file.Stream,
+                        file.FileName,
+                        file.ContentType,
+                        $"reviews/{review.Id}",
+                        ct);
+                    uploadedUrls.Add(url);
+
+                    result.Add(new FileUploadResponseDto
+                    {
+                        OriginalFileName = file.FileName,
+                        FileUrl = url,
+                        ContentType = file.ContentType,
+                        Size = file.Length
+                    });
+
+                    if (file.ContentType.StartsWith("image/"))
+                        imageUrls.Add(url);
+                    else if (file.ContentType.StartsWith("video/"))
+                        videoUrls.Add(url);
+                }
+
+                // Обновляем review
+                if (imageUrls.Any())
+                    review.SetImageUrls(imageUrls);
+                if (videoUrls.Any())
+                    review.SetVideoUrls(videoUrls);
+
+                await _unitOfWork.SaveChangesAsync(ct);
+                await _unitOfWork.CommitTransactionAsync(ct);
+
+                // ✅ Указываем префиксы для инвалидации
+                command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));
+                command.AddCachePrefix(CacheKeys.Product(review.ProductId));
+                command.AddCachePrefix(CacheKeys.ProductsPrefix);
+
+                return result;
+            }
+            catch
+            {
+                // ✅ Компенсация: БД откатит SaveChanges, а файлы удаляем вручную
+                await TryDeleteUploadedFilesAsync(uploadedUrls, ct);
+                throw;
+            }
         }
         catch
         {
-            // ✅ Компенсация: БД откатит SaveChanges, а файлы удаляем вручную
-            await TryDeleteUploadedFilesAsync(uploadedUrls, ct);
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
             throw;
         }
     }

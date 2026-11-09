@@ -37,7 +37,20 @@ public class UpdateReviewResponseHandler : IRequestHandler<UpdateReviewResponseC
 
         review.UpdateAdminResponse(command.NewResponse);
 
-        await _unitOfWork.SaveChangesAsync(ct);
+        // Сохраняем в транзакции с оптимистической блокировкой (xmin).
+        // При конфликте с другим администратором → DbUpdateConcurrencyException → middleware мапит в 409.
+        await _unitOfWork.BeginTransactionAsync(ct);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync(ct);
+            _logger.LogWarning(ex, "Conflict updating response for review {ReviewId}", review.Id);
+            throw;
+        }
 
         // ✅ Указываем префиксы для инвалидации
         command.AddCachePrefix(CacheKeys.ReviewsForProduct(review.ProductId));

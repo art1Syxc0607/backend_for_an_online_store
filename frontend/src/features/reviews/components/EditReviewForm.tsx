@@ -84,9 +84,11 @@ export default function EditReviewForm({ review, onCancel, onSaved }: Props) {
             await queryClient.invalidateQueries({
                 queryKey: ['reviews', review.productId],
             })
+            queryClient.invalidateQueries({ queryKey: ['userReviews'] })
             queryClient.invalidateQueries({
                 queryKey: ['product', review.productId],
             })
+            queryClient.invalidateQueries({ queryKey: ['products'] })
 
             onSaved()
         } catch (err: any) {

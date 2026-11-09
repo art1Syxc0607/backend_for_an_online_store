@@ -24,27 +24,46 @@ public class UpdateCartItemQuantityHandler : IRequestHandler<UpdateCartItemQuant
 
     public async Task Handle(UpdateCartItemQuantityCommand request, CancellationToken ct)
     {
-        var cart = await _cartRepository.GetByUserIdAsync(request.UserId, ct);
-        if (cart == null) throw new NotFoundException("Cart not found");
+        await _unitOfWork.BeginTransactionAsync(ct);
 
-        if (request.NewQuantity <= 0)
+        try
         {
-            cart.RemoveItem(request.ProductId); // удаляем, если 0
+            var cart = await _cartRepository.GetCartForUpdateAsync(request.UserId, ct);
+            if (cart == null)
+            {
+                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                throw new NotFoundException("Cart not found");
+            }
+
+            if (request.NewQuantity <= 0)
+            {
+                cart.RemoveItem(request.ProductId); // удаляем, если 0
+            }
+            else
+            {
+                var item = cart.Items.FirstOrDefault(i => i.ProductId == request.ProductId);
+                if (item == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                    throw new NotFoundException("Item not found in cart");
+                }
+
+                // зачем в корзине это делать?
+                // Проверяем наличие на складе (через Product)
+                //var product = await _productRepository.GetByIdAsync(request.ProductId, ct);
+                //if (product.StockQuantity < request.NewQuantity)
+                //    throw new DomainException($"Not enough stock. Available: {product.StockQuantity}");
+
+                item.SetQuantity(request.NewQuantity);
+            }
+
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.CommitTransactionAsync(ct);
         }
-        else
+        catch
         {
-            var item = cart.Items.FirstOrDefault(i => i.ProductId == request.ProductId);
-            if (item == null) throw new NotFoundException("Item not found in cart");
-
-            // зачем в корзине это делать?
-            // Проверяем наличие на складе (через Product)
-            //var product = await _productRepository.GetByIdAsync(request.ProductId, ct);
-            //if (product.StockQuantity < request.NewQuantity)
-            //    throw new DomainException($"Not enough stock. Available: {product.StockQuantity}");
-
-            item.SetQuantity(request.NewQuantity);
+            await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+            throw;
         }
-
-        await _unitOfWork.SaveChangesAsync(ct);
     }
 }

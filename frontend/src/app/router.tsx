@@ -8,6 +8,7 @@ import NotFound from '@/shared/ui/NotFound'
 import CheckoutPage from '@/features/checkout/pages/CheckoutPage'
 import OrderDetailsPage from '@/features/orders/pages/OrderDetailsPage'
 import OrdersHistoryPage from '@/features/orders/pages/OrdersHistoryPage'
+import FavoritesPage from '@/features/favorites/components/FavoritesPage'
 import AdminLayout from '@/features/admin/components/AdminLayout'
 import AdminDashboardPage from '@/features/admin/pages/AdminDashboardPage'
 import AdminProductsPage from '@/features/admin/pages/AdminProductsPage'
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
             { path: 'checkout', element: <CheckoutPage /> },
             { path: 'orders', element: <OrdersHistoryPage /> },      // ✅ история
             { path: 'orders/:id', element: <OrderDetailsPage /> },   // ✅ детали
+            { path: 'favorites', element: <FavoritesPage /> },       // ✅ избранное
         ],
     },
     {

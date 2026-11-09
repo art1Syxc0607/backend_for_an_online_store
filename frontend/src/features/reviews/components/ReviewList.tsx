@@ -1,21 +1,25 @@
-﻿import { useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-// ✅ Стало
 import { getProductReviews } from '../api/reviewApi'
 import type { GetProductReviewsParams } from '../api/reviewApi'
-import StarRating from '@/shared/ui/StarRating'
 import ReviewFilters from './ReviewFilters'
 import EditReviewForm from './EditReviewForm'
+import ReviewCard from './ReviewCard'
+import ConfirmDialog from '@/shared/ui/ConfirmDialog'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { useDeleteReview, useUserReviews } from '../hooks/useUserReviews'
 
 interface Props {
     productId: number
+    /** Отзыв, который нужно подсветить и прокрутить к нему (из личного кабинета). */
+    highlightReviewId?: number
 }
 
-export default function ReviewList({ productId }: Props) {
+export default function ReviewList({ productId, highlightReviewId }: Props) {
     const { user } = useAuth()
     const [pageNumber, setPageNumber] = useState(1)
     const [editingReviewId, setEditingReviewId] = useState<number | null>(null)
+    const [reviewToDelete, setReviewToDelete] = useState<number | null>(null)
     const [filters, setFilters] = useState<GetProductReviewsParams>({
         sortBy: 'DateOfCreation',
         descending: true,
@@ -30,8 +34,27 @@ export default function ReviewList({ productId }: Props) {
         }),
     })
 
-    if (isLoading) return <div className="text-center py-8">Загрузка отзывов...</div>
-    if (error) return <div className="text-center py-8 text-red-500">Ошибка загрузки отзывов</div>
+    // Отзывы текущего пользователя нужны, чтобы показать выбранный отзыв,
+    // даже если он не попал на текущую страницу или в фильтр.
+    const { data: myReviews } = useUserReviews(!!user && !!highlightReviewId)
+    const deleteMutation = useDeleteReview()
+
+    const reviews = data?.items ?? []
+    const highlightedReview = highlightReviewId
+        ? myReviews?.find((review) => review.id === highlightReviewId)
+        : undefined
+    const isHighlightOnPage = reviews.some(
+        (review) => review.id === highlightReviewId,
+    )
+
+    useEffect(() => {
+        if (!highlightReviewId) return
+
+        const element = document.getElementById(`review-${highlightReviewId}`)
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+    }, [highlightReviewId, highlightedReview, data])
 
     const handleApplyFilters = (newFilters: GetProductReviewsParams) => {
         setFilters(newFilters)
@@ -39,7 +62,17 @@ export default function ReviewList({ productId }: Props) {
         setEditingReviewId(null)
     }
 
-    const reviews = data?.items ?? []
+    const handleDelete = () => {
+        if (reviewToDelete === null) return
+
+        deleteMutation.mutate(
+            { reviewId: reviewToDelete, productId },
+            { onSuccess: () => setReviewToDelete(null) },
+        )
+    }
+
+    if (isLoading) return <div className="text-center py-8">Загрузка отзывов...</div>
+    if (error) return <div className="text-center py-8 text-red-500">Ошибка загрузки отзывов</div>
 
     return (
         <div>
@@ -50,8 +83,37 @@ export default function ReviewList({ productId }: Props) {
                 totalCount={data?.totalCount ?? 0}
             />
 
+            {deleteMutation.isError && (
+                <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+                    Не удалось удалить отзыв. Попробуйте ещё раз.
+                </div>
+            )}
+
+            {/* Выбранный отзыв, которого нет на текущей странице */}
+            {highlightedReview && !isHighlightOnPage && (
+                <div className="mt-4">
+                    <div className="text-sm font-medium text-amber-700 mb-2">
+                        Ваш отзыв
+                    </div>
+                    <ReviewCard
+                        id={`review-${highlightedReview.id}`}
+                        review={highlightedReview}
+                        highlighted
+                        actions={
+                            <button
+                                type="button"
+                                onClick={() => setReviewToDelete(highlightedReview.id)}
+                                className="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 whitespace-nowrap"
+                            >
+                                🗑 Удалить
+                            </button>
+                        }
+                    />
+                </div>
+            )}
+
             {/* Список отзывов */}
-            {reviews.length === 0 ? (
+            {reviews.length === 0 && !highlightedReview ? (
                 <div className="text-gray-500 py-8 text-center">
                     Отзывов пока нет
                 </div>
@@ -61,98 +123,49 @@ export default function ReviewList({ productId }: Props) {
                         const isOwner = user?.id === review.userId
                         const isEditing = editingReviewId === review.id
 
-                        return (
-                            <div key={review.id} className="bg-white rounded-lg shadow p-4">
-                                {/* Header */}
-                                <div className="flex items-center justify-between gap-3 mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold">{review.userName || 'Аноним'}</span>
-                                        {review.isVerifiedPurchase && (
-                                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                                                ✅ Купил
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        {isOwner && !isEditing && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setEditingReviewId(review.id)}
-                                                className="text-xs px-2 py-1 rounded border border-blue-200 text-blue-600 hover:bg-blue-50"
-                                            >
-                                                ✏️ Редактировать
-                                            </button>
-                                        )}
-                                        <span className="text-xs text-gray-500">
-                                            {new Date(review.createdAt).toLocaleDateString('ru-RU')}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {isEditing ? (
+                        if (isEditing) {
+                            return (
+                                <div
+                                    key={review.id}
+                                    id={`review-${review.id}`}
+                                    className="bg-white rounded-lg shadow p-4"
+                                >
                                     <EditReviewForm
                                         review={review}
                                         onCancel={() => setEditingReviewId(null)}
                                         onSaved={() => setEditingReviewId(null)}
                                     />
-                                ) : (
-                                    <>
-                                        {/* Рейтинг */}
-                                        <StarRating rating={review.rating || 0} size="sm" />
+                                </div>
+                            )
+                        }
 
-                                        {/* Текст */}
-                                        <p className="mt-2 text-gray-700 whitespace-pre-wrap">{review.text}</p>
-
-                                        {/* ✅ Фото — imagesUrls */}
-                                        {review.imagesUrls && review.imagesUrls.length > 0 && (
-                                            <div className="flex gap-2 mt-3 flex-wrap">
-                                                {review.imagesUrls.map((url, i) => (
-                                                    <img
-                                                        key={i}
-                                                        src={url}
-                                                        alt={`Фото ${i + 1}`}
-                                                        className="w-24 h-24 object-cover rounded cursor-pointer hover:opacity-80 border"
-                                                        onClick={() => window.open(url, '_blank')}
-                                                        onError={(e) => {
-                                                            e.currentTarget.style.display = 'none'
-                                                        }}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* ✅ Видео — videosUrls */}
-                                        {review.videosUrls && review.videosUrls.length > 0 && (
-                                            <div className="flex gap-2 mt-3 flex-wrap">
-                                                {review.videosUrls.map((url, i) => (
-                                                    <video
-                                                        key={i}
-                                                        src={url}
-                                                        controls
-                                                        className="w-40 h-24 object-cover rounded border"
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Ответ админа */}
-                                        {review.adminResponse && (
-                                            <div className="mt-3 ml-4 p-3 bg-blue-50 rounded border-l-4 border-blue-500">
-                                                <div className="text-xs font-bold text-blue-700 mb-1">
-                                                    💬 Ответ магазина
-                                                </div>
-                                                <p className="text-sm text-gray-700">{review.adminResponse}</p>
-                                                {review.adminResponseAt && (
-                                                    <div className="text-xs text-gray-500 mt-1">
-                                                        {new Date(review.adminResponseAt).toLocaleDateString('ru-RU')}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </div>
+                        return (
+                            <ReviewCard
+                                key={review.id}
+                                id={`review-${review.id}`}
+                                review={review}
+                                highlighted={review.id === highlightReviewId}
+                                actions={
+                                    isOwner ? (
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditingReviewId(review.id)}
+                                                className="text-xs px-2 py-1 rounded border border-blue-200 text-blue-600 hover:bg-blue-50 whitespace-nowrap"
+                                            >
+                                                ✏️ Редактировать
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setReviewToDelete(review.id)}
+                                                className="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 whitespace-nowrap"
+                                            >
+                                                🗑 Удалить
+                                            </button>
+                                        </div>
+                                    ) : undefined
+                                }
+                            />
                         )
                     })}
                 </div>
@@ -186,6 +199,17 @@ export default function ReviewList({ productId }: Props) {
                     </button>
                 </div>
             )}
+
+            <ConfirmDialog
+                isOpen={reviewToDelete !== null}
+                title="Удалить отзыв?"
+                message="Отзыв будет удалён без возможности восстановления."
+                confirmLabel="Да, удалить"
+                cancelLabel="Отмена"
+                onConfirm={handleDelete}
+                onCancel={() => setReviewToDelete(null)}
+                isLoading={deleteMutation.isPending}
+            />
         </div>
     )
 }

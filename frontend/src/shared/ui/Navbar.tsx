@@ -74,6 +74,16 @@ export default function Navbar() {
                         </Link>
                     )}
 
+                    {isAuthenticated && (
+                        <Link
+                            to="/favorites"
+                            className="text-gray-600 hover:text-gray-900"
+                            title="Избранное"
+                        >
+                            ❤️ Избранное
+                        </Link>
+                    )}
+
                     {isAuthenticated ? (
                         <Link
                             to="/profile"

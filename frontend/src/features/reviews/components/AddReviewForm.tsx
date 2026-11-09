@@ -29,6 +29,9 @@ export default function AddReviewForm({ productId, onSuccess }: Props) {
 
             // ✅ Обновляем список отзывов
             queryClient.invalidateQueries({ queryKey: ['reviews', productId] })
+            queryClient.invalidateQueries({ queryKey: ['userReviews'] })
+            queryClient.invalidateQueries({ queryKey: ['product', productId] })
+            queryClient.invalidateQueries({ queryKey: ['products'] })
 
             setTimeout(() => {
                 setSuccessMessage(null)

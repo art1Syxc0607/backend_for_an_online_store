@@ -3,6 +3,7 @@ import type { ProductDto, PopularProductDto } from '@/shared/api/types'
 import StarRating from '@/shared/ui/StarRating'
 import AddToCartButton from '@/features/cart/components/AddToCartButton'
 import AddToCurrentOrderButton from '@/features/current-order/components/AddToCurrentOrderButton'
+import FavoriteButton from '@/features/favorites/components/FavoriteButton'
 
 type ProductLike = ProductDto | PopularProductDto
 
@@ -94,6 +95,11 @@ export default function ProductCard({ product }: Props) {
                         size="sm"
                         className="w-full"
                     />
+                </div>
+
+                {/* ✅ Кнопка избранного */}
+                <div className="mt-2">
+                    <FavoriteButton productId={productId} className="w-full" />
                 </div>
             </div>
         </div>
