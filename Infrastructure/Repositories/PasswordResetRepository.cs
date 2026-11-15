@@ -28,6 +28,41 @@ public class PasswordResetRepository : IPasswordResetRepository
             .FirstOrDefaultAsync(ct);
     }
 
+    public async Task<PasswordResetCode?> GetLatestActiveForUpdateAsync(
+        int userId,
+        CancellationToken ct = default)
+    {
+        // The row stays locked until the transaction ends, so a concurrent
+        // reset request waits here and then sees UsedAt != null.
+        var now = DateTime.UtcNow;
+        var code = await _context.PasswordResetCodes
+            .FromSqlInterpolated(
+                $@"SELECT *, xmin FROM ""PasswordResetCodes""
+                   WHERE ""UserId"" = {userId}
+                     AND ""UsedAt"" IS NULL
+                     AND ""ExpiresAt"" > {now}
+                   ORDER BY ""CreatedAt"" DESC
+                   LIMIT 1
+                   FOR UPDATE")
+            .FirstOrDefaultAsync(ct);
+
+        // A tracking query does not refresh an entity that is already tracked.
+        if (code != null)
+            await _context.Entry(code).ReloadAsync(ct);
+
+        return code;
+    }
+
+    public Task<int> IncrementAttemptsAsync(int codeId, CancellationToken ct = default)
+    {
+        // Single UPDATE ... SET "AttemptsCount" = "AttemptsCount" + 1, so
+        // parallel wrong guesses cannot lose each other's increments.
+        return _context.PasswordResetCodes
+            .Where(x => x.Id == codeId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.AttemptsCount, x => x.AttemptsCount + 1), ct);
+    }
+
     public async Task<List<PasswordResetCode>> GetAllActiveByUserIdAsync(
         int userId,
         CancellationToken ct = default)

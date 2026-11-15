@@ -1,18 +1,16 @@
-﻿using Application.DTOs.Category;
+﻿using Application.Interfaces.Caching;
 using MediatR;
-using Application.Interfaces.Caching;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Category;
+namespace Application.Commands.Admin.Category;
 
-public class AddCategoryCommand : IRequest<int>, ICacheInvalidatingCommand
+public class DeleteCategoryCommand : IRequest, ICacheInvalidatingCommand
 {
-    public string Name { get;  set; }
-    public string? Description { get;  set; }
+    public int CategoryId { get; set; }
 
     // ✅ Инвалидируем кэш 
     public IEnumerable<string> CachePrefixesToInvalidate => new[]

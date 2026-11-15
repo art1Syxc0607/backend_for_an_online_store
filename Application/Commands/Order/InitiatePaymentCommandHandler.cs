@@ -16,6 +16,12 @@ namespace Application.Commands.Order;
 
 public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, PaymentResult>
 {
+    /// <summary>
+    /// How long a pending payment intent is reused before it is considered stale
+    /// and replaced by a fresh one.
+    /// </summary>
+    private static readonly TimeSpan PendingPaymentLifetime = TimeSpan.FromMinutes(30);
+
     private readonly IOrderRepository _orderRepository;
     private readonly IUserRepository _userRepository;
     private readonly IPaymentService _paymentService;
@@ -67,12 +73,31 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
             throw new DomainException(
                 $"Cannot pay for an order in status '{order.Status}'. Only pending orders can be paid.");
 
-        // 2. Получаем пользователя для отправки email
+        // 2. Переиспользуем уже созданный Pending-intent, если он ещё жив.
+        //    Двойной клик / повтор запроса не должен создавать вторую оплату.
+        var pending = await _paymentRepository.GetPendingByOrderIdAsync(order.Id, ct);
+        if (pending != null
+            && pending.Method == command.Method
+            && pending.CreatedAt > DateTime.UtcNow - PendingPaymentLifetime)
+        {
+            _logger.LogInformation(
+                "Reusing pending payment: OrderId {OrderId}, PaymentIntentId {PaymentIntentId}",
+                order.Id,
+                pending.TransactionId);
+
+            return new PaymentResult
+            {
+                Success = true,
+                PaymentIntentId = pending.TransactionId
+            };
+        }
+
+        // 3. Получаем пользователя для отправки email
         var user = await _userRepository.GetByIdAsync(command.UserId, ct);
         if (user == null)
             throw new DomainException("User not found");
 
-        // 3. Инициируем оплату через внешний сервис
+        // 4. Инициируем оплату через внешний сервис (вне транзакции и блокировок)
         var result = await _paymentService.InitiatePaymentAsync(command.OrderId, order.TotalAmount, command.Method, ct);
 
         if (result.Success)
@@ -105,7 +130,7 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
         if (string.IsNullOrWhiteSpace(result.PaymentIntentId))
             throw new DomainException("Payment provider did not return a payment intent id");
 
-        // 4. После ответа шлюза блокируем заказ и проверяем его статус ещё раз.
+        // 5. После ответа шлюза блокируем заказ и проверяем его статус ещё раз.
         //    Внешний HTTP-вызов не должен выполняться под блокировкой БД.
         await _unitOfWork.BeginTransactionAsync(ct);
 
@@ -121,6 +146,38 @@ public class InitiatePaymentHandler : IRequestHandler<InitiatePaymentCommand, Pa
             if (lockedOrder.Status != OrderStatus.Pending)
                 throw new DomainException(
                     $"Cannot pay for an order in status '{lockedOrder.Status}'. Only pending orders can be paid.");
+
+            // 6. Под блокировкой заказа проверяем, не создал ли платёж
+            //    параллельный запрос. У заказа может быть только один Pending.
+            var existing = await _paymentRepository.GetPendingByOrderIdForUpdateAsync(lockedOrder.Id, ct);
+            if (existing != null)
+            {
+                if (existing.Method == command.Method
+                    && existing.CreatedAt > DateTime.UtcNow - PendingPaymentLifetime)
+                {
+                    await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+
+                    _logger.LogInformation(
+                        "Concurrent payment initiation detected; reusing intent {PaymentIntentId} " +
+                        "for order {OrderId}",
+                        existing.TransactionId,
+                        lockedOrder.Id);
+
+                    return new PaymentResult
+                    {
+                        Success = true,
+                        PaymentIntentId = existing.TransactionId
+                    };
+                }
+
+                // Метод оплаты сменился или intent устарел — закрываем старую
+                // попытку, чтобы освободить место для нового Pending-платежа.
+                existing.MarkAsFailed("Superseded by a newer payment attempt.");
+
+                // Flush the UPDATE before the INSERT: the partial unique index
+                // allows only one pending payment per order.
+                await _unitOfWork.SaveChangesAsync(ct);
+            }
 
             var payment = new Payment(
                 lockedOrder,

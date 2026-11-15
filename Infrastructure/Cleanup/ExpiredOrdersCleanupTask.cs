@@ -12,7 +12,6 @@ public class ExpiredOrdersCleanupTask : ICleanupTask
 {
     private readonly IOrderRepository _orderRepository;
     private readonly IProductRepository _productRepository;
-    private readonly IUserRepository _userRepository;
     private readonly IEmailBackgroundService _emailService;
     private readonly IEmailTemplateService _emailTemplate;
     private readonly IUnitOfWork _unitOfWork;
@@ -26,7 +25,6 @@ public class ExpiredOrdersCleanupTask : ICleanupTask
     public ExpiredOrdersCleanupTask(
         IOrderRepository orderRepository,
         IProductRepository productRepository,
-        IUserRepository userRepository,
         IEmailBackgroundService emailService,
         IEmailTemplateService emailTemplate,
         IUnitOfWork unitOfWork,
@@ -36,7 +34,6 @@ public class ExpiredOrdersCleanupTask : ICleanupTask
     {
         _orderRepository = orderRepository;
         _productRepository = productRepository;
-        _userRepository = userRepository;
         _emailService = emailService;
         _emailTemplate = emailTemplate;
         _unitOfWork = unitOfWork;
@@ -53,19 +50,19 @@ public class ExpiredOrdersCleanupTask : ICleanupTask
 
         var threshold = DateTime.UtcNow.AddMinutes(-_options.PaymentTimeoutMinutes);
         var totalCancelled = 0;
-        const int batchSize = 100;
+        var batchSize = Math.Max(1, _options.BatchSize);
 
         while (!ct.IsCancellationRequested)
         {
-            var batch = await _orderRepository.GetExpiredPendingOrdersAsync(
+            var batchIds = await _orderRepository.GetExpiredPendingOrderIdsAsync(
                 threshold, batchSize, ct);
 
-            if (!batch.Any())
+            if (!batchIds.Any())
                 break;
 
             var cancelledInBatch = 0;
 
-            foreach (var candidate in batch)
+            foreach (var candidateId in batchIds)
             {
                 if (ct.IsCancellationRequested)
                     break;
@@ -76,12 +73,13 @@ public class ExpiredOrdersCleanupTask : ICleanupTask
                 {
                     // Re-read and lock the order: another worker or a payment
                     // confirmation may have changed it after the batch query.
-                    var order = await _orderRepository.GetOrderForUpdateAsync(candidate.Id, ct);
+                    var order = await _orderRepository.GetOrderForUpdateAsync(candidateId, ct);
                     if (order == null ||
                         order.Status != OrderStatus.Pending ||
                         order.CreatedAt >= threshold)
                     {
                         await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
+                        _unitOfWork.DiscardPendingChanges();
                         continue;
                     }
 
@@ -101,13 +99,19 @@ public class ExpiredOrdersCleanupTask : ICleanupTask
 
                     await _unitOfWork.SaveChangesAsync(ct);
                     await _unitOfWork.CommitTransactionAsync(ct);
+
+                    // Commit succeeded: detach the tracked graph so the next
+                    // order starts clean. The email below only reads in-memory data.
+                    _unitOfWork.DiscardPendingChanges();
+
                     cancelledInBatch++;
                     totalCancelled++;
 
                     // Email only after the cancellation is committed.
                     try
                     {
-                        var user = await _userRepository.GetByIdAsync(order.UserId, ct);
+                        // Loaded together with the order by GetOrderForUpdateAsync.
+                        var user = order.User;
                         if (user != null)
                         {
                             var email = _emailTemplate.CreateOrderCancelledByTimeoutEmail(
@@ -125,7 +129,9 @@ public class ExpiredOrdersCleanupTask : ICleanupTask
                 catch (Exception ex)
                 {
                     await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
-                    _logger.LogError(ex, "Failed to cancel order {OrderId}", candidate.Id);
+                    _logger.LogError(ex, "Failed to cancel order {OrderId}", candidateId);
+
+                    _unitOfWork.DiscardPendingChanges();
                 }
             }
 
@@ -134,7 +140,7 @@ public class ExpiredOrdersCleanupTask : ICleanupTask
             if (cancelledInBatch == 0)
                 break;
 
-            if (batch.Count < batchSize)
+            if (batchIds.Count < batchSize)
                 break;
         }
 

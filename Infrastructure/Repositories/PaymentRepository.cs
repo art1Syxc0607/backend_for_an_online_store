@@ -29,9 +29,14 @@ public class PaymentRepository : IPaymentRepository
 
     public async Task<Payment?> GetByOrderIdAsync(int orderId, CancellationToken ct = default)
     {
+        // An order can have several payment attempts (pending -> failed -> paid),
+        // so return the most recent one instead of an arbitrary row.
         return await _context.Payments
             .Include(p => p.Order)
-            .FirstOrDefaultAsync(p => p.OrderId == orderId, ct);
+            .Where(p => p.OrderId == orderId)
+            .OrderByDescending(p => p.CreatedAt)
+            .ThenByDescending(p => p.Id)
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task<Payment?> GetByTransactionIdAsync(string transactionId, CancellationToken ct = default)
@@ -89,6 +94,37 @@ public class PaymentRepository : IPaymentRepository
     public async Task<bool> ExistsByOrderIdAsync(int orderId, CancellationToken ct = default)
     {
         return await _context.Payments.AnyAsync(p => p.OrderId == orderId, ct);
+    }
+
+    public async Task<Payment?> GetPendingByOrderIdAsync(int orderId, CancellationToken ct = default)
+    {
+        return await _context.Payments
+            .Where(p => p.OrderId == orderId && p.Status == PaymentStatus.Pending)
+            .OrderByDescending(p => p.CreatedAt)
+            .ThenByDescending(p => p.Id)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<Payment?> GetPendingByOrderIdForUpdateAsync(
+        int orderId,
+        CancellationToken ct = default)
+    {
+        // Status is stored as an int, so Pending == 0. The row is locked until
+        // the transaction ends, which serialises concurrent payment initiation.
+        var payment = await _context.Payments
+            .FromSqlInterpolated(
+                $@"SELECT *, xmin FROM ""Payments""
+                   WHERE ""OrderId"" = {orderId} AND ""Status"" = {(int)PaymentStatus.Pending}
+                   ORDER BY ""CreatedAt"" DESC
+                   LIMIT 1
+                   FOR UPDATE")
+            .FirstOrDefaultAsync(ct);
+
+        // A tracking query does not refresh an entity that is already tracked.
+        if (payment != null)
+            await _context.Entry(payment).ReloadAsync(ct);
+
+        return payment;
     }
 
     public async Task<List<Payment>> GetPendingPaymentsAsync(DateTime olderThan, CancellationToken ct = default)

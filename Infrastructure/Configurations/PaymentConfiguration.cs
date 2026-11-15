@@ -44,7 +44,15 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         // ✅ Индексы
         builder.HasIndex(p => p.TransactionId).IsUnique();
         builder.HasIndex(p => p.UserId);
-        builder.HasIndex(p => p.OrderId);
         builder.HasIndex(p => p.Status);
+
+        // An order must not have more than one active (Pending) payment at a time.
+        // This is the database-level guarantee behind InitiatePaymentHandler.
+        // EF keeps a single index per property set, so this partial unique index
+        // also replaces the former plain IX_Payments_OrderId.
+        builder.HasIndex(p => p.OrderId)
+            .HasDatabaseName("IX_Payments_OrderId_Pending")
+            .HasFilter("\"Status\" = 0")
+            .IsUnique();
     }
 }

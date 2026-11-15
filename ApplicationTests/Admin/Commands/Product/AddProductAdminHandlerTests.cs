@@ -1,4 +1,4 @@
-﻿using Application.Commands.Product;
+﻿using Application.Commands.Admin.Product;
 using Application.DTOs.File;
 using Application.Interfaces;
 using Application.Interfaces.Caching;

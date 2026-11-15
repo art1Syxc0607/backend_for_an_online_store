@@ -64,4 +64,18 @@ public class CategoryRepository : ICategoryRepository
     {
         return await _dbContext.Categories.AnyAsync(c => c.Id == categoryId, ct);
     }
+
+    public async Task<bool> ExistsByNameAsync(
+        string name,
+        int? excludeCategoryId = null,
+        CancellationToken ct = default)
+    {
+        var normalized = name.Trim().ToLowerInvariant();
+
+        // Compares lower("Name") so "Обувь" and "обувь" are the same category.
+        return await _dbContext.Categories.AnyAsync(
+            c => (excludeCategoryId == null || c.Id != excludeCategoryId)
+                 && c.Name.ToLower() == normalized,
+            ct);
+    }
 }

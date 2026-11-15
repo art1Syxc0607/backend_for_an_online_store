@@ -58,6 +58,7 @@ public class OrderRepository : IOrderRepository
             .Include(o => o.Items)
                 .ThenInclude(i => i.Product)
                     .ThenInclude(p => p.Category)
+            .Include(o => o.User)
             .Where(o => o.Id == id)
             .LoadAsync(ct);
 
@@ -346,18 +347,19 @@ public class OrderRepository : IOrderRepository
 
 
     // Cleanup
-    public async Task<List<Order>> GetExpiredPendingOrdersAsync(
+    public async Task<List<int>> GetExpiredPendingOrderIdsAsync(
         DateTime olderThan,
         int limit,
         CancellationToken ct = default)
     {
+        // The cleanup task re-reads every order under a row lock, so only the
+        // identifiers are needed here. A scalar projection is never tracked.
         return await _dpContext.Orders
-            .Include(o => o.Items)
-                .ThenInclude(oi => oi.Product)
             .Where(o => o.Status == OrderStatus.Pending)
             .Where(o => o.CreatedAt < olderThan)
             .OrderBy(o => o.CreatedAt)
             .Take(limit)
+            .Select(o => o.Id)
             .ToListAsync(ct);
     }
 

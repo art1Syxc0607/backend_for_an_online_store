@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Product;
+namespace Application.Commands.Admin.Product;
 
 public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
 {
@@ -71,6 +71,12 @@ public class AddProductCommandHandler : IRequestHandler<AddProductCommand, int>
         );
 
         product.EnsureCanAddFiles(files.Count);
+
+        // SKU — бизнес-ключ товара. Уникальность обеспечивает индекс
+        // IX_Products_NormalizedSku: при гонке второй INSERT получит 23505,
+        // который middleware превращает в 409 DUPLICATE_ENTRY.
+        if (!string.IsNullOrWhiteSpace(command.Sku))
+            product.UpdateDetails(sku: command.Sku);
 
         var uploadedUrls = new List<string>();
         var productPersisted = false;

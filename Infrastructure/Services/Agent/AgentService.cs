@@ -23,8 +23,51 @@ public class AgentService
     private readonly ILogger<AgentService> _logger;
     private static readonly JsonSerializerOptions JsonOptions = JsonSerializerOptions.Web;
 
-    // Семафоры на sessionId для защиты от параллельных запросов к одной сессии
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new();
+    // Семафоры на sessionId для защиты от параллельных запросов к одной сессии.
+    // Запись удаляется, когда с ней больше никто не работает, чтобы словарь
+    // не рос бесконечно. Работает в пределах одного процесса; между
+    // инстансами дополнительно защищает xmin.
+    private static readonly ConcurrentDictionary<string, SessionLockEntry> _sessionLocks = new();
+
+    private sealed class SessionLockEntry
+    {
+        public SemaphoreSlim Semaphore { get; } = new(1, 1);
+        public int References;
+    }
+
+    private static SessionLockEntry AcquireEntry(string sessionId)
+    {
+        while (true)
+        {
+            var entry = _sessionLocks.GetOrAdd(sessionId, _ => new SessionLockEntry());
+            Interlocked.Increment(ref entry.References);
+
+            // The entry may have been removed between GetOrAdd and the
+            // increment; in that case retry with (or create) the current one.
+            if (_sessionLocks.TryGetValue(sessionId, out var current)
+                && ReferenceEquals(current, entry))
+            {
+                return entry;
+            }
+
+            Interlocked.Decrement(ref entry.References);
+        }
+    }
+
+    private static void ReleaseEntry(string sessionId, SessionLockEntry entry)
+    {
+        entry.Semaphore.Release();
+        DropReference(sessionId, entry);
+    }
+
+    private static void DropReference(string sessionId, SessionLockEntry entry)
+    {
+        if (Interlocked.Decrement(ref entry.References) == 0)
+        {
+            _sessionLocks.TryRemove(
+                new KeyValuePair<string, SessionLockEntry>(sessionId, entry));
+        }
+    }
 
     public AgentService(
         AIAgent agent,
@@ -59,15 +102,26 @@ public class AgentService
         // Семафор гарантирует, что два запроса с одинаковым SessionId не будут
         // читать одно состояние JsonState, вызывать агента дважды и перезаписывать
         // изменения друг друга (lost update).
-        var sem = _sessionLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
-        await sem.WaitAsync(ct);
+        var lockEntry = AcquireEntry(sessionId);
+        try
+        {
+            await lockEntry.Semaphore.WaitAsync(ct);
+        }
+        catch
+        {
+            // Waiting was cancelled before the semaphore was acquired: drop the
+            // reference without releasing someone else's lock.
+            DropReference(sessionId, lockEntry);
+            throw;
+        }
+
         try
         {
             return await ChatWithLockAsync(request, sessionId, ct);
         }
         finally
         {
-            sem.Release();
+            ReleaseEntry(sessionId, lockEntry);
         }
     }
 

@@ -14,5 +14,6 @@ public class AddProductDto
     public int StockQuantity { get; set; }
     public int? CategoryId { get; set; }
     public string Description { get; set; }
+    public string? Sku { get; set; }
     public List<IFormFile>? Files { get; set; } // ← файл внутри DTO!
 }

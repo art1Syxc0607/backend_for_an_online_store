@@ -52,10 +52,10 @@ public interface IOrderRepository
         CancellationToken ct = default);
 
     /// <summary>
-    /// Получить неоплаченные заказы старше указанного времени
-    /// Cleanup
+    /// Получить идентификаторы неоплаченных заказов старше указанного времени.
+    /// Cleanup: сами заказы перечитываются под блокировкой в обработчике.
     /// </summary>
-    Task<List<Order>> GetExpiredPendingOrdersAsync(
+    Task<List<int>> GetExpiredPendingOrderIdsAsync(
         DateTime olderThan,
         int limit,
         CancellationToken ct = default);

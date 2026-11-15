@@ -9,7 +9,41 @@ namespace Infrastructure.Data;
 
 public static class SeedData
 {
+    // Arbitrary application-wide key for the seeding advisory lock.
+    private const int SeedAdvisoryLockId = 727_001;
+
     public static async Task InitializeAsync(AppDbContext context, IPasswordHasher passwordHasher)
+    {
+        var isPostgres = context.Database.ProviderName?
+            .Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+
+        if (!isPostgres)
+        {
+            await SeedAsync(context, passwordHasher);
+            return;
+        }
+
+        // A transaction-scoped advisory lock keeps two application instances
+        // from seeding the same empty database concurrently (duplicated rows,
+        // 23505 on unique indexes, startup crash). The lock is released
+        // automatically on commit/rollback.
+        await context.Database.BeginTransactionAsync();
+        await context.Database.ExecuteSqlRawAsync(
+            "SELECT pg_advisory_xact_lock({0})", SeedAdvisoryLockId);
+
+        try
+        {
+            await SeedAsync(context, passwordHasher);
+            await context.Database.CommitTransactionAsync();
+        }
+        catch
+        {
+            await context.Database.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
+    private static async Task SeedAsync(AppDbContext context, IPasswordHasher passwordHasher)
     {
         // ===== 1. АДМИН =====
         if (!await context.Users.AnyAsync(u => u.Email == "admin@store.com"))

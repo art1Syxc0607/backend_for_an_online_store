@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Product;
+namespace Application.Commands.Admin.Product;
 
 // Application/Commands/Product/DeleteFilesHandler.cs
 public class DeleteFilesHandler : IRequestHandler<DeleteFilesCommand, DeleteFilesResponseDto>

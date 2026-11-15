@@ -87,7 +87,17 @@ public class Product
             Description = description;
         } 
         
-        if (sku != null) Sku = sku;
+        if (sku != null)
+        {
+            var normalizedSku = sku.Trim();
+
+            if (normalizedSku.Length > 100)
+                throw new DomainException("SKU cannot be longer than 100 characters");
+
+            // Пустой SKU храним как NULL: иначе несколько товаров без артикула
+            // получили бы одинаковый NormalizedSku = '' и упали на уникальном индексе.
+            Sku = normalizedSku.Length == 0 ? null : normalizedSku;
+        }
         if(purchasePrice.HasValue) SetPurchasePrice(purchasePrice.Value);
 
         // ✅ Остаток и резерв обновляем согласованно и проверяем ИТОГОВУЮ пару,

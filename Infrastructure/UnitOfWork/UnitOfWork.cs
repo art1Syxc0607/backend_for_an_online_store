@@ -64,6 +64,15 @@ public class UnitOfWork : IUnitOfWork, IAsyncDisposable
         }
     }
 
+    public void DiscardPendingChanges()
+    {
+        if (_transaction != null)
+            throw new InvalidOperationException(
+                "Cannot discard pending changes while a transaction is active. Roll it back first.");
+
+        _context.ChangeTracker.Clear();
+    }
+
     public async ValueTask DisposeAsync()
     {
         var transaction = _transaction;

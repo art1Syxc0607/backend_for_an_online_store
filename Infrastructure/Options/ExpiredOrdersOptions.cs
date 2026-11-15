@@ -19,4 +19,9 @@ public class ExpiredOrdersOptions
     /// Как часто проверять просроченные заказы (в минутах)
     /// </summary>
     public int CheckIntervalMinutes { get; set; } = 15;
+
+    /// <summary>
+    /// Сколько просроченных заказов выбирать за одну итерацию
+    /// </summary>
+    public int BatchSize { get; set; } = 100;
 }

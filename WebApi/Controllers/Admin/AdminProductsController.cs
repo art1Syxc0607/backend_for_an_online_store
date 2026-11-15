@@ -1,4 +1,4 @@
-﻿using Application.Commands.Product;
+﻿using Application.Commands.Admin.Product;
 using Application.Common;
 using Application.Queries.Admin.Product;
 using Application.DTOs.Admin.Product;
@@ -49,6 +49,7 @@ public class AdminProductsController : ControllerBase
             StockQuantity = dto.StockQuantity,
             CategoryId = dto.CategoryId,
             Description = dto.Description,
+            Sku = dto.Sku,
             Files = dto.Files?.Select(f => new Application.DTOs.File.FileUploadDto
             {
                 Stream = f.OpenReadStream(),

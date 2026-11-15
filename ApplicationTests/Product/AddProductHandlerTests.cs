@@ -1,5 +1,5 @@
 ﻿// ApplicationTests/Commands/Product/AddProductHandlerTests.cs
-using Application.Commands.Product;
+using Application.Commands.Admin.Product;
 using Application.Interfaces;
 using Castle.Core.Logging;
 using Domain.Entities;

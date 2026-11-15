@@ -4,7 +4,7 @@ using Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Application.Commands.Product;
+namespace Application.Commands.Admin.Product;
 
 public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand>
 {

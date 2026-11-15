@@ -76,7 +76,8 @@ public abstract class IntegrationTestBase : IClassFixture<CustomWebApplicationFa
     protected async Task<string> LoginAsAdminAsync()
     {
         var adminEmail = "admin@store.com";
-        var adminPassword = "Admin123!@#";
+        // SeedData хеширует именно "Admin123!" — пароль должен совпадать.
+        var adminPassword = "Admin123!";
 
         var loginResponse = await Client.PostAsJsonAsync("/api/auth/login", new
         {

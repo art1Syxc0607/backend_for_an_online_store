@@ -1,5 +1,4 @@
 using Application.Interfaces;
-using Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -27,16 +26,21 @@ public class RemoveFromFavoritesCommandHandler : IRequestHandler<RemoveFromFavor
 
         try
         {
-            if (!await _favoriteRepository.IsFavoritedAsync(command.UserId, command.ProductId, ct))
-            {
-                await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
-                throw new DomainException("Product is not in favorites");
-            }
+            // Idempotent: a concurrent double-remove deletes 0 rows and still
+            // succeeds instead of surfacing a concurrency conflict.
+            var removed = await _favoriteRepository.RemoveAsync(
+                command.UserId, command.ProductId, ct);
 
-            await _favoriteRepository.RemoveAsync(command.UserId, command.ProductId, ct);
-
-            await _unitOfWork.SaveChangesAsync(ct);
             await _unitOfWork.CommitTransactionAsync(ct);
+
+            if (removed == 0)
+            {
+                _logger.LogInformation(
+                    "Product {ProductId} was already not in favorites for user {UserId}",
+                    command.ProductId,
+                    command.UserId);
+                return;
+            }
 
             _logger.LogInformation(
                 "Product {ProductId} removed from favorites for user {UserId}",

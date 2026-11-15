@@ -474,13 +474,13 @@ public class ConcurrencyTests : IntegrationTestBase
     [Fact]
     public async Task UpdateProduct_WhenTwoUpdatesRace_OneGets409()
     {
-        // Arrange — продукт и пользователь с ролью Admin (админ-логин сломан:
-        // SeedData использует Admin123!, а LoginAsAdminAsync пытается Admin123!@#,
-        // поэтому делаем пользователя админом напрямую в БД).
+        // Arrange — продукт и пользователь с ролью Admin. Роль повышаем в БД,
+        // а затем перелогиниваемся: в старом JWT роль ещё "User".
         var productId = await CreateProductAsync("AdminProduct", 100m, 10);
         var client = await CreateUserClientAsync("admin1@mail.com", "Test123!@#", "Admin1");
 
         await MakeUserAdminAsync(client);
+        await ReloginAsync(client, "admin1@mail.com", "Test123!@#");
 
         var product = await GetProductFromDbAsync(productId);
         product!.Price.Should().Be(100m);
@@ -519,6 +519,32 @@ public class ConcurrencyTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task AddProduct_WhenSameSkuCreatedConcurrently_OnlyOneProductIsCreated()
+    {
+        // Arrange — пользователь с ролью Admin + свежий токен с этой ролью
+        var client = await CreateUserClientAsync("skuAdmin@mail.com", "Test123!@#", "SkuAdmin");
+        await MakeUserAdminAsync(client);
+        await ReloginAsync(client, "skuAdmin@mail.com", "Test123!@#");
+
+        const string sku = "RACE-SKU-001";
+
+        // Act — два одинаковых товара с одним SKU одновременно
+        var responses = await RunConcurrently(
+            () => client.PostAsync("/api/admin/product", BuildProductForm("Race product 1", sku)),
+            () => client.PostAsync("/api/admin/product", BuildProductForm("Race product 2", sku)));
+
+        // Assert — уникальный индекс IX_Products_NormalizedSku пропускает только один INSERT
+        responses.Count(r => r.IsSuccessStatusCode).Should().Be(1);
+        responses.Count(r => r.StatusCode == HttpStatusCode.Conflict).Should().Be(1,
+            "второй INSERT должен получить 23505, который middleware маппит в 409");
+
+        var productsWithSku = await QueryDbAsync(async db =>
+            await db.Products.CountAsync(p => p.Sku == sku));
+
+        productsWithSku.Should().Be(1, "дубликатов с одинаковым SKU быть не должно");
+    }
+
+    [Fact]
     public async Task UploadProductFiles_WhenTwoUploadsRace_OneGets409()
     {
         // Arrange — продукт и пользователь с ролью Admin
@@ -526,6 +552,7 @@ public class ConcurrencyTests : IntegrationTestBase
         var client = await CreateUserClientAsync("admin2@mail.com", "Test123!@#", "Admin2");
 
         await MakeUserAdminAsync(client);
+        await ReloginAsync(client, "admin2@mail.com", "Test123!@#");
 
         // Act — две одновременные загрузки файлов одного продукта
         var content1 = new MultipartFormDataContent();
@@ -560,6 +587,25 @@ public class ConcurrencyTests : IntegrationTestBase
             await db.Database.ExecuteSqlInterpolatedAsync(
                 $@"UPDATE ""Users"" SET ""Role"" = 'Admin' WHERE ""Id"" = {userId}");
         });
+    }
+
+    /// <summary>
+    /// Повышение роли в БД не меняет уже выданный JWT, поэтому после
+    /// MakeUserAdminAsync нужен новый токен — иначе [Authorize(Roles="Admin")]
+    /// продолжит видеть старую роль "User".
+    /// </summary>
+    private static async Task ReloginAsync(HttpClient client, string email, string password)
+    {
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            Email = email,
+            Password = password
+        });
+        loginResponse.EnsureSuccessStatusCode();
+
+        var auth = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", auth!.Token);
     }
 
     // =====================================================================
@@ -695,6 +741,18 @@ public class ConcurrencyTests : IntegrationTestBase
         content.Add(new StringContent(productId.ToString()), "ProductId");
         content.Add(new StringContent(text), "Text");
         content.Add(new StringContent(rating.ToString()), "Rating");
+        return content;
+    }
+
+    private static MultipartFormDataContent BuildProductForm(string name, string sku)
+    {
+        var content = new MultipartFormDataContent();
+        content.Add(new StringContent(name), "Name");
+        content.Add(new StringContent("100"), "Price");
+        content.Add(new StringContent("70"), "PurchasePrice");
+        content.Add(new StringContent("5"), "StockQuantity");
+        content.Add(new StringContent("Test description"), "Description");
+        content.Add(new StringContent(sku), "Sku");
         return content;
     }
 }

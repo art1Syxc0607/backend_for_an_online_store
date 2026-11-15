@@ -1,5 +1,4 @@
 ﻿// InfrastructureTests/Services/UploadProductImageHandlerTests.cs
-using Application.Commands.Product;
 using Application.DTOs.Product;
 using Application.DTOs.File;
 using Application.Interfaces;
@@ -9,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System.Threading;
 using Xunit;
+using Application.Commands.Admin.Product;
 
 namespace InfrastructureTests.Services;
 

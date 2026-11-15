@@ -28,6 +28,16 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Ignore(p => p.AvailableQuantity);
 
         builder.Property(p => p.Sku).HasMaxLength(100);
+
+        // Нормализованный SKU — бизнес-ключ товара (без учёта регистра и
+        // пробелов по краям). PostgreSQL считает NULL-ы в уникальном индексе
+        // различными, поэтому товары без артикула не конфликтуют между собой.
+        builder.Property<string>("NormalizedSku")
+            .HasComputedColumnSql(@"lower(btrim(""Sku""))", stored: true);
+
+        builder.HasIndex("NormalizedSku")
+            .IsUnique()
+            .HasDatabaseName("IX_Products_NormalizedSku");
         //builder.Property(p => p.ImageUrl).HasMaxLength(2048);
 
 

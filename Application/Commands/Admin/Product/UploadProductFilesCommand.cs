@@ -1,4 +1,4 @@
-﻿using Application.DTOs.Product;
+﻿using Application.DTOs.File;
 using Application.Interfaces.Caching;
 using MediatR;
 using System;
@@ -7,12 +7,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Product;
+namespace Application.Commands.Admin.Product;
 
-public class DeleteFilesCommand : IRequest<DeleteFilesResponseDto>, ICacheInvalidatingCommand
+public class UploadProductFilesCommand : IRequest<List<FileUploadResponseDto>>, ICacheInvalidatingCommand
 {
     public int ProductId { get; init; }
-    public List<string> FileUrls { get; init; } = new(); // список URL для удаления
+    public List<FileUploadDto> Files { get; init; } = new();
 
     // ✅ Инвалидируем весь кэш товаров
     public IEnumerable<string> CachePrefixesToInvalidate => new[]

@@ -1,18 +1,16 @@
-﻿using Application.DTOs.File;
+﻿using MediatR;
 using Application.Interfaces.Caching;
-using MediatR;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Product;
+namespace Application.Commands.Admin.Product;
 
-public class UploadProductFilesCommand : IRequest<List<FileUploadResponseDto>>, ICacheInvalidatingCommand
+public class DeleteProductCommand : IRequest, ICacheInvalidatingCommand
 {
-    public int ProductId { get; init; }
-    public List<FileUploadDto> Files { get; init; } = new();
+    public int Id { get; set; }
 
     // ✅ Инвалидируем весь кэш товаров
     public IEnumerable<string> CachePrefixesToInvalidate => new[]

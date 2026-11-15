@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Category;
+namespace Application.Commands.Admin.Category;
 
 public class UpdateCategoryCommand : IRequest, ICacheInvalidatingCommand
 {

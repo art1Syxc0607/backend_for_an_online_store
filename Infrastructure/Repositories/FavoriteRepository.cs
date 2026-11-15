@@ -43,17 +43,16 @@ public class FavoriteRepository : IFavoriteRepository
         await _context.Favorites.AddAsync(favorite, ct);
     }
 
-    public async Task RemoveAsync(
+    public async Task<int> RemoveAsync(
         int userId,
         int productId,
         CancellationToken ct = default)
     {
-        var favorite = await _context.Favorites
-            .FirstOrDefaultAsync(f => f.UserId == userId && f.ProductId == productId, ct);
-
-        if (favorite != null)
-        {
-            _context.Favorites.Remove(favorite);
-        }
+        // A single DELETE ... WHERE statement is atomic, so two concurrent
+        // removals no longer produce a DbUpdateConcurrencyException (0 rows
+        // affected is a normal, idempotent outcome).
+        return await _context.Favorites
+            .Where(f => f.UserId == userId && f.ProductId == productId)
+            .ExecuteDeleteAsync(ct);
     }
 }

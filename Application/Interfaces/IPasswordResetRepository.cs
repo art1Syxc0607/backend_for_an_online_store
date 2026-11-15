@@ -15,6 +15,17 @@ public interface IPasswordResetRepository
     Task<PasswordResetCode?> GetLatestByUserIdAsync(int userId, CancellationToken ct = default);
 
     /// <summary>
+    /// Заблокировать последний активный код пользователя на время текущей
+    /// транзакции. Гарантирует, что один код нельзя погасить дважды.
+    /// </summary>
+    Task<PasswordResetCode?> GetLatestActiveForUpdateAsync(int userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Атомарно увеличить счётчик неудачных попыток (без потери обновлений).
+    /// </summary>
+    Task<int> IncrementAttemptsAsync(int codeId, CancellationToken ct = default);
+
+    /// <summary>
     /// Получить все активные коды для пользователя
     /// </summary>
     Task<List<PasswordResetCode>> GetAllActiveByUserIdAsync(int userId, CancellationToken ct = default);

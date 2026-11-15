@@ -60,6 +60,19 @@ public interface IPaymentRepository
     Task<bool> ExistsByOrderIdAsync(int orderId, CancellationToken ct = default);
 
     /// <summary>
+    /// Получить незавершённый (Pending) платёж заказа без блокировки.
+    /// Используется, чтобы переиспользовать уже созданный платёжный intent
+    /// вместо повторного обращения к шлюзу.
+    /// </summary>
+    Task<Payment?> GetPendingByOrderIdAsync(int orderId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Заблокировать незавершённый платёж заказа на время текущей транзакции.
+    /// Гарантирует, что у заказа не появится второй Pending-платёж.
+    /// </summary>
+    Task<Payment?> GetPendingByOrderIdForUpdateAsync(int orderId, CancellationToken ct = default);
+
+    /// <summary>
     /// Получить все платежи со статусом Pending (для фоновых задач)
     /// </summary>
     Task<List<Payment>> GetPendingPaymentsAsync(DateTime olderThan, CancellationToken ct = default);

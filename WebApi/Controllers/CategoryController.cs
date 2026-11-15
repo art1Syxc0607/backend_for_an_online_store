@@ -1,4 +1,4 @@
-﻿using Application.Commands.Category;
+﻿using Application.Commands.Admin.Category;
 using Application.Queries.Category;
 using Application.DTOs.Category;
 using MediatR;

@@ -26,4 +26,13 @@ public interface ICategoryRepository
     Task DeleteAllAsync();
 
     Task<bool> ExistByIdAsync(int categoryId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Проверяет, существует ли категория с таким названием
+    /// (без учёта регистра и пробелов по краям).
+    /// </summary>
+    Task<bool> ExistsByNameAsync(
+        string name,
+        int? excludeCategoryId = null,
+        CancellationToken ct = default);
 }

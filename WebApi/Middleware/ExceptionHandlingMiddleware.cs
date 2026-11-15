@@ -161,12 +161,57 @@ public class ExceptionHandlingMiddleware
                 TraceId = traceId
             },
 
+            // Нарушение внешнего ключа (23503): например, товар/категорию
+            // удалили между проверкой и вставкой.
+            Npgsql.PostgresException pgFkEx when pgFkEx.SqlState == "23503" => new ErrorResponseDto
+            {
+                Error = "Связанная запись была изменена или удалена. Обновите данные и повторите попытку.",
+                ErrorCode = "REFERENCE_CONFLICT",
+                StatusCode = 409,
+                Timestamp = DateTime.UtcNow,
+                Path = context.Request.Path,
+                TraceId = traceId
+            },
+
+            // Сериализационная ошибка / deadlock (40001, 40P01): операцию
+            // безопасно повторить.
+            Npgsql.PostgresException pgRetryEx when pgRetryEx.SqlState is "40001" or "40P01" => new ErrorResponseDto
+            {
+                Error = "Конфликт параллельных операций. Повторите запрос.",
+                ErrorCode = "CONCURRENCY_RETRY",
+                StatusCode = 409,
+                Timestamp = DateTime.UtcNow,
+                Path = context.Request.Path,
+                TraceId = traceId
+            },
+
             // Нарушение уникального ограничения, обёрнутое EF Core в DbUpdateException.
             // SaveChanges() почти всегда приходит именно так: PostgresException лежит во InnerException.
-            DbUpdateException dupEx when IsUniqueViolation(dupEx) => new ErrorResponseDto
+            DbUpdateException dupEx when HasSqlState(dupEx, "23505") => new ErrorResponseDto
             {
                 Error = "Запись уже существует.",
                 ErrorCode = "DUPLICATE_ENTRY",
+                StatusCode = 409,
+                Timestamp = DateTime.UtcNow,
+                Path = context.Request.Path,
+                TraceId = traceId
+            },
+
+            // Те же ошибки БД, обёрнутые EF Core в DbUpdateException.
+            DbUpdateException fkEx when HasSqlState(fkEx, "23503") => new ErrorResponseDto
+            {
+                Error = "Связанная запись была изменена или удалена. Обновите данные и повторите попытку.",
+                ErrorCode = "REFERENCE_CONFLICT",
+                StatusCode = 409,
+                Timestamp = DateTime.UtcNow,
+                Path = context.Request.Path,
+                TraceId = traceId
+            },
+
+            DbUpdateException retryEx when HasSqlState(retryEx, "40001", "40P01") => new ErrorResponseDto
+            {
+                Error = "Конфликт параллельных операций. Повторите запрос.",
+                ErrorCode = "CONCURRENCY_RETRY",
                 StatusCode = 409,
                 Timestamp = DateTime.UtcNow,
                 Path = context.Request.Path,
@@ -198,15 +243,18 @@ public class ExceptionHandlingMiddleware
     }
 
     /// <summary>
-    /// Проверяет цепочку InnerException на нарушение уникальности PostgreSQL (23505).
+    /// Проверяет цепочку InnerException на один из SQLSTATE PostgreSQL.
     /// EF Core оборачивает PostgresException в DbUpdateException при SaveChanges.
     /// </summary>
-    private static bool IsUniqueViolation(Exception exception)
+    private static bool HasSqlState(Exception exception, params string[] sqlStates)
     {
         for (var current = exception; current != null; current = current.InnerException)
         {
-            if (current is PostgresException pg && pg.SqlState == "23505")
+            if (current is PostgresException pg
+                && Array.IndexOf(sqlStates, pg.SqlState) >= 0)
+            {
                 return true;
+            }
         }
 
         return false;

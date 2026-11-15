@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commands.Product;
+namespace Application.Commands.Admin.Product;
 
 public class DeleteAllFilesCommand : IRequest, ICacheInvalidatingCommand
 {

@@ -1,4 +1,4 @@
-using Application.Commands.Product;
+using Application.Commands.Admin.Product;
 using Application.Interfaces;
 using Domain.Entities;
 using FluentAssertions;

@@ -63,6 +63,21 @@ public class AppDbContext : DbContext
                 .Property<uint>("xmin")
                 .HasColumnType("xid")
                 .IsRowVersion();
+
+            builder.Entity<Category>()
+                .Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
+
+            builder.Entity<User>()
+                .Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
+
+            builder.Entity<PasswordResetCode>()
+                .Property<uint>("xmin")
+                .HasColumnType("xid")
+                .IsRowVersion();
         }
 
         base.OnModelCreating(builder);
