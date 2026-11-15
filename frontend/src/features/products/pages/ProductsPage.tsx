@@ -4,7 +4,9 @@ import { getPopularProducts, getFilteredProducts } from '../api/productApi'
 import type { ProductFilterRequest } from '../api/productApi'
 import ProductCard from '../components/ProductCard'
 import ProductFilters from '../components/ProductFilters'
-import type { ProductDto } from '@/shared/api/types'
+import type { PagedResult, ProductDto, PopularProductDto } from '@/shared/api/types'
+
+type ProductPage = PagedResult<ProductDto | PopularProductDto>
 
 export default function ProductsPage() {
     const [showFilters, setShowFilters] = useState(false)
@@ -22,7 +24,7 @@ export default function ProductsPage() {
         isFetchingNextPage,
     } = useInfiniteQuery({
         queryKey: ['products', isFiltered ? filters : 'popular'],
-        queryFn: ({ pageParam = 1 }) => {
+        queryFn: async ({ pageParam = 1 }): Promise<ProductPage> => {
             if (isFiltered) {
                 return getFilteredProducts({
                     ...filters,
@@ -56,12 +58,6 @@ export default function ProductsPage() {
 
     const allItems = data?.pages.flatMap((page) => page.items) ?? []
     const totalCount = data?.pages[0]?.totalCount ?? 0
-
-    // ✅ Нормализация: productId → id
-    const normalizedProducts: ProductDto[] = allItems.map((item: any) => ({
-        ...item,
-        id: item.id ?? item.productId,  // ✅ fallback
-    }))
 
     return (
         <div>
@@ -102,18 +98,19 @@ export default function ProductsPage() {
 
             {/* ✅ Товары с правильным ID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {normalizedProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                ))}
+                {allItems.map((product) => {
+                    const key = 'id' in product ? product.id : product.productId
+                    return <ProductCard key={key} product={product} />
+                })}
             </div>
 
-            {normalizedProducts.length === 0 && (
+            {allItems.length === 0 && (
                 <div className="text-center py-20 text-gray-500">Ничего не найдено</div>
             )}
 
             <div ref={loadMoreRef} className="py-8 text-center">
                 {isFetchingNextPage && <div className="text-gray-500">Загрузка...</div>}
-                {!hasNextPage && normalizedProducts.length > 0 && (
+                {!hasNextPage && allItems.length > 0 && (
                     <div className="text-gray-400 text-sm">Все товары загружены</div>
                 )}
             </div>

@@ -19,8 +19,16 @@
 **/logs/
 
 # ===== Node / frontend =====
+node_modules/
 frontend/node_modules/
 frontend/dist/
+package.json
+package-lock.json
+
+# ===== Docs / meta =====
+docs/
+README.md
+.github/
 
 # ===== Uploaded files (persist via Docker volume) =====
 WebApi/wwwroot/

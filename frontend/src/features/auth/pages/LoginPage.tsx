@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 
 export default function LoginPage() {
@@ -21,7 +20,7 @@ export default function LoginPage() {
             } else {
                 await register({ email, userName, password })
             }
-        } catch (err) {
+        } catch {
             // Ошибка отобразится через loginError/registerError
         }
     }

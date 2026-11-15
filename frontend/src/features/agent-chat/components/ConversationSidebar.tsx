@@ -1,5 +1,4 @@
 ﻿import { useState } from 'react'
-import { useChatActions } from '../hooks/useChat'
 import ConversationItemMenu from './ConversationItemMenu'
 import type { ConversationDto } from '../api/agentApi'   // ✅ import type
 

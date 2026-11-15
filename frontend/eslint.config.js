@@ -1,27 +1,39 @@
-﻿import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/postcss'
-import path from 'path'
+﻿import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
 
-export default defineConfig({
-    plugins: [react()],
-    css: {
-        postcss: {
-            plugins: [tailwindcss()],
+// Flat-конфиг ESLint 9/10. Раньше здесь лежала копия vite.config.ts,
+// из-за чего `npm run lint` падал с `__dirname is not defined`.
+export default tseslint.config(
+    { ignores: ['dist', 'node_modules'] },
+    js.configs.recommended,
+    ...tseslint.configs.recommended,
+    {
+        files: ['**/*.{ts,tsx}'],
+        languageOptions: {
+            ecmaVersion: 2023,
+            globals: { ...globals.browser, ...globals.node },
         },
-    },
-    resolve: {
-        alias: {
-            '@': path.resolve(__dirname, './src'),
+        plugins: {
+            'react-hooks': reactHooks,
+            'react-refresh': reactRefresh,
         },
-    },
-    server: {
-        proxy: {
-            '/api': {
-                target: 'https://localhost:7197',  // ← ВАШ BACKEND
-                changeOrigin: true,
-                secure: false,  // Self-signed сертификат
-            },
+        rules: {
+            'react-hooks/rules-of-hooks': 'error',
+            'react-hooks/exhaustive-deps': 'warn',
+            'react-refresh/only-export-components': [
+                'warn',
+                { allowConstantExport: true },
+            ],
+            // Проект не использует строгую типизацию any/unused повсеместно —
+            // не превращаем это в блокирующие ошибки.
+            '@typescript-eslint/no-explicit-any': 'off',
+            '@typescript-eslint/no-unused-vars': [
+                'warn',
+                { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+            ],
         },
-    },
-})
+    }
+)

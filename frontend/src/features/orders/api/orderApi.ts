@@ -15,12 +15,14 @@ export type OrderStatus =
 // ═══════════════════════════════════════════
 // ✅ SortOrderBy — ЧИСЛА (точно как в backend)
 // ═══════════════════════════════════════════
-export enum SortOrderBy {
-    Status = 0,
-    DateOfCreation = 1,
-    UserId = 2,
-    Price = 3,
-}
+// `erasableSyntaxOnly` запрещает enum: используем const-объект + union-тип.
+export const SortOrderBy = {
+    Status: 0,
+    DateOfCreation: 1,
+    UserId: 2,
+    Price: 3,
+} as const
+export type SortOrderBy = (typeof SortOrderBy)[keyof typeof SortOrderBy]
 
 // ═══════════════════════════════════════════
 // DTO

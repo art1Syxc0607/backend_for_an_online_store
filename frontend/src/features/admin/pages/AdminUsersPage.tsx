@@ -10,14 +10,14 @@ import {
 import AdminTable from '../components/AdminTable'
 import type { Column } from '../components/AdminTable'
 import AdminModal from '../components/AdminModal'
-import type { UserAdminDto } from '../api/adminUsersApi'
+import type { GetAllUsersParams, UserAdminDto } from '../api/adminUsersApi'
 
 export default function AdminUsersPage() {
     const queryClient = useQueryClient()
-    const [filters, setFilters] = useState({
+    const [filters, setFilters] = useState<GetAllUsersParams>({
         search: '',
-        role: undefined as UserRole | undefined,
-        isActive: undefined as boolean | undefined,
+        role: undefined,
+        isActive: undefined,
         pageNumber: 1,
         pageSize: 20,
         sortBy: SortUserBy.CreatedAt,

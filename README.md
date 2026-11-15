@@ -274,7 +274,9 @@ dotnet run --project WebApi --launch-profile https
 - Swagger (только Development): `https://localhost:7197/swagger`
 
 Используйте профиль `https` — Vite-прокси настроен именно на `https://localhost:7197`.
-Профиль `http` (порт 5277) фронтендом не используется.
+Профиль `https` идёт первым в `launchSettings.json`, поэтому `dotnet run --project WebApi`
+без `--launch-profile` тоже поднимает API на 7197. Профиль `http` (порт 5277) фронтендом
+не используется.
 
 При старте выполняется seed:
 
@@ -301,7 +303,7 @@ Vite отдаёт приложение на `http://localhost:5173` и прок�
 
 ```powershell
 npm run build    # tsc -b && vite build
-npm run lint     # сейчас падает, см. «Известные ограничения»
+npm run lint     # 0 ошибок (несколько warning'ов)
 npm run preview
 ```
 
@@ -348,19 +350,32 @@ npm run preview
 Copy-Item .env.example .env
 # заполните DB_PASSWORD, JWT__KEY и при необходимости остальное
 docker compose up -d --build
+docker compose ps            # api/web/db должны стать healthy
 ```
+
+Compose-проект называется `online-store` (задано через `name:`), поэтому имена
+volume'ов стабильны и не зависят от пути к репозиторию.
 
 Состав:
 
 | Сервис | Описание |
 |---|---|
-| `db` | PostgreSQL 16-alpine, volume `pgdata`, healthcheck |
-| `api` | ASP.NET Core, `Database:MigrateOnStartup=true`, volumes `uploads` (wwwroot) и `logs` |
-| `web` | frontend, собранный Vite и раздаваемый nginx |
-| `caddy` | TLS-прокси на 80/443, автоматический сертификат Let's Encrypt |
+| `db` | PostgreSQL 16-alpine, volume `pgdata`, healthcheck `pg_isready` |
+| `api` | ASP.NET Core, non-root (`app`), `Database:MigrateOnStartup=true`, healthcheck `/health`, volumes `uploads` (wwwroot) и `logs` |
+| `web` | frontend, собранный Vite и раздаваемый nginx, healthcheck |
+| `caddy` | TLS-прокси на 80/443, автоматический сертификат Let's Encrypt, security-заголовки |
+
+Порядок запуска: `db` (healthy) → `api` (healthy) → `web` (healthy) → `caddy`.
+У всех сервисов ограничен размер docker-логов (`10 MB × 3`), у `api` —
+`stop_grace_period: 30s`, чтобы фоновые задачи успели завершиться.
 
 Домен задаётся в `.env` (`DOMAIN`). Для локального теста `DOMAIN=localhost` — Caddy
 сгенерирует самоподписанный сертификат.
+
+> Если volume `uploads`/`logs` уже создавался старой версией compose (от root),
+> после перехода на non-root пользователя может потребоваться однократный
+> `docker compose exec -u root api chown -R 1654 /app/wwwroot /app/logs`
+> (либо удалить volume и дать ему пересоздаться).
 
 Полезные команды:
 
@@ -593,9 +608,20 @@ dotnet test WebAPITests --filter "FullyQualifiedName~AuthFlowTests"
 
 ### Frontend
 
-- `frontend/eslint.config.js` — копия `vite.config.ts`; `npm run lint` не работает.
-- `npm run build` падает на существующих TS-ошибках (`ProductsPage.tsx`, `LoginPage.tsx`,
-  `ErrorBoundary.tsx`, `adminUsersApi.ts`, `orderApi.ts`, `useChat.ts`).
+- `npm run lint` проходит: 0 ошибок, остаются только warning'и
+  `react-hooks/exhaustive-deps` и `react-refresh/only-export-components`.
+- `vite build` предупреждает о чанке > 500 kB — это не ошибка; при необходимости
+  можно включить code splitting.
+
+### Инфраструктура
+
+- Базовые образы зафиксированы на .NET 8. Поддержка .NET 8 LTS завершилась 10.11.2026,
+  поэтому образы больше не получают security-патчи. Планируемый переход — .NET 10 LTS
+  (не .NET 9: его поддержка закончилась в мае 2026).
+- Compose использует `postgres:16-alpine`, локальная разработка — PostgreSQL 18;
+  при переносе дампов между версиями учитывайте разницу мажоров.
+- `WebApi/wwwroot` исключён из образа: локальные загрузки не попадают в Docker,
+  для них используется volume `uploads`.
 
 ### Прочее
 

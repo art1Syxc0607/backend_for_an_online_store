@@ -2,6 +2,16 @@
 # Caddy автоматически выпустит и будет обновлять TLS-сертификат Let's Encrypt.
 # Для локального теста DOMAIN=localhost — Caddy сгенерирует self-signed сертификат.
 {$DOMAIN:localhost} {
-    encode gzip
+    encode zstd gzip
+
+    # Security-заголовки на периметре. HSTS намеренно не включён:
+    # для localhost с self-signed сертификатом он мешает локальной разработке.
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+
     reverse_proxy web:80
 }

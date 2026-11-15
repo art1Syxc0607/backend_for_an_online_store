@@ -167,6 +167,11 @@ app.UseAuthorization();  // ПОТОМ авторизация
 
 app.MapControllers();
 
+// Liveness/readiness для Docker healthcheck. Эндпоинт внутренний:
+// healthcheck ходит напрямую в контейнер на :8080, наружу через nginx/Caddy
+// он не публикуется (не попадает под проксируемые /api|/images|...).
+app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTime.UtcNow }));
+
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;

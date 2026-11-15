@@ -1,17 +1,20 @@
 import { apiClient } from '@/shared/api/client'
 
-export enum UserRole {
-    User = 'User',
-    Admin = 'Admin',
-}
+// `erasableSyntaxOnly` запрещает enum: используем const-объект + union-тип.
+export const UserRole = {
+    User: 'User',
+    Admin: 'Admin',
+} as const
+export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 
-export enum SortUserBy {
-    CreatedAt = 'CreatedAt',
-    UserName = 'UserName',
-    Email = 'Email',
-    OrdersCount = 'OrdersCount',
-    TotalSpent = 'TotalSpent',
-}
+export const SortUserBy = {
+    CreatedAt: 'CreatedAt',
+    UserName: 'UserName',
+    Email: 'Email',
+    OrdersCount: 'OrdersCount',
+    TotalSpent: 'TotalSpent',
+} as const
+export type SortUserBy = (typeof SortUserBy)[keyof typeof SortUserBy]
 
 export interface UserAdminDto {
     id: number

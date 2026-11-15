@@ -173,7 +173,7 @@ export default function AdminOrdersPage() {
                         <label className="block text-xs font-medium mb-1 text-gray-600">Сортировка</label>
                         <select
                             value={filters.orderBy}
-                            onChange={(e) => updateFilter({ orderBy: Number(e.target.value) })}
+                            onChange={(e) => updateFilter({ orderBy: Number(e.target.value) as SortOrderBy })}
                             className="w-full px-3 py-2 border rounded-lg text-sm"
                         >
                             <option value={SortOrderBy.DateOfCreation}>По дате</option>

@@ -67,7 +67,7 @@ export function useChatActions() {
         },
 
         // ✅ После успеха — обновляем данные с сервера
-        onSuccess: (data, variables, context) => {
+        onSuccess: (data) => {
             // ✅ Если новый диалог — инвалидируем список
             queryClient.invalidateQueries({ queryKey: CONVERSATIONS_KEY })
 
@@ -80,7 +80,7 @@ export function useChatActions() {
         },
 
         // ✅ При ошибке — возвращаем предыдущее состояние
-        onError: (error, variables, context) => {
+        onError: (_error, _variables, context) => {
             if (context?.previousConversation) {
                 queryClient.setQueryData(
                     ['agent', 'conversation', context.sessionId],

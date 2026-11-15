@@ -1,3 +1,5 @@
+name: online-store
+
 services:
   # ---------- PostgreSQL ----------
   db:
@@ -14,6 +16,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ---------- ASP.NET Core API ----------
   api:
@@ -47,6 +54,13 @@ services:
     volumes:
       - uploads:/app/wwwroot
       - logs:/app/logs
+    # Даём время корректно завершить фоновые задачи (email-очередь, cleanup).
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ---------- Frontend (nginx) ----------
   web:
@@ -55,16 +69,23 @@ services:
       dockerfile: frontend/Dockerfile
     restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     expose:
       - "80"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ---------- TLS reverse proxy ----------
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
@@ -74,6 +95,11 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   pgdata:
