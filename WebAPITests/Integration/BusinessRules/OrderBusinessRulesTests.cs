@@ -3,11 +3,27 @@ using System.Net;
 using WebAPITests.Infrastructure;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Application.DTOs.Order;
 using FluentAssertions;
 
 public class OrderBusinessRulesTests : IntegrationTestBase
 {
     public OrderBusinessRulesTests(CustomWebApplicationFactory factory) : base(factory) { }
+
+    private async Task<string> InitiatePaymentIntentAsync(int orderId)
+    {
+        var response = await Client.PostAsJsonAsync("/api/order/initiate", new
+        {
+            OrderId = orderId,
+            Method = "Card"
+        });
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<PaymentResult>();
+        result.Should().NotBeNull();
+        result!.Success.Should().BeTrue();
+        result.PaymentIntentId.Should().NotBeNullOrEmpty();
+        return result.PaymentIntentId!;
+    }
 
     [Fact]
     public async Task PayOrder_WhenAlreadyPaid_ShouldReturn400()
@@ -19,13 +35,19 @@ public class OrderBusinessRulesTests : IntegrationTestBase
         var orderId = await CreateOrderAsync(productId);
 
         // Первая оплата
-        await Client.PostAsJsonAsync($"/api/payments/{orderId}/confirm", new { });
+        var paymentIntentId = await InitiatePaymentIntentAsync(orderId);
+        var firstConfirm = await Client.PostAsJsonAsync("/api/order/confirm", new { PaymentIntentId = paymentIntentId });
+        firstConfirm.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Act: вторая оплата
-        var response = await Client.PostAsJsonAsync($"/api/payments/{orderId}/confirm", new { });
+        // Act: вторая оплата (новый intent для уже оплаченного заказа невозможен/должен завершиться ошибкой)
+        var secondInitiate = await Client.PostAsJsonAsync("/api/order/initiate", new
+        {
+            OrderId = orderId,
+            Method = "Card"
+        });
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        secondInitiate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -37,10 +59,12 @@ public class OrderBusinessRulesTests : IntegrationTestBase
         var productId = await CreateProductAsync();
         var orderId = await CreateOrderAsync(productId);
 
-        await Client.PostAsJsonAsync($"/api/payments/{orderId}/confirm", new { });
+        var paymentIntentId = await InitiatePaymentIntentAsync(orderId);
+        var confirm = await Client.PostAsJsonAsync("/api/order/confirm", new { PaymentIntentId = paymentIntentId });
+        confirm.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Act
-        var response = await Client.PostAsync($"/api/order/{orderId}/cancel", null);
+        var response = await Client.PutAsJsonAsync("/api/order/Cancel", new { OrderId = orderId });
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -55,11 +79,13 @@ public class OrderBusinessRulesTests : IntegrationTestBase
         var productId = await CreateProductAsync();
 
         // Act: отзыв без покупки
-        var response = await Client.PostAsJsonAsync($"/api/products/{productId}/reviews", new
+        using var content = new MultipartFormDataContent
         {
-            Text = "Great product!",
-            Rating = 5
-        });
+            { new StringContent(productId.ToString()), "ProductId" },
+            { new StringContent("Great product review without purchase."), "Text" },
+            { new StringContent("5"), "Rating" }
+        };
+        var response = await Client.PostAsync("/api/review", content);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);

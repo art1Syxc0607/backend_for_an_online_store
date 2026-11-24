@@ -64,9 +64,13 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         // ✅ Запускаем контейнер
         await _dbContainer.StartAsync();
 
-        // ✅ Применяем миграции
-        using var scope = Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // ✅ Применяем миграции до старта хоста, чтобы сидирование в Program.cs
+        //    увидело готовую схему.
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(_dbContainer.GetConnectionString())
+            .Options;
+
+        await using var db = new AppDbContext(options);
         await db.Database.MigrateAsync();
     }
 

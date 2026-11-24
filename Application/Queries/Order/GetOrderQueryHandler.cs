@@ -32,7 +32,7 @@ public class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, OrderResponse
     {
         var order = await _orderRepository.GetOrder(query.OrderId, ct);
         if (order == null) throw new DomainException("No such order");
-        if (order.UserId != query.UserId) throw new DomainException("This order doesn't belong to the user");
+        if (order.UserId != query.UserId) throw new ForbiddenException("This order doesn't belong to the user");
 
         // Маппим через AutoMapper
         var result = _mapper.Map<OrderResponseDto>(order);

@@ -51,7 +51,7 @@ public class OrderFlowTests : IntegrationTestBase
     public async Task FullOrderFlow_FromCreateToReceive_ShouldSucceed()
     {
         // Arrange
-        var userToken = await RegisterAndLoginAsync("buyer@mail.com");
+        var userToken = await RegisterAndLoginAsync("buyer@mail.com", "Test123!@#", "Buyer");
         var adminToken = await LoginAsAdminAsync();
 
         SetAuthToken(adminToken); // нужно для админских операций
@@ -61,22 +61,36 @@ public class OrderFlowTests : IntegrationTestBase
         SetAuthToken(userToken);
         var orderId = await CreateOrderAsync(productId, 1);
 
-        // 2. Оплата (эмуляция webhook)
-        var paymentResponse = await Client.PostAsJsonAsync($"/api/payments/{orderId}/confirm", new { });
-        paymentResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        // 2. Инициация и подтверждение оплаты
+        var initiateResponse = await Client.PostAsJsonAsync("/api/order/initiate", new
+        {
+            OrderId = orderId,
+            Method = "Card"
+        });
+        initiateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var paymentResult = await initiateResponse.Content.ReadFromJsonAsync<PaymentResult>();
+        paymentResult.Should().NotBeNull();
+        paymentResult!.Success.Should().BeTrue();
+        paymentResult.PaymentIntentId.Should().NotBeNullOrEmpty();
+
+        var confirmResponse = await Client.PostAsJsonAsync("/api/order/confirm", new
+        {
+            PaymentIntentId = paymentResult.PaymentIntentId
+        });
+        confirmResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 3. Отгрузка (админ)
         SetAuthToken(adminToken);
-        var shipResponse = await Client.PostAsync($"/api/admin/orders/{orderId}/ship", null);
+        var shipResponse = await Client.PostAsync($"/api/admin/order/ship/{orderId}", null);
         shipResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 4. Доставка (админ)
-        var deliverResponse = await Client.PostAsync($"/api/admin/orders/{orderId}/deliver", null);
+        var deliverResponse = await Client.PostAsync($"/api/admin/order/deliver/{orderId}", null);
         deliverResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 5. Получение (пользователь)
         SetAuthToken(userToken);
-        var receiveResponse = await Client.PostAsync($"/api/order/{orderId}/receive", null);
+        var receiveResponse = await Client.PostAsync($"/api/order/receive/{orderId}", null);
         receiveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Assert: проверяем финальный статус
@@ -89,8 +103,8 @@ public class OrderFlowTests : IntegrationTestBase
     public async Task GetOrder_WhenAnotherUser_ShouldReturn403()
     {
         // Arrange
-        var user1Token = await RegisterAndLoginAsync("user1@mail.com");
-        var user2Token = await RegisterAndLoginAsync("user2@mail.com");
+        var user1Token = await RegisterAndLoginAsync("user1@mail.com", "Test123!@#", "User1");
+        var user2Token = await RegisterAndLoginAsync("user2@mail.com", "Test123!@#", "User2");
 
         SetAuthToken(user1Token);
         var productId = await CreateProductAsync();
@@ -114,9 +128,9 @@ public class OrderFlowTests : IntegrationTestBase
         var orderId = await CreateOrderAsync(productId);
 
         // Act
-        var response = await Client.PostAsync($"/api/order/{orderId}/cancel", null);
+        var response = await Client.PutAsJsonAsync("/api/order/Cancel", new { OrderId = orderId });
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 }

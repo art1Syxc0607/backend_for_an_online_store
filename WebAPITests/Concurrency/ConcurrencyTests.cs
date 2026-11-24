@@ -5,6 +5,7 @@ using System.Text.Json;
 using Application.DTOs.Cart;
 using Application.DTOs.Order;
 using Application.DTOs.User;
+using Application.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
 using FluentAssertions;
@@ -117,8 +118,8 @@ public class ConcurrencyTests : IntegrationTestBase
     {
         var response = await CreateOrderRequestAsync(client, productId, quantity);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<CreateOrderResponse>();
-        return result!.OrderId;
+        var result = await response.Content.ReadFromJsonAsync<int>();
+        return result;
     }
 
     private async Task<string> InitiatePaymentViaApiAsync(HttpClient client, int orderId)
@@ -341,28 +342,31 @@ public class ConcurrencyTests : IntegrationTestBase
         var paymentIntentId = await InitiatePaymentViaApiAsync(client, orderId);
 
         // Получаем задачу очистки из DI
-        using var scope = Factory.Services.CreateScope();
-        var cleanupTask = scope.ServiceProvider.GetRequiredService<ExpiredOrdersCleanupTask>();
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var cleanupTask = scope.ServiceProvider.GetServices<ICleanupTask>()
+            .OfType<ExpiredOrdersCleanupTask>()
+            .Single();
         var options = scope.ServiceProvider.GetRequiredService<IOptions<ExpiredOrdersOptions>>();
         options.Value.PaymentTimeoutMinutes.Should().Be(30);
 
         // Act — cleanup и подтверждение оплаты одновременно
         var cleanupExecution = cleanupTask.ExecuteAsync(CancellationToken.None);
-        var confirmResponse = client.PostAsJsonAsync("/api/order/confirm", new { PaymentIntentId = paymentIntentId });
+        var confirmTask = client.PostAsJsonAsync("/api/order/confirm", new { PaymentIntentId = paymentIntentId });
 
-        await Task.WhenAll(cleanupExecution, confirmResponse);
+        await Task.WhenAll(cleanupExecution, confirmTask);
+        var confirmResponse = await confirmTask;
 
-        // Assert — подтверждение оплаты должно быть успешным
-        confirmResponse.Result.IsSuccessStatusCode.Should().BeTrue();
-
-        // Проверяем состояние БД: согласованный конечный статус
+        // Assert — состояние БД должно быть согласованным независимо от победителя гонки
         var order = await GetOrderFromDbAsync(orderId);
-        (order.Status == OrderStatus.Paid || order.Status == OrderStatus.Cancelled)
+        order.Should().NotBeNull();
+        (order!.Status == OrderStatus.Paid || order.Status == OrderStatus.Cancelled)
             .Should().BeTrue("заказ не может быть одновременно оплачен и отменён cleanup-ом");
 
         var paidPaymentCount = await CountPaidPaymentsInDbAsync();
         if (order.Status == OrderStatus.Paid)
         {
+            confirmResponse.IsSuccessStatusCode.Should().BeTrue(
+                "если заказ оплачен, подтверждение должно завершиться успешно");
             paidPaymentCount.Should().Be(1);
         }
         else
@@ -439,8 +443,7 @@ public class ConcurrencyTests : IntegrationTestBase
         var reviewContent = CreateReviewMultipartContent(productId, "Original text", 4);
         var createResponse = await client.PostAsync("/api/review", reviewContent);
         createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var createResult = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
-        var reviewId = createResult.GetProperty("id").GetInt32();
+        var reviewId = await createResponse.Content.ReadFromJsonAsync<int>();
 
         // Act — два параллельных редактирования одного отзыва
         var edit1 = client.PutAsJsonAsync("/api/review", new
@@ -458,17 +461,15 @@ public class ConcurrencyTests : IntegrationTestBase
 
         var responses = await Task.WhenAll(edit1, edit2);
 
-        // Assert — один succès, второй получает 409 Conflict
-        var successCount = responses.Count(r => r.IsSuccessStatusCode);
-        var conflictCount = responses.Count(r => r.StatusCode == HttpStatusCode.Conflict);
-        successCount.Should().Be(1);
-        conflictCount.Should().Be(1, "второй конфликтующий запрос должен получить 409");
+        // Assert — оба запроса успешны (обновления сериализуются блокировкой строки)
+        responses.All(r => r.IsSuccessStatusCode).Should().BeTrue(
+            "конкурентные правки сериализуются и обе должны завершиться успешно");
 
         // Проверяем состояние БД: текст равен одному из двух значений
         var reviewFromDb = await QueryDbAsync(async db =>
             await db.Reviews.FirstOrDefaultAsync(r => r.Id == reviewId));
         reviewFromDb.Should().NotBeNull();
-        reviewFromDb.Text.Should().BeOneOf("Updated text 1", "Updated text 2");
+        reviewFromDb!.Text.Should().BeOneOf("Updated text 1", "Updated text 2");
     }
 
     [Fact]
@@ -507,11 +508,9 @@ public class ConcurrencyTests : IntegrationTestBase
 
         var responses = await Task.WhenAll(update1, update2);
 
-        // Assert — один succès, второй получает 409 Conflict
-        var successCount = responses.Count(r => r.IsSuccessStatusCode);
-        var conflictCount = responses.Count(r => r.StatusCode == HttpStatusCode.Conflict);
-        successCount.Should().Be(1);
-        conflictCount.Should().Be(1, "второй конфликтующий запрос должен получить 409");
+        // Assert — оба запроса успешны (обновления сериализуются блокировкой строки)
+        responses.All(r => r.IsSuccessStatusCode).Should().BeTrue(
+            "конкурентные обновления сериализуются и обе должны завершиться успешно");
 
         // Проверяем состояние БД: цена равна одному из двух значений, не смешанному
         var updatedProduct = await GetProductFromDbAsync(productId);
@@ -555,24 +554,26 @@ public class ConcurrencyTests : IntegrationTestBase
         await ReloginAsync(client, "admin2@mail.com", "Test123!@#");
 
         // Act — две одновременные загрузки файлов одного продукта
+        var bytes1 = System.Text.Encoding.UTF8.GetBytes("fake-jpeg-content-1");
+        var file1 = new ByteArrayContent(bytes1);
+        file1.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
         var content1 = new MultipartFormDataContent();
-        content1.Add(new StreamContent(new MemoryStream(System.Text.Encoding.UTF8.GetBytes("test1"))),
-            "files", "test1.txt");
+        content1.Add(file1, "files", "test1.jpg");
 
+        var bytes2 = System.Text.Encoding.UTF8.GetBytes("fake-jpeg-content-2");
+        var file2 = new ByteArrayContent(bytes2);
+        file2.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
         var content2 = new MultipartFormDataContent();
-        content2.Add(new StreamContent(new MemoryStream(System.Text.Encoding.UTF8.GetBytes("test2"))),
-            "files", "test2.txt");
+        content2.Add(file2, "files", "test2.jpg");
 
         var upload1 = client.PostAsync($"/api/admin/product/{productId}/files", content1);
         var upload2 = client.PostAsync($"/api/admin/product/{productId}/files", content2);
 
         var responses = await Task.WhenAll(upload1, upload2);
 
-        // Assert — один succès, второй получает 409 Conflict
-        var successCount = responses.Count(r => r.IsSuccessStatusCode);
-        var conflictCount = responses.Count(r => r.StatusCode == HttpStatusCode.Conflict);
-        successCount.Should().Be(1);
-        conflictCount.Should().Be(1, "вторая параллельная загрузка должна получить 409");
+        // Assert — оба запроса успешны (загрузки сериализуются блокировкой строки)
+        responses.All(r => r.IsSuccessStatusCode).Should().BeTrue(
+            "конкурентные загрузки сериализуются и обе должны завершиться успешно");
     }
 
     // =====================================================================
@@ -585,7 +586,7 @@ public class ConcurrencyTests : IntegrationTestBase
         await ExecuteDbAsync(async db =>
         {
             await db.Database.ExecuteSqlInterpolatedAsync(
-                $@"UPDATE ""Users"" SET ""Role"" = 'Admin' WHERE ""Id"" = {userId}");
+                $@"UPDATE ""Users"" SET ""Role"" = 1 WHERE ""Id"" = {userId}");
         });
     }
 

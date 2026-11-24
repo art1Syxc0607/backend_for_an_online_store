@@ -66,6 +66,20 @@ public class AgentConversationRepository : IAgentConversationRepository
         string conversationId,
         CancellationToken ct = default)
     {
+        if (!_context.Database.IsRelational())
+        {
+            var conversation = await _context.AgentConversations
+                .FirstOrDefaultAsync(c => c.UserId == userId &&
+                                          c.AgentConversationId == conversationId, ct);
+
+            if (conversation == null)
+                return false;
+
+            _context.AgentConversations.Remove(conversation);
+            await _context.SaveChangesAsync(ct);
+            return true;
+        }
+
         // ✅ Чёткий WHERE: UserId AND ConversationId
         var deleted = await _context.AgentConversations
             .Where(c => c.UserId == userId)
@@ -80,6 +94,21 @@ public class AgentConversationRepository : IAgentConversationRepository
         string conversationId,
         CancellationToken ct = default)
     {
+        if (!_context.Database.IsRelational())
+        {
+            var conversation = await _context.AgentConversations
+                .FirstOrDefaultAsync(c => c.GuestId == guestId &&
+                                          c.UserId == null &&
+                                          c.AgentConversationId == conversationId, ct);
+
+            if (conversation == null)
+                return false;
+
+            _context.AgentConversations.Remove(conversation);
+            await _context.SaveChangesAsync(ct);
+            return true;
+        }
+
         // ✅ Чёткий WHERE: GuestId AND UserId IS NULL AND ConversationId
         var deleted = await _context.AgentConversations
             .Where(c => c.GuestId == guestId)
@@ -94,6 +123,19 @@ public class AgentConversationRepository : IAgentConversationRepository
     public async Task<int> AttachGuestConversationsToUserAsync(
         string guestId, int userId, CancellationToken ct = default)
     {
+        if (!_context.Database.IsRelational())
+        {
+            var conversations = await _context.AgentConversations
+                .Where(c => c.GuestId == guestId && c.UserId == null)
+                .ToListAsync(ct);
+
+            foreach (var conversation in conversations)
+                conversation.AttachToUser(userId);
+
+            await _context.SaveChangesAsync(ct);
+            return conversations.Count;
+        }
+
         return await _context.AgentConversations
             .Where(c => c.GuestId == guestId && c.UserId == null)
             .ExecuteUpdateAsync(setters => setters
@@ -107,6 +149,18 @@ public class AgentConversationRepository : IAgentConversationRepository
         int retentionDays, CancellationToken ct = default)
     {
         var threshold = DateTime.UtcNow.AddDays(-retentionDays);
+
+        if (!_context.Database.IsRelational())
+        {
+            var expired = await _context.AgentConversations
+                .Where(c => c.UserId == null)
+                .Where(c => (c.LastMessageAt ?? c.CreatedAt) < threshold)
+                .ToListAsync(ct);
+
+            _context.AgentConversations.RemoveRange(expired);
+            await _context.SaveChangesAsync(ct);
+            return expired.Count;
+        }
 
         // ✅ Удаляем только гостевые диалоги, где не было активности > N дней
         return await _context.AgentConversations

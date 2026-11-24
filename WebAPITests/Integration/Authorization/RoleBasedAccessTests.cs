@@ -19,7 +19,7 @@ public class RoleBasedAccessTests : IntegrationTestBase
         SetAuthToken(userToken);
 
         // Act
-        var response = await Client.GetAsync("/api/admin/orders");
+        var response = await Client.GetAsync("/api/admin/order");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -33,7 +33,7 @@ public class RoleBasedAccessTests : IntegrationTestBase
         SetAuthToken(adminToken);
 
         // Act
-        var response = await Client.GetAsync("/api/admin/orders");
+        var response = await Client.GetAsync("/api/admin/order");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -43,7 +43,7 @@ public class RoleBasedAccessTests : IntegrationTestBase
     public async Task AdminEndpoint_WhenNotAuthenticated_ShouldReturn401()
     {
         // Act
-        var response = await Client.GetAsync("/api/admin/orders");
+        var response = await Client.GetAsync("/api/admin/order");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);

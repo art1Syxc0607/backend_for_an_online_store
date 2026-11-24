@@ -20,7 +20,7 @@ public class DeleteFilesHandlerTests
         product.SetImageUrls(new List<string> { fileUrl });
 
         var productRepoMock = new Mock<IProductRepository>();
-        productRepoMock.Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
+        productRepoMock.Setup(x => x.GetProductForUpdateAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product);
 
         var unitOfWorkMock = new Mock<IUnitOfWork>();

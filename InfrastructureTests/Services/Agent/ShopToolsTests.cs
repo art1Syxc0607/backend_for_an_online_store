@@ -148,6 +148,7 @@ public class ShopToolsTests
         // Arrange
         var product = new Domain.Entities.Product(name: "iPhone 15", price: 99999m, purchasePrice: 99900m,
             stockQuantity: 10, description: "iPhone 15");
+        product.TestsSetProduct(42);
 
         _productRepoMock
             .Setup(r => r.GetByIdAsync(42, It.IsAny<CancellationToken>()))

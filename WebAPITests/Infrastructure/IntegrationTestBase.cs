@@ -1,5 +1,6 @@
 ﻿// WebAPITests/Infrastructure/IntegrationTestBase.cs
 using Application.DTOs.User;
+using Application.Interfaces;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,20 +27,30 @@ public abstract class IntegrationTestBase : IClassFixture<CustomWebApplicationFa
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var connection = db.Database.GetDbConnection();
+        await connection.OpenAsync();
 
-        _respawner = await Respawner.CreateAsync(db.Database.GetDbConnection(), new RespawnerOptions
+        _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
             DbAdapter = DbAdapter.Postgres,
             SchemasToInclude = new[] { "public" },
             TablesToIgnore = new Table[] { "__EFMigrationsHistory" }
         });
+
+        // Каждый тест стартует с чистой БД (после ResetAsync в DisposeAsync),
+        // поэтому восстанавливаем минимальные seed-данные (админ, базовые категории).
+        // 1000 товаров из ProductSeeder не нужны для тестов и замедляют прогон.
+        var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        await SeedData.InitializeAsync(db, passwordHasher);
     }
 
     public async Task DisposeAsync()
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await _respawner.ResetAsync(db.Database.GetDbConnection());
+        var connection = db.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await _respawner.ResetAsync(connection);
     }
 
     // ✅ Хелпер: регистрация + подтверждение email + логин
@@ -90,7 +101,9 @@ public abstract class IntegrationTestBase : IClassFixture<CustomWebApplicationFa
         return auth!.Token;
     }
 
-    // ✅ Хелпер: подтверждение email через HTTP-эндпоинт
+    // ✅ Хелпер: подтверждение email (напрямую в БД)
+    // Эндпоинт /api/auth/confirm-email защищён [Authorize], поэтому в тестах
+    // подтверждаем через доменную логику, используя выданный при регистрации токен.
     protected async Task ConfirmEmailViaApiAsync(string email)
     {
         using var scope = Factory.Services.CreateScope();
@@ -102,10 +115,8 @@ public abstract class IntegrationTestBase : IClassFixture<CustomWebApplicationFa
                 $"User {email} has no confirmation token. " +
                 "Ensure RegisterCommandHandler generates it.");
 
-        var response = await Client.GetAsync(
-            $"/api/auth/confirm-email?userId={user.Id}&token={token}");
-
-        response.EnsureSuccessStatusCode();
+        user.ConfirmEmail(token);
+        await db.SaveChangesAsync();
     }
 
     // ✅ Хелпер: установка JWT
@@ -145,9 +156,7 @@ public abstract class IntegrationTestBase : IClassFixture<CustomWebApplicationFa
         });
 
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<CreateOrderResponse>();
-        return result!.OrderId;
+        var result = await response.Content.ReadFromJsonAsync<int>();
+        return result;
     }
 }
-
-public record CreateOrderResponse(int OrderId);

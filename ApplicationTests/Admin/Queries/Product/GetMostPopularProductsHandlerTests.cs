@@ -1,10 +1,7 @@
 ﻿using Application.DTOs.Product;
-using Application.Enums;
 using Application.Interfaces;
 using Application.Queries.Admin.Dashboard;
-using Application.Queries.Admin.Product;
-using Domain.Entities;
-using Domain.Enums;
+using Domain.Exceptions;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -18,16 +15,6 @@ public class GetMostPopularProductsHandlerTests
     public async Task Handle_WhenProductsExist_ShouldReturnPopularProducts()
     {
         // Arrange
-        var product1 = new Domain.Entities.Product("iPhone", 999.99m, 750m, 10, "Test");
-        //product1.AmountOfPaid = 5;
-        //product1.AmountOfReceived = 5;
-        product1.TestsSetProduct(1, 5, 5);
-
-        var product2 = new Domain.Entities.Product("AirPods", 199.99m, 140m, 20, "Test");
-        //product2.AmountOfPaid = 3;
-        //product2.AmountOfReceived = 3;
-        product2.TestsSetProduct(1, 3, 3);
-
         var popularProducts = new List<PopularProductDto>
         {
             new() { ProductId = 1, Name = "iPhone", TotalPurchases = 5 },
@@ -39,11 +26,6 @@ public class GetMostPopularProductsHandlerTests
             It.IsAny<GetMostPopularProductsForThePeriodCommand>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync((popularProducts, 2));
-
-        var cacheServiceMock = new Mock<ICacheService>();
-        cacheServiceMock.Setup(x => x.GetAsync<List<PopularProductDto>>(It.IsAny<string>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync((List<PopularProductDto>?)null);
 
         var handler = new GetMostPopularProductsForThePeriodHandler(
             productRepoMock.Object,
@@ -66,26 +48,47 @@ public class GetMostPopularProductsHandlerTests
         result.Items[0].TotalPurchases.Should().Be(5);
         result.Items[1].Name.Should().Be("AirPods");
         result.Items[1].TotalPurchases.Should().Be(3);
-        cacheServiceMock.Verify(x => x.SetAsync(
-            It.IsAny<string>(),
-            It.IsAny<List<PopularProductDto>>(),
-            It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()), Times.Once);
+        result.TotalCount.Should().Be(2);
     }
 
     [Fact]
-    public async Task Handle_WhenCachedDataExists_ShouldReturnFromCache()
+    public async Task Handle_WhenRepositoryReturnsEmpty_ShouldReturnEmptyPage()
     {
         // Arrange
-        var cachedData = new List<PopularProductDto>
+        var productRepoMock = new Mock<IProductRepository>();
+        productRepoMock.Setup(x => x.GetMostPopularProductsForThePeriodAsync(
+            It.IsAny<GetMostPopularProductsForThePeriodCommand>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new List<PopularProductDto>(), 0));
+
+        var handler = new GetMostPopularProductsForThePeriodHandler(
+            productRepoMock.Object,
+            Mock.Of<IOrderRepository>(),
+            Mock.Of<ILogger<GetMostPopularProductsForThePeriodHandler>>()
+        );
+
+        var command = new GetMostPopularProductsForThePeriodCommand
         {
-            new() { ProductId = 1, Name = "iPhone", TotalPurchases = 10 }
+            FirstDayOfThePeriod = DateTime.Today.AddDays(-7),
+            LastDayOfThePeriod = DateTime.Today,
+            PageNumber = 2,
+            PageSize = 5
         };
 
-        var cacheServiceMock = new Mock<ICacheService>();
-        cacheServiceMock.Setup(x => x.GetAsync<List<PopularProductDto>>(It.IsAny<string>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync((List<PopularProductDto>?)null);
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
 
+        // Assert
+        result.Items.Should().BeEmpty();
+        result.TotalCount.Should().Be(0);
+        result.PageNumber.Should().Be(2);
+        result.PageSize.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task Handle_WhenFirstDayIsAfterLastDay_ShouldThrowDomainException()
+    {
+        // Arrange
         var handler = new GetMostPopularProductsForThePeriodHandler(
             Mock.Of<IProductRepository>(),
             Mock.Of<IOrderRepository>(),
@@ -94,22 +97,15 @@ public class GetMostPopularProductsHandlerTests
 
         var command = new GetMostPopularProductsForThePeriodCommand
         {
-            FirstDayOfThePeriod = DateTime.Today.AddDays(-7),
-            LastDayOfThePeriod = DateTime.Today
+            FirstDayOfThePeriod = DateTime.Today,
+            LastDayOfThePeriod = DateTime.Today.AddDays(-1)
         };
 
         // Act
-        var result = await handler.Handle(command, CancellationToken.None);
+        Func<Task> act = async () => await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Items.Should().HaveCount(1);
-        result.Items[0].Name.Should().Be("iPhone");
-        cacheServiceMock.Verify(x => x.SetAsync(
-            It.IsAny<string>(),
-            It.IsAny<List<PopularProductDto>>(),
-            It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()), Times.Once);
+        await act.Should().ThrowAsync<DomainException>()
+            .WithMessage("*cannot be later*");
     }
-
-    //done 
-    //Сводка теста: всего: 2; сбой: 0; успешно: 2; пропущено: 0; длительность: 1,2 с
 }

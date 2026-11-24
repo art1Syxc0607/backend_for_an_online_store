@@ -95,22 +95,31 @@ public class AgentConversationRepositoryTests : IAsyncLifetime
         // LastMessageAt = null, CreatedAt = NOW (не истёк)
 
         var veryOldConv = new AgentConversationEntity("guest-3", "s3");
-        // Нужно симулировать CreatedAt = -10 дней
 
         var userConv = new AgentConversationEntity(42, "s4");
         userConv.UpdateState("{}");  // ← User — не удаляем
 
-        await _context.AgentConversations.AddRangeAsync(
+        _context.AgentConversations.AddRange(
             activeConv, expiredConv, veryOldConv, userConv);
+        _context.Entry(veryOldConv)
+            .Property(c => c.CreatedAt)
+            .CurrentValue = DateTime.UtcNow.AddDays(-10);
         await _context.SaveChangesAsync();
 
         // Act
         var deleted = await _repository.DeleteExpiredAsync(retentionDays: 7);
 
         // Assert
-        // activeConv — остался (обновлён)
-        // expiredConv — остался (CreatedAt = NOW)
-        // veryOldConv — удалён (если CreatedAt старый)
-        // userConv — остался (не гость)
+        deleted.Should().Be(1);
+
+        _context.ChangeTracker.Clear();
+        var remaining = await _context.AgentConversations
+            .AsNoTracking()
+            .ToListAsync();
+
+        remaining.Should().Contain(c => c.AgentConversationId == "s1");
+        remaining.Should().Contain(c => c.AgentConversationId == "s2");
+        remaining.Should().NotContain(c => c.AgentConversationId == "s3");
+        remaining.Should().Contain(c => c.AgentConversationId == "s4");
     }
 }

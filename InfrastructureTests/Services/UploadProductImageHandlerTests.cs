@@ -23,7 +23,7 @@ public class UploadProductImageHandlerTests
         var imageUrl = "/images/products/1/test.jpg";
 
         var productRepoMock = new Mock<IProductRepository>();
-        productRepoMock.Setup(x => x.GetByIdAsync(productId, It.IsAny<CancellationToken>()))
+        productRepoMock.Setup(x => x.GetProductForUpdateAsync(productId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product);
 
         var fileStorageMock = new Mock<IFileStorageService>();
@@ -74,7 +74,7 @@ public class UploadProductImageHandlerTests
     {
         // Arrange
         var productRepoMock = new Mock<IProductRepository>();
-        productRepoMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        productRepoMock.Setup(x => x.GetProductForUpdateAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Product?)null);
 
         var handler = new UploadProductFilesHandler(
@@ -115,7 +115,7 @@ public class UploadProductImageHandlerTests
         var imageUrl = "/images/products/1/test.jpg";
 
         var productRepoMock = new Mock<IProductRepository>();
-        productRepoMock.Setup(x => x.GetByIdAsync(productId, It.IsAny<CancellationToken>()))
+        productRepoMock.Setup(x => x.GetProductForUpdateAsync(productId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product);
 
         var fileStorageMock = new Mock<IFileStorageService>();

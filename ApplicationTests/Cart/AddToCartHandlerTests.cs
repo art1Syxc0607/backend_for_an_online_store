@@ -30,7 +30,7 @@ public class AddToCartHandlerTests
         cart.Clear(); // чтобы не было null
 
         var cartRepoMock = new Mock<ICartRepository>();
-        cartRepoMock.Setup(x => x.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+        cartRepoMock.Setup(x => x.GetCartForUpdateAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(cart);
 
         var productRepoMock = new Mock<IProductRepository>();
@@ -67,7 +67,7 @@ public class AddToCartHandlerTests
     {
         // Arrange
         var cartRepoMock = new Mock<ICartRepository>();
-        cartRepoMock.Setup(x => x.GetByUserIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        cartRepoMock.Setup(x => x.GetCartForUpdateAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Domain.Entities.Cart(new User("test@mail.com", "hash", "John")));
 
         var productRepoMock = new Mock<IProductRepository>();

@@ -365,3 +365,5 @@ FodyWeavers.xsd
 # ===== Local Docker secrets =====
 .env
 .env.local
+# Нагрузочные тесты: отчёты и логи прогонов
+loadtest/results/

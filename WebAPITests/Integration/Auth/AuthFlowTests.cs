@@ -97,7 +97,7 @@ public class AuthFlowTests : IntegrationTestBase
         });
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]

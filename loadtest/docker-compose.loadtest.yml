@@ -1,0 +1,39 @@
+# Override только для нагрузочных прогонов.
+#
+# Что делает:
+#  1. Публикует API напрямую на 8080, чтобы k6 мерил бэкенд без TLS/nginx.
+#  2. Понижает уровень логов (меньше I/O -> меньше искажений в замерах).
+#  3. Гасит фоновые сервисы и внешние интеграции, не относящиеся к нагрузке.
+#  4. Направляет SMTP в "никуда" (connection refused сразу), чтобы фоновые
+#     письма не висели на таймаутах к gmail.
+#
+# Запуск:
+#   docker compose -f docker-compose.yml -f loadtest/docker-compose.loadtest.yml up -d --build db api
+#
+# Остановка:
+#   docker compose -f docker-compose.yml -f loadtest/docker-compose.loadtest.yml down
+
+services:
+  api:
+    ports:
+      - "8080:8080"
+    environment:
+      # --- логи ---
+      Serilog__MinimumLevel__Default: Warning
+      Serilog__MinimumLevel__Override__Microsoft: Warning
+      Serilog__MinimumLevel__Override__Microsoft.EntityFrameworkCore: Warning
+      Logging__LogLevel__Default: Warning
+      Logging__LogLevel__Microsoft.EntityFrameworkCore: Warning
+
+      # --- фоновые/внешние активности ---
+      IpInfo__Enabled: "false"
+      Agent__Enabled: "false"
+      BackgroundServices__ExpiredOrders__Enabled: "false"
+
+      # --- SMTP: мгновенный отказ вместо сетевых таймаутов ---
+      Smtp__Host: "127.0.0.1"
+      Smtp__Port: "1"
+      Smtp__EnableSsl: "false"
+
+      # --- диагностика для dotnet-counters ---
+      DOTNET_EnableDiagnostics: "1"
