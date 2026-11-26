@@ -17,8 +17,9 @@ using WebApi.DTOs.Review;
 namespace WebApi.Controllers;
 
 
+[ApiController]
 [Route("api/review")]
-public class ReviewController : Controller
+public class ReviewController : ControllerBase
 {
     private readonly IMediator _mediator;
 

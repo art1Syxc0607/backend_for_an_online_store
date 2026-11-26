@@ -19,6 +19,6 @@ public class AddReviewDto
     [Range(1, 5, ErrorMessage = "Rating must be between 1 and 5")]
     public int Rating { get; init; }
 
-    [MaxLength(8, ErrorMessage = "Maximum 8 files allowed")]
+    // Количество файлов проверяет FileUploadValidation (AllowedFileTypes.MaxFiles).
     public List<IFormFile>? Files { get; init; }
 }

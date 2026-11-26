@@ -18,8 +18,9 @@ loadtest/
     scenarios/04-mixed.js       # S4: 70% каталог / 10% логин / 20% покупка
   scripts/
     Seed-LoadTestUsers.ps1      # пул ботов (регистрация + подтверждение email в БД)
-    Reset-LoadTestData.ps1      # чистка заказов/корзин, откат остатков
+    Reset-LoadTestData.ps1      # чистка заказов/корзин, откат остатков, пересоздание корзин
     Run-LoadTests.ps1           # запуск сценариев + отчёты
+    Monitor-Resources.ps1       # CPU/память контейнеров и соединения PostgreSQL в CSV
   results/                      # json-отчёты и логи прогонов (не коммитятся)
 ```
 
@@ -65,6 +66,9 @@ curl http://localhost:8080/health
 # чистка транзакционных таблиц + остатки >= 1000 и ReservedQuantity = 0
 .\loadtest\scripts\Reset-LoadTestData.ps1
 ```
+
+Скрипт чистки также пересоздаёт ботам пустые корзины: `AddToCart` и `Checkout`
+работают только с уже существующей строкой `Carts` и падают с 404/400, если её нет.
 
 Почему боты подтверждаются в БД: `POST /api/cart/Checkout`, `POST /api/order` и
 создание отзыва требуют `IsEmailConfirmed == true`, а эндпоинт подтверждения email
@@ -114,11 +118,33 @@ k6 run --summary-export loadtest/results/catalog.json -e BASE_URL=http://localho
 Пороги заданы в `options.thresholds`: k6 вернёт код 99, если p95 или доля ошибок
 хуже целевых — это же подходит для CI.
 
+### Результаты прогона 2026-11-26
+
+Стенд: Ryzen 7 5700X (8C/16T), 32 GB, Docker Desktop (WSL2), k6 на хосте.
+Все профили `load`, с `-ResetBeforeEach`, 40 ботов.
+
+| Сценарий | VU | Длительность | Запросов | RPS | p50 | p95 | p99 | Ошибки |
+|---|---|---|---|---|---|---|---|---|
+| 01-catalog | 50 | 4 мин | 43 213 | 179.7 | 1.0 мс | 2.0 мс | 6.0 мс | 0% |
+| 02-auth | 20 | 2 мин 10 с | 2 840 | 21.8 | 61 мс | 151 мс | 165 мс | 0% |
+| 03-order-flow | 20 | 2 мин 40 с | 5 819 | 35.7 | 6.6 мс | 1.01 с | 1.01 с | 0% |
+| 04-mixed | 50 | 4 мин | 28 549 | 118.2 | 1.2 мс | 147 мс | 1.01 с | 0% |
+
+Ресурсы во время `04-mixed` (`Monitor-Resources.ps1`): API — 56% CPU в среднем
+(пик 160%, то есть ~1.6 ядра) и 544–567 MB RSS; PostgreSQL — 10.5% CPU
+(пик 21.9%), 40–42 MB, 6 соединений. Узкое место — CPU API, не БД.
+
+p95/p99 в сценариях с оплатой упираются в искусственную задержку 1 с
+`PaymentService.ConfirmPaymentAsync`; реальную работу API видно по `med`.
+
 ## 6. Что смотреть во время прогона
 
 ```powershell
-# ресурсы контейнеров
-docker stats --no-stream online-store-api-1 online-store-db-1
+# CPU/память API и PostgreSQL + число соединений, раз в 5 секунд
+.\loadtest\scripts\Monitor-Resources.ps1 -DurationMinutes 6 -OutFile .\loadtest\results\monitor-mixed.csv
+
+# остановить досрочно: создать файл .monitor-stop рядом с CSV
+New-Item -ItemType File -Force .\loadtest\results\.monitor-stop
 
 # соединения и ожидания PostgreSQL
 docker exec -i online-store-db-1 psql -U postgres -d WebStoreProjectDb -c "SELECT state, wait_event_type, count(*) FROM pg_stat_activity GROUP BY 1,2 ORDER BY 3 DESC;"
@@ -126,6 +152,10 @@ docker exec -i online-store-db-1 psql -U postgres -d WebStoreProjectDb -c "SELEC
 # ошибки API
 docker logs --tail 100 online-store-api-1
 ```
+
+`Monitor-Resources.ps1` пишет CSV с колонками
+`timestamp,api_cpu_pct,api_mem_mb,db_cpu_pct,db_mem_mb,pg_connections`
+(числа в InvariantCulture, чтобы не ломались в русской локали).
 
 ## 7. Как читать результаты
 
@@ -135,6 +165,9 @@ docker logs --tail 100 online-store-api-1
 - **02-auth** ограничен CPU на хешировании пароля, а не БД.
 - **03-order-flow** и **04-mixed** — запись: `Checkout` берёт `FOR UPDATE` на корзину
   и товары, поэтому рост p95 при увеличении VU — ожидаемое поведение.
+- `DELETE /api/cart/clear` идемпотентен: 204 и на непустой, и на пустой, и на
+  отсутствующей корзине (раньше отсутствующая давала 400). Поэтому `orderFlow`
+  начинается с очистки и не спотыкается после `Reset-LoadTestData.ps1`.
 - `POST /api/order/confirm` содержит искусственную задержку 1 с
   (`PaymentService.ConfirmPaymentAsync` — эмуляция платёжного шлюза), поэтому p95 в
   сценариях с оплатой включает эту секунду. Остальную работу БД/API удобнее смотреть

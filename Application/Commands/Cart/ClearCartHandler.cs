@@ -1,12 +1,6 @@
 ﻿using Application.Interfaces;
-using Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Application.Commands.Cart;
 
@@ -36,13 +30,16 @@ public class ClearCartHandler : IRequestHandler<ClearCartCommand>
         {
             var cart = await _cartRepository.GetCartForUpdateAsync(command.UserId, ct);
 
+            // Идемпотентность: очистка отсутствующей корзины - не ошибка.
+            // Раньше здесь бросался DomainException, из-за чего DELETE /api/cart/clear
+            // возвращал 400 на пустой/отсутствующей корзине.
             if (cart == null)
             {
                 await _unitOfWork.RollbackTransactionAsync(CancellationToken.None);
-                _logger.LogWarning(
-                    "Cart not found for user {UserId}",
+                _logger.LogInformation(
+                    "Cart not found for user {UserId}; nothing to clear",
                     command.UserId);
-                throw new DomainException("Cart isn't found");
+                return;
             }
 
             var itemsCount = cart.Items.Count;

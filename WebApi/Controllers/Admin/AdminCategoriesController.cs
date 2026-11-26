@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 namespace WebApi.Controllers.Admin;
 
+[ApiController]
 [Route("api/admin/category")]
 [Authorize(Roles = "Admin")]
 public class AdminCategoriesController : ControllerBase

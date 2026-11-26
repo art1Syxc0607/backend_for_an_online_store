@@ -20,7 +20,7 @@ public class GetCartQueryHandler : IRequestHandler<GetCartQuery, CartResponseDto
 
     public async Task<CartResponseDto> Handle(GetCartQuery query, CancellationToken ct)
     {
-        var cart = await _cartRepository.GetByUserIdAsync(query.UserId);
+        var cart = await _cartRepository.GetByUserIdAsync(query.UserId, ct);
 
         if (cart == null) throw new DomainException("No such User or cart");
 

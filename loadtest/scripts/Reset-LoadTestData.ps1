@@ -70,6 +70,10 @@ else {
 
 # Остатки: не ниже минимума, резервы сброшены (заказы больше не держат товар).
 Invoke-DbQuery $container "UPDATE ""Products"" SET ""StockQuantity"" = GREATEST(""StockQuantity"", $MinimumStock), ""ReservedQuantity"" = 0;" | Out-Null
+
+# Корзины удалены вместе с транзакционными таблицами. Checkout работает только
+# с существующей строкой корзины, поэтому восстанавливаем пустые корзины ботам.
+Invoke-DbQuery $container "INSERT INTO ""Carts"" (""UserId"", ""UpdatedAt"") SELECT u.""Id"", NOW() FROM ""Users"" u WHERE NOT EXISTS (SELECT 1 FROM ""Carts"" c WHERE c.""UserId"" = u.""Id"");" | Out-Null
 Write-Host "Product stock >= $MinimumStock, reserved quantity reset." -ForegroundColor Yellow
 
 foreach ($table in $before.Keys) {

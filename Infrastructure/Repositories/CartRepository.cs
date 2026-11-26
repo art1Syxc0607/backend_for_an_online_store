@@ -14,9 +14,15 @@ public class CartRepository : ICartRepository
         _context = context;
     }
 
+    /// <summary>
+    /// Read-only cart projection used by <c>GetCartQueryHandler</c>.
+    /// The returned entity is not tracked: changes made to it will not be saved.
+    /// Use <see cref="GetCartForUpdateAsync"/> for mutations.
+    /// </summary>
     public async Task<Cart?> GetByUserIdAsync(int userId, CancellationToken ct = default)
     {
         return await _context.Carts
+            .AsNoTracking()
             .Include(c => c.Items)
                 .ThenInclude(i => i.Product)
             .FirstOrDefaultAsync(c => c.UserId == userId, ct);

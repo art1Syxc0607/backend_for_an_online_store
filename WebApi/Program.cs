@@ -97,7 +97,6 @@ builder.Services.AddSwaggerGen(c =>   // https://localhost:7197/swagger/index.ht
         }
     });
 });
-builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor(); // Как получить HttpContext в сервисе/команде?
 builder.Services.Extension(builder.Configuration); // DbContext + Repositories
 builder.Services.AddApplication();      // MediatR + FluentValidation
@@ -144,13 +143,13 @@ forwardedHeadersOptions.KnownProxies.Clear();
 
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
-// Добавляем middleware до всех остальных
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-
 app.UseStaticFiles();
 
-// 2. МАГИЯ: ОДНА СТРОЧКА для логирования времени ВСЕХ запросов
-app.UseSerilogRequestLogging(); // Важно: поставить ДО эндпоинтов!
+// Serilog request logging должен оборачивать ExceptionHandlingMiddleware:
+// иначе доменные ответы 400/403 логируются как 500.
+app.UseSerilogRequestLogging();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

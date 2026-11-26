@@ -21,6 +21,7 @@ using WebApi.DTOs.Product;
 
 namespace WebApi.Controllers.Admin;
 
+[ApiController]
 [Route("api/admin/product")]
 [Authorize(Roles = "Admin")]
 public class AdminProductsController : ControllerBase

@@ -107,12 +107,23 @@ foreach ($currentProfile in $profiles) {
         Write-Host ''
         Write-Host ("=== {0} [{1}] ===" -f $name, $currentProfile) -ForegroundColor Green
 
-        & $k6Exe run --quiet --summary-export $out `
-            -e PROFILE=$currentProfile `
-            -e BASE_URL=$BaseUrl `
-            $path 2>&1 | Tee-Object -FilePath $log | Out-Host
+        # k6 пишет часть вывода в stderr. В PowerShell 5.1 при
+        # $ErrorActionPreference='Stop' первая же строка stderr становится
+        # терминирующей ошибкой и обрывает весь прогон, поэтому локально
+        # переключаемся на 'Continue' и приводим строки к тексту.
+        $previousErrorAction = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            & $k6Exe run --quiet --summary-export $out `
+                -e PROFILE=$currentProfile `
+                -e BASE_URL=$BaseUrl `
+                $path 2>&1 | ForEach-Object { "$_" } | Tee-Object -FilePath $log | Out-Host
 
-        $exitCode = $LASTEXITCODE
+            $exitCode = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $previousErrorAction
+        }
         $results.Add([pscustomobject]@{
                 Scenario = $name
                 Profile  = $currentProfile
