@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using WebApi.Common.RateLimiting;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
@@ -38,10 +39,11 @@ public class UserController : ControllerBase
         return Ok(result);
     }
 
+    [EnableRateLimiting(RateLimitPolicies.AuthRegister)]
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterDto dto)
     {
-        // Получаем IP-адрес
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ IP-пїЅпїЅпїЅпїЅпїЅ
         var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
         var command = new RegisterCommand { 
@@ -50,7 +52,7 @@ public class UserController : ControllerBase
             Password = dto.Password,
             UserIP = clientIp,
 
-            // Формируем BaseUrl здесь — единственное место
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ BaseUrl пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
             BaseUrl = $"{Request.Scheme}://{Request.Host}"
         };
         var result = await _mediator.Send(command);
@@ -69,13 +71,14 @@ public class UserController : ControllerBase
 
         await _mediator.Send(command);
 
-        // Перенаправляем на фронтенд страницу успеха
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
         //return Redirect("https://yourstore.com/email-confirmed");
 
         return NoContent();
     }
 
     [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.EmailResend)]
     [HttpGet("resend-confirmation-email")]
     public async Task<IActionResult> ResendConfirmEmail()
     {
@@ -104,10 +107,11 @@ public class UserController : ControllerBase
         }
     }
 
+    [EnableRateLimiting(RateLimitPolicies.AuthLogin)]
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto loginDto)
     {
-        // Получаем IP-адрес
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ IP-пїЅпїЅпїЅпїЅпїЅ
         var userIP = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
         var command = new LoginCommand
@@ -116,7 +120,7 @@ public class UserController : ControllerBase
             Password = loginDto.Password,
             UserIP = userIP,
 
-            // Формируем BaseUrl здесь — единственное место
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ BaseUrl пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
             BaseUrl = $"{Request.Scheme}://{Request.Host}"
         };
 
@@ -126,6 +130,7 @@ public class UserController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.AuthRequestReset)]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
     {
@@ -137,13 +142,13 @@ public class UserController : ControllerBase
 
         await _mediator.Send(command);
 
-        // Всегда возвращаем 200 OK (не раскрываем существование email)
+        // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ 200 OK (пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ email)
         return Ok(new { Message = "If the email exists, a reset code has been sent." });
     }
 
     [HttpPost("reset-password")]
     [AllowAnonymous]
-    //[EnableRateLimiting("auth")]
+    [EnableRateLimiting(RateLimitPolicies.AuthSubmitReset)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
     {
         var command = new ResetPasswordCommand

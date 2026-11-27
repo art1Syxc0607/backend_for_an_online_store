@@ -30,6 +30,9 @@ services:
       Agent__Enabled: "false"
       BackgroundServices__ExpiredOrders__Enabled: "false"
 
+      # Rate limiting is disabled: load comes from a single IP and would trip limits.
+      RateLimiting__Enabled: "false"
+
       # --- SMTP: мгновенный отказ вместо сетевых таймаутов ---
       Smtp__Host: "127.0.0.1"
       Smtp__Port: "1"

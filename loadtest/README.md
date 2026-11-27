@@ -55,6 +55,7 @@ curl http://localhost:8080/health
 | `IpInfo__Enabled=false` | логин не ходит во внешний geo-сервис |
 | `Agent__Enabled=false` | AI-агент не участвует в замерах |
 | `BackgroundServices__ExpiredOrders__Enabled=false` | cleanup не мешает прогонам |
+| `RateLimiting__Enabled=false` | весь трафик идёт с одного IP, лимиты логина исказили бы замер |
 | `Smtp__Host=127.0.0.1`, `Smtp__Port=1` | письма падают мгновенно вместо таймаутов к Gmail |
 
 ## 3. Подготовить данные
@@ -186,3 +187,32 @@ docker logs --tail 100 online-store-api-1
 | `checkout 400` | email не подтверждён или пустая корзина: перезапустите seed-скрипт, проверьте `Reset-LoadTestData.ps1` |
 | `checkout 400` / `order 400` про остатки | остатки кончились: `Reset-LoadTestData.ps1 -MinimumStock 5000` |
 | `no products returned` | БД пустая: поднимите стенд и дождитесь сидирования (1000 товаров) |
+
+## 9. Rate limiting
+
+Включён по умолчанию (секция `RateLimiting` в `WebApi/appsettings.json`):
+
+| Политика | Эндпоинт | Лимит | Ключ |
+|---|---|---|---|
+| `auth-login` | `POST /api/auth/login` | 5/мин | IP |
+| `auth-register` | `POST /api/auth/register` | 5/10 мин | IP |
+| `auth-request-reset` | `POST /api/auth/change-password` | 3/15 мин | IP |
+| `auth-submit-reset` | `POST /api/auth/reset-password` | 10/15 мин | IP |
+| `email-resend` | `GET /api/auth/resend-confirmation-email` | 1/5 мин | userId |
+| global | весь API | 600/мин | IP |
+
+При превышении: `429`, заголовок `Retry-After` (секунды) и тело в формате
+`ErrorResponseDto` с `errorCode = "RATE_LIMITED"`. `/health` исключён из лимитов.
+
+- Пороги переопределяются конфигурацией: `RateLimiting__Login__PermitLimit=20`.
+- В интеграционных тестах лимитер выключен (`RateLimiting:Enabled=false` в
+  `CustomWebApplicationFactory`): счётчики живут в памяти процесса и не
+  сбрасываются Respawn между тестами. Сам лимитер проверяет `RateLimitingTests`
+  через `RateLimitedWebApplicationFactory`.
+- В нагрузочных прогонах выключен (`RateLimiting__Enabled=false`), потому что
+  весь трафик идёт с одного IP.
+- Счётчики in-memory: при нескольких репликах фактический лимит умножается на их
+  число. Для масштабирования нужен Redis-backed limiter или `limit_req` на ingress.
+- Rate limiting не заменяет блокировку аккаунта: следующим шагом логично добавить
+  счётчик неудачных попыток на пользователя (по аналогии с
+  `PasswordResetCode.AttemptsCount`).

@@ -15,6 +15,7 @@ using Serilog;
 using Serilog.Events;
 using System.Text;
 using WebAPI.Middleware;
+using WebApi.Common.RateLimiting;
 //using SQLitePCL;
 
 
@@ -63,6 +64,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // "B
 
 // Добавляем авторизацию
 builder.Services.AddAuthorization();
+
+// Rate limiting: политики для auth-эндпоинтов + мягкий глобальный лимит.
+builder.Services.AddAppRateLimiting(builder.Configuration);
 
 
 // Add services to the container.
@@ -164,12 +168,15 @@ app.UseHttpsRedirection();
 app.UseAuthentication(); // СНАЧАЛА аутентификация
 app.UseAuthorization();  // ПОТОМ авторизация
 
+app.UseRateLimiter();
+
 app.MapControllers();
 
 // Liveness/readiness для Docker healthcheck. Эндпоинт внутренний:
 // healthcheck ходит напрямую в контейнер на :8080, наружу через nginx/Caddy
 // он не публикуется (не попадает под проксируемые /api|/images|...).
-app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTime.UtcNow }));
+app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTime.UtcNow }))
+    .DisableRateLimiting();
 
 using (var scope = app.Services.CreateScope())
 {
